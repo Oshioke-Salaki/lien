@@ -1,0 +1,16 @@
+{
+  "network": "testnet",
+  "registry": "v1.lien-13569.testnet",
+  "token": "usd.lien-13569.testnet",
+  "tokenSymbol": "tUSD",
+  "tokenDecimals": 6,
+  "outlayer": "outlayer.testnet",
+  "agentCode": "5h7GXbekbD4VcpG3VQbjX422jScuFvZPrfyrXwicaww1",
+  "collectorCode": "s9UZi2DdpngukguA7mvJ8qEQ8nG3pd6YLSNaYQo9D7h",
+  "sentinel": {
+    "url": "https://test.fastfs.io/lien-13569.testnet/outlayer.testnet/9fd9a77add6b2938c8d40d9cbb8ad2979ce2eb993e42982a9c17597ca6a10e9f.wasm",
+    "hash": "9fd9a77add6b2938c8d40d9cbb8ad2979ce2eb993e42982a9c17597ca6a10e9f",
+    "buildTarget": "wasm32-wasip2",
+    "vendor": "lien-f6-3876.testnet"
+  }
+}

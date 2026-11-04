@@ -1,0 +1,25 @@
+{
+  "name": "lien-ops",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "publish-agent": "tsx src/publish-agent.ts",
+    "deploy": "tsx src/deploy.ts",
+    "create-business": "tsx src/create-business.ts",
+    "store-secret": "tsx src/store-secret.ts",
+    "keeper": "tsx src/keeper.ts",
+    "e2e": "tsx src/e2e.ts"
+  },
+  "dependencies": {
+    "@noble/ciphers": "^2.4.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "near-api-js": "^7.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
