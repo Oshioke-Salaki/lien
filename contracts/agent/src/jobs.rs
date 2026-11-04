@@ -23,6 +23,7 @@ const SECONDS_PER_DAY: u64 = 86_400;
 /// Must leave room for OutLayer's 50 TGas settlement callback.
 const GAS_OUTLAYER: Gas = Gas::from_tgas(120);
 const GAS_ON_JOB: Gas = Gas::from_tgas(70);
+const GAS_STORE_SECRETS: Gas = Gas::from_tgas(50);
 /// NEAR kept back so storage writes never run the account dry.
 const TANK_RESERVE: NearToken = NearToken::from_millinear(50);
 
@@ -39,6 +40,15 @@ trait OutLayer {
         response_format: Option<String>,
         payer_account_id: Option<AccountId>,
         params: Option<Value>,
+    );
+
+    fn store_secrets(
+        &mut self,
+        accessor: Value,
+        profile: String,
+        encrypted_secrets_base64: String,
+        access: Value,
+        vault_id: Option<AccountId>,
     );
 }
 
@@ -72,6 +82,26 @@ impl AgentContract {
         self.assert_no_open_loan();
         require!(amount <= self.tank(), errors::INSUFFICIENT);
         near_sdk::Promise::new(self.operator.clone()).transfer(amount).detach();
+    }
+
+    /// Stores encrypted secrets for the agent's code, such as a NEAR AI key. The
+    /// row belongs to this account rather than the operator, so it passes with the
+    /// business. Only possible with no open loan, since it changes what the frozen
+    /// code can do. The attached NEAR pays OutLayer's storage cost.
+    #[payable]
+    pub fn store_secrets(
+        &mut self,
+        accessor: Value,
+        profile: String,
+        encrypted_secrets_base64: String,
+        access: Value,
+    ) -> near_sdk::Promise {
+        self.assert_operator();
+        self.assert_no_open_loan();
+        ext_outlayer::ext(self.outlayer.clone())
+            .with_attached_deposit(env::attached_deposit())
+            .with_static_gas(GAS_STORE_SECRETS)
+            .store_secrets(accessor, profile, encrypted_secrets_base64, access, None)
     }
 
     /// Settles a job when OutLayer returns. This never panics: if it did, the

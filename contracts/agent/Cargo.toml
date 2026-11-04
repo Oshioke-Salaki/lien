@@ -15,9 +15,3 @@ near-sdk.workspace = true
 [dev-dependencies]
 near-sdk = { workspace = true, features = ["unit-testing"] }
 proptest = "1"
-
-[package.metadata.near.reproducible_build]
-image = "sourcescan/cargo-near:0.22.0-rust-1.91.1"
-image_digest = ""
-passed_env = []
-container_build_command = ["cargo", "near", "build", "non-reproducible-wasm", "--locked"]

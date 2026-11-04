@@ -436,6 +436,20 @@ async fn a_cancelled_offer_returns_lender_money_through_the_claim_path() -> Resu
 }
 
 #[tokio::test]
+async fn secrets_are_stored_under_the_business_not_the_operator() -> Result<()> {
+    let env = Env::new().await?;
+    let agent = env.create_agent("scout").await?;
+    ok(env.operator.call(&agent.parse()?, "store_secrets")
+        .args_json(json!({"accessor":{"WasmHash":{"hash":"a"}},"profile":"default","encrypted_secrets_base64":"eA==","access":"AllowAll"}))
+        .deposit(NearToken::from_millinear(100))
+        .max_gas().transact().await?)?;
+    let (_, _, secrets, _): (Option<String>, Option<String>, Option<String>, Option<String>) =
+        env.worker.view(env.outlayer.id(), "get_last").await?.json()?;
+    assert_eq!(secrets.unwrap(), format!("{agent}:default"));
+    Ok(())
+}
+
+#[tokio::test]
 async fn nobody_can_call_the_private_callbacks() -> Result<()> {
     let env = Env::new().await?;
     let agent = env.create_agent("scout").await?;

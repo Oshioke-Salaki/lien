@@ -72,6 +72,19 @@ impl MockOutLayer {
         Promise::new(env::current_account_id()).deploy_global_contract(code)
     }
 
+    #[payable]
+    pub fn store_secrets(
+        &mut self,
+        accessor: Value,
+        profile: String,
+        encrypted_secrets_base64: String,
+        access: Value,
+        vault_id: Option<AccountId>,
+    ) {
+        let _ = (accessor, encrypted_secrets_base64, access, vault_id);
+        self.last_secrets = Some(format!("{}:{profile}", env::predecessor_account_id()));
+    }
+
     pub fn get_calls(&self) -> u32 {
         self.calls
     }

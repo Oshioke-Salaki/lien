@@ -440,6 +440,22 @@ fn with_no_loan_the_operator_has_full_control() {
     assert_eq!(c.service.price.0, 9);
 }
 
+#[test]
+#[should_panic(expected = "not allowed while a loan is open")]
+fn secrets_cannot_change_during_a_loan() {
+    let mut c = active();
+    ctx(operator(), T0);
+    let _ = c.store_secrets(json!({}), "p".into(), "x".into(), json!("AllowAll"));
+}
+
+#[test]
+#[should_panic(expected = "only the operator")]
+fn strangers_cannot_set_secrets() {
+    let mut c = fresh();
+    ctx(alice(), T0);
+    let _ = c.store_secrets(json!({}), "p".into(), "x".into(), json!("AllowAll"));
+}
+
 // ---------- the waterfall ----------
 
 #[test]
