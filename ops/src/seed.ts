@@ -101,7 +101,7 @@ if ((await view<any>(sale, "get_agent", {}, net)).loan_count === 0) {
   await pay(alice, d.token, sale, 30n * USD, { action: "fund", loan_id: 0 });
   await sleep(25_000);
   await call(bob, sale, "foreclose");
-  await runJob(sale, "still serving after foreclosure?");
+  await runJob(sale, "is outlayer.testnet still safe?");
 }
 
 console.log(JSON.stringify((await view<string[]>(d.registry, "get_agents", {}, net))));

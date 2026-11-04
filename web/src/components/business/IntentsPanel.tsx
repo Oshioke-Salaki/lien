@@ -87,7 +87,7 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
                 {routes.map((r) => <option key={r.assetId} value={r.assetId}>{r.label}</option>)}
               </select>
             </label>
-            <AmountField label="Business receives, in USDC" value={amountText} onChange={setAmountText} />
+            <AmountField label="Business receives" unit="USDC" value={amountText} onChange={setAmountText} />
             <TextField label="Your address on that chain, for refunds" testId="intents-refund" value={refundTo} onChange={setRefundTo} placeholder="0x…" />
             <button type="submit" className="btn btn-secondary w-full" data-testid="intents-quote" disabled={state === "loading" || !wanted || !refundTo.trim()}>{state === "loading" ? "Finding a route…" : "Get a live quote"}</button>
           </form>

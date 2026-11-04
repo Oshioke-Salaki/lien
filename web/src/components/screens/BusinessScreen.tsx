@@ -29,7 +29,8 @@ export function BusinessScreen({ id }: { id: string }) {
   if (!live.data) {
     return (
       <div className="space-y-4" aria-busy="true">
-        <Skeleton className="h-10 w-72" />
+        <h1 className="text-[28px] leading-tight font-medium tracking-[-0.01em]">{id.split(".")[0]}</h1>
+        <p className="text-[15px] muted">Reading this business from the chain…</p>
         <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_372px]">
           <Skeleton className="h-64" />
           <Skeleton className="h-64" />
@@ -59,15 +60,18 @@ export function BusinessScreen({ id }: { id: string }) {
       {foreclosed ? <ForeclosureNotice key={b.current_loan!.id} /> : null}
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_372px]">
-        <div className="space-y-4">
-          <DebtPanel business={b} now={now} />
-          <WaterfallPanel business={b} now={now} />
-          <ProofPanel business={b} listed={registry.loaded ? listed : undefined} />
-          <JobsPanel business={b} />
-          <TermsPanel business={b} />
-          <HistoryPanel business={b} />
+        {/* On a phone the actions sit right after the debt, not below every table. */}
+        <div className="contents lg:block lg:space-y-4">
+          <div className="order-1"><DebtPanel business={b} now={now} /></div>
+          <div className="order-3 space-y-4">
+            <WaterfallPanel business={b} now={now} />
+            <ProofPanel business={b} listed={registry.loaded ? listed : undefined} />
+            <JobsPanel business={b} />
+            <TermsPanel business={b} />
+            <HistoryPanel business={b} />
+          </div>
         </div>
-        <ActionRail business={b} now={now} refresh={live.refresh} />
+        <div className="order-2 lg:order-none"><ActionRail business={b} now={now} refresh={live.refresh} /></div>
       </div>
     </div>
   );

@@ -24,7 +24,7 @@ export function checkAmount(text: string, { min, max, balance }: { min?: bigint;
   return { value, error: null };
 }
 
-export function AmountField({ label, value, onChange, error, hint, testId }: { label: string; value: string; onChange: (v: string) => void; error?: string | null; hint?: string; testId?: string }) {
+export function AmountField({ label, value, onChange, error, hint, testId, unit = symbol }: { label: string; value: string; onChange: (v: string) => void; error?: string | null; hint?: string; testId?: string; unit?: string }) {
   const id = useId();
   const described = error || hint ? `${id}-hint` : undefined;
   return (
@@ -32,7 +32,7 @@ export function AmountField({ label, value, onChange, error, hint, testId }: { l
       <span>{label}</span>
       <div className="relative">
         <input id={id} data-testid={testId} className="input pr-16" inputMode="decimal" autoComplete="off" value={value} aria-invalid={!!error} aria-describedby={described} onChange={(e) => onChange(e.target.value)} />
-        <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[14px] muted">{symbol}</span>
+        <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[14px] muted">{unit}</span>
       </div>
       {error || hint ? <p id={described} className="hint" data-error={!!error}>{error ?? hint}</p> : null}
     </label>

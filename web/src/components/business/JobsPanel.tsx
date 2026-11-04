@@ -47,7 +47,7 @@ function JobRow({ job, result, open, onToggle }: { job: Job; result: string; ope
         <td className="max-w-[220px]">
           <button type="button" className="block max-w-full truncate text-left hover:underline" aria-expanded={open} onClick={(e) => { e.stopPropagation(); onToggle(); }}>{job.input || "(empty)"}</button>
         </td>
-        <td title={job.payer}>{shortAccount(job.payer, 22)}</td>
+        <td title={job.payer} className="whitespace-nowrap">{shortAccount(job.payer, 22)}</td>
         <td className="capitalize">{result}</td>
         <td className="r">{money(job.paid)}</td>
         <td className="r whitespace-nowrap">{dateTime(job.created_at)}</td>
