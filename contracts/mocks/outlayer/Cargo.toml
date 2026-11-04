@@ -1,0 +1,13 @@
+[package]
+name = "lien-mock-outlayer"
+description = "Stands in for OutLayer's request_execution in sandbox tests."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true

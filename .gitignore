@@ -1,0 +1,19 @@
+target/
+node_modules/
+.next/
+out/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.taste-skill/
+.near-credentials/
+web/test-results/
+web/playwright-report/
+scripts/.state/
+!scripts/.env.example
+
+# Local agent tooling
+.claude/
+skills-lock.json
