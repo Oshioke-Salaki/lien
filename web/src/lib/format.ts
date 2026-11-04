@@ -13,11 +13,10 @@ export function amount(value: bigint | string, decimals = 2): string {
   return decimals === 0 ? `${sign}${whole}` : `${sign}${whole}.${fraction}`;
 }
 
-/** Like `amount`, with enough decimals that small prices do not print as 0.00. */
+/** Exact to the last unit, with at least two decimals, so parts always add up on screen. */
 export function smartAmount(value: bigint | string): string {
-  const v = typeof value === "string" ? BigInt(value) : value;
-  if (v !== 0n && (v < 0n ? -v : v) < UNIT / 100n) return amount(v, Number(DECIMALS));
-  return amount(v);
+  const full = amount(value, Number(DECIMALS));
+  return full.replace(/(\.\d{2}\d*?)0+$/, "$1");
 }
 
 export const symbol = deployment.tokenSymbol;

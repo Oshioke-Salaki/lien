@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { Bar, ErrorState, Skeleton, StandingLabel } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
-import { amount, money, percent, share, shortAccount, symbol } from "@/lib/format";
+import { amount, money, percent, share, shortAccount, smartAmount, symbol } from "@/lib/format";
 import { listBusinesses } from "@/lib/near/rpc";
 import type { Business } from "@/lib/near/types";
 import { isAlert, standing, type Standing } from "@/lib/status";
@@ -86,10 +86,40 @@ export function MarketScreen() {
           </table>
         </div>
       )}
+      {live.loaded ? <TryIt rows={rows} /> : null}
       <p className="text-[14px] muted">
         Every figure is read live from the contracts. Each business is its own keyless account, so nothing here depends on Lien being honest.
       </p>
     </div>
+  );
+}
+
+/** What a newcomer can do right now, built from the market's real state. */
+function TryIt({ rows }: { rows: Business[] }) {
+  const pick = (...states: Standing[]) => rows.find((b) => states.includes(standing(b)));
+  const raising = pick("funding");
+  const late = pick("foreclosable", "behind");
+  const sale = pick("foreclosed", "auction");
+  const serving = pick("current") ?? rows[0];
+  const steps = [
+    raising && { href: `/b/${raising.id}`, action: `Lend to ${raising.name}`, result: "You receive a note and a share of every sale." },
+    serving && { href: `/b/${serving.id}`, action: `Buy a check from ${serving.name}`, result: "Sealed code runs in about 15 seconds, and the report lands on chain." },
+    late && { href: `/b/${late.id}`, action: `Foreclose ${late.name}`, result: "Past grace, anyone can take it. It keeps serving customers." },
+    sale && { href: `/b/${sale.id}`, action: `Bid on ${sale.name}`, result: "The highest bid takes a running business." },
+  ].filter((s): s is { href: string; action: string; result: string } => Boolean(s));
+  if (!steps.length) return null;
+  return (
+    <section className="panel" aria-labelledby="try-title">
+      <div className="panel-head"><h2 id="try-title">Things to try</h2><span className="text-[14px] muted">Free on testnet, nothing to install</span></div>
+      <ul className="grid gap-x-8 gap-y-4 p-[18px] sm:grid-cols-2">
+        {steps.map((step) => (
+          <li key={step.action}>
+            <Link className="link text-[17px] font-medium" href={step.href}>{step.action}</Link>
+            <p className="mt-1 text-[15px] muted">{step.result}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -112,8 +142,8 @@ function MarketRow({ business: b, onOpen }: { business: Business; onOpen: () => 
       <td className="r">
         {loan && loan.status !== "Funding" ? (
           <>
-            {amount(loan.repaid)}
-            <div className="text-[13px] muted">of {amount(loan.terms.total_due)}</div>
+            {smartAmount(loan.repaid)}
+            <div className="text-[13px] muted">of {smartAmount(loan.terms.total_due)}</div>
           </>
         ) : <span className="muted">-</span>}
         {loan && loan.status !== "Funding" ? <span className="sr-only">{repaid}%</span> : null}

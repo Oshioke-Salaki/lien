@@ -29,16 +29,14 @@ export function forgetGuest() {
 export async function createGuest(): Promise<Guest> {
   const { KeyPair } = await import("near-api-js");
   const pair = KeyPair.fromRandom("ed25519");
-  const suffix = crypto.getRandomValues(new Uint32Array(1))[0]!.toString(36);
-  const accountId = `lien-guest-${suffix}.testnet`;
   const response = await fetch("/api/guest", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ accountId, publicKey: pair.getPublicKey().toString() }),
+    body: JSON.stringify({ publicKey: pair.getPublicKey().toString() }),
   });
-  if (!response.ok) {
-    const { error } = (await response.json().catch(() => ({ error: "" }))) as { error?: string };
-    throw new Error(error || "The testnet faucet could not create an account. Try again in a minute.");
+  const { accountId, error } = (await response.json().catch(() => ({}))) as { accountId?: string; error?: string };
+  if (!response.ok || !accountId) {
+    throw new Error(error || "A test account could not be created. Try again in a minute.");
   }
   const guest = { accountId, privateKey: pair.toString() };
   try {
@@ -49,6 +47,19 @@ export async function createGuest(): Promise<Guest> {
   // The faucet answers before the account is visible on every RPC node.
   await waitForAccount(accountId);
   return guest;
+}
+
+/** Asks the sponsor for enough NEAR to start a business. */
+export async function topUpGuest(accountId: string) {
+  const response = await fetch("/api/guest", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ topUp: accountId }),
+  });
+  if (!response.ok) {
+    const { error } = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new Error(error || "Your test account could not be topped up.");
+  }
 }
 
 async function waitForAccount(accountId: string) {

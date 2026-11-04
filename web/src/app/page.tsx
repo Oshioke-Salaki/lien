@@ -22,7 +22,7 @@ export default function Page() {
         <Simulator />
         <Proof />
         <Questions />
-        <section className="flex min-h-[90svh] flex-col justify-between bg-black px-[var(--margin)] py-10 text-white" aria-labelledby="close-title">
+        <section className="flex min-h-[90svh] flex-col justify-between bg-black px-[var(--margin)] pt-10 pb-[120px] text-white" aria-labelledby="close-title">
           <h2 id="close-title" className="text-[15vw] leading-[0.92] font-medium tracking-[-0.03em] lg:text-[10vw]" data-reveal>
             <span className="block">Lend to it.</span>
             <span className="block">Or own it.</span>
@@ -33,7 +33,7 @@ export default function Page() {
           </div>
         </section>
       </main>
-      <footer className="overflow-hidden bg-[var(--accent)] px-[var(--margin)] pt-8 pb-8 text-black">
+      <footer className="overflow-hidden bg-[var(--accent)] px-[var(--margin)] pt-14 pb-8 text-black">
         <p className="text-[34vw] leading-[0.8] font-medium tracking-[-0.05em] lg:text-[26vw]" aria-hidden>Lien</p>
         <div className="mt-[72px] grid gap-10 lg:grid-cols-12">
           <ul className="space-y-1 text-[26px] leading-tight font-medium lg:col-span-5 lg:text-[34px]">

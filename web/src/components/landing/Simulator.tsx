@@ -53,8 +53,8 @@ export function Simulator() {
 
   return (
     <section id="try" aria-labelledby="try-title" className="lg:grid lg:grid-cols-[50%_1fr]">
-      <div className="sticky top-0 z-10 flex h-[46svh] items-center justify-center overflow-hidden px-4 transition-colors duration-700 lg:h-svh" style={{ background: noticed ? "var(--accent)" : "var(--sage)", transitionTimingFunction: "var(--ease-out)" }}>
-        <div data-ui data-testid="notice" data-state={noticed ? "foreclosed" : "active"} className="relative w-full max-w-[440px] origin-center scale-[0.72] bg-white p-6 text-[15px] sm:scale-90 lg:scale-100">
+      <div className="flex items-center justify-center overflow-hidden px-4 py-10 transition-colors duration-700 lg:sticky lg:top-0 lg:h-svh lg:py-0" style={{ background: noticed ? "var(--accent)" : "var(--sage)", transitionTimingFunction: "var(--ease-out)" }}>
+        <div data-ui data-testid="notice" data-state={noticed ? "foreclosed" : "active"} className="relative w-full max-w-[440px] bg-white p-6 text-[15px]">
           <p className="text-[24px] leading-tight font-medium tracking-[-0.01em]">{noticed ? "Notice of foreclosure" : clearsAnyway ? "Lien released" : "Record of lien"}</p>
           <p className="mt-1 muted">sentinel, an AI business on NEAR</p>
           <dl className="dl mt-4">
@@ -77,7 +77,7 @@ export function Simulator() {
               </>
             )}
           </dl>
-          <p className="mt-4 border-t border-[var(--line)] pt-3">
+          <p className="mt-4 bg-[var(--paper-sage)] p-3">
             {noticed ? "The address, the inbox and the service stay exactly as they were. Only the owner changes." : clearsAnyway ? "The debt cleared before payments stopped, so the operator keeps everything." : "Current. Nobody holds a key to this business."}
           </p>
           {noticed ? (
@@ -86,10 +86,10 @@ export function Simulator() {
         </div>
       </div>
 
-      <div className="space-y-[20svh] px-[var(--margin)] py-16 lg:space-y-[34svh] lg:px-[8%] lg:py-[20svh]">
+      <div className="space-y-14 px-[var(--margin)] py-14 lg:space-y-[34svh] lg:px-[8%] lg:py-[20svh]">
         <div>
-          <h2 id="try-title" className="text-[var(--step-head)] leading-[1.05] font-medium tracking-[-0.02em]" data-reveal>Now stop the payments</h2>
-          <p className="mt-5 text-[var(--step-body)]" data-reveal style={{ "--d": 1 } as React.CSSProperties}>A $1,000 loan to a business that sells checks. The rule that runs here is the one in the contract.</p>
+          <h2 id="try-title" className="text-[length:var(--step-head)] leading-[1.05] font-medium tracking-[-0.02em]" data-reveal>Now stop the payments</h2>
+          <p className="mt-5 text-[length:var(--step-body)]" data-reveal style={{ "--d": 1 } as React.CSSProperties}>A $1,000 loan to a business that sells checks. The rule that runs here is the one in the contract.</p>
         </div>
         <div className="max-w-[44ch] space-y-4" data-reveal>
           <p className="text-[28px] leading-tight font-medium tracking-[-0.01em]">Revenue repays the debt on its own.</p>

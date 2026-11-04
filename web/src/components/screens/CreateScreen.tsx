@@ -10,14 +10,17 @@ import { money, parseAmount, shortHash, toYocto } from "@/lib/format";
 import { createBusiness } from "@/lib/near/actions";
 import { accountExists } from "@/lib/near/rpc";
 import type { Service } from "@/lib/near/types";
+import { topUpGuest } from "@/lib/wallet/guest";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 
 const LABEL = /^[a-z0-9](?:[a-z0-9]|-(?!-))*[a-z0-9]$/;
 
 export function CreateScreen() {
   const router = useRouter();
-  const { account } = useWallet();
+  const { account, kind } = useWallet();
   const { run, busy } = useTx();
+  const [preparing, setPreparing] = useState(false);
+  const [prepareError, setPrepareError] = useState<string | null>(null);
   const sentinel = deployment.sentinel;
   const [label, setLabel] = useState("");
   const [name, setName] = useState("Sentinel");
@@ -68,6 +71,17 @@ export function CreateScreen() {
       secrets_profile: null,
       policy: { vendors: vendorList, max_per_tx: perTxValue.toString(), max_per_day: perDayValue.toString() },
     };
+    if (kind === "guest" && account) {
+      setPreparing(true);
+      try {
+        await topUpGuest(account);
+      } catch (error) {
+        setPrepareError(error instanceof Error ? error.message : "Your test account could not be topped up.");
+        return;
+      } finally {
+        setPreparing(false);
+      }
+    }
     const result = await run(
       createBusiness({ label, name: name.trim(), description: description.trim(), sourceUrl: REPO_URL, service, depositYocto: toYocto(CREATE_DEPOSIT_NEAR) }),
       { done: `${name} is live` },
@@ -81,7 +95,7 @@ export function CreateScreen() {
         <h1 className="text-[28px] leading-tight font-medium tracking-[-0.01em]">Start a business</h1>
         <p className="mt-1 max-w-[70ch] text-[17px]">You get a keyless account that runs your build, sells its work and can borrow against what it earns. You keep control until you take a loan.</p>
       </div>
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_372px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_372px]">
         <Panel>
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="create-form">
             <TextField label="Account name" testId="create-label" value={label} onChange={(v) => setLabel(v.toLowerCase())} placeholder="scout"
@@ -106,7 +120,8 @@ export function CreateScreen() {
               </div>
             </details>
             <ConnectGate reason="Connect to create it. The account that creates a business operates it.">
-              <button type="submit" className="btn btn-primary w-full sm:w-auto" data-testid="create-submit" disabled={!ready || busy}>Create it for {CREATE_DEPOSIT_NEAR} NEAR</button>
+              <button type="submit" className="btn btn-primary w-full sm:w-auto" data-testid="create-submit" disabled={!ready || busy || preparing}>{preparing ? "Preparing your account…" : `Create it for ${CREATE_DEPOSIT_NEAR} NEAR`}</button>
+              {prepareError ? <p role="alert" className="hint" data-error="true">{prepareError}</p> : null}
             </ConnectGate>
           </form>
         </Panel>

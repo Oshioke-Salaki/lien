@@ -52,6 +52,7 @@ body {
 code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
 .num { font-variant-numeric: tabular-nums lining-nums; }
 
+@layer components {
 /* Shared controls. One corner radius for the whole product. */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -89,7 +90,7 @@ textarea.input { padding: 10px 12px; min-height: 76px; }
 .hint[data-error="true"] { color: var(--danger); }
 
 /* App panels: flat, one hairline, no shadow. */
-.panel { background: #fff; border: 1px solid var(--line); border-radius: 2px; }
+.panel { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 2px; }
 .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 18px 0; }
 .panel-head h2, .panel-head h3 { font-size: 15px; font-weight: 600; }
 .panel-body { padding: 12px 18px 18px; }
@@ -115,6 +116,7 @@ textarea.input { padding: 10px 12px; min-height: 76px; }
 .spinner { width: 16px; height: 16px; flex: none; border: 2px solid rgb(255 255 255 / 0.3); border-top-color: #fff; border-radius: 50%; animation: spin 800ms linear infinite; }
 .spinner-ink { border-color: rgb(0 0 0 / 0.15); border-top-color: #000; }
 .skeleton { background: #eef0ee; border-radius: 2px; animation: breathe 1.6s ease-in-out infinite; }
+}
 
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes spin { to { transform: rotate(360deg); } }

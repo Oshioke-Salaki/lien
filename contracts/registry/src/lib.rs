@@ -10,7 +10,7 @@ use near_sdk::store::Vector;
 use near_sdk::{env, near, require, AccountId, BorshStorageKey, CryptoHash, Gas, NearToken, PanicOnDefault, Promise};
 
 /// Storage for both accounts, token registration and an initial compute tank.
-const MIN_DEPOSIT: NearToken = NearToken::from_near(1);
+const MIN_DEPOSIT: NearToken = NearToken::from_millinear(500);
 const COLLECTOR_BALANCE: NearToken = NearToken::from_millinear(50);
 const TOKEN_REGISTRATION: NearToken = NearToken::from_micronear(1_250);
 const GAS_INIT_AGENT: Gas = Gas::from_tgas(30);
@@ -80,7 +80,7 @@ impl Registry {
         service: Value,
     ) -> Promise {
         let deposit = env::attached_deposit();
-        require!(deposit >= MIN_DEPOSIT, "attach at least 1 NEAR");
+        require!(deposit >= MIN_DEPOSIT, "attach at least 0.5 NEAR");
         require!(is_label(&label), "label must be 2 to 32 lowercase letters, digits or single hyphens");
 
         let operator = env::predecessor_account_id();

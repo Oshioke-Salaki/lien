@@ -113,11 +113,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (!isTestnet) throw new Error("Guest accounts only exist on testnet");
       const created = await createGuest();
       guest.current = created;
-      setAccount(created.accountId);
-      setKind("guest");
-      // Guests start with test funds so they can use every part of the product.
+      // Guests start with test funds, and only appear signed in once they have them.
       const registered = await isRegistered(created.accountId);
       await sendAsGuest(created, faucet(created.accountId, 500n * 10n ** BigInt(deployment.tokenDecimals), { register: !registered }));
+      setAccount(created.accountId);
+      setKind("guest");
     },
     disconnect: async () => {
       if (guest.current) {

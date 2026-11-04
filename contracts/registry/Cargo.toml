@@ -1,6 +1,6 @@
 [package]
 name = "lien-registry"
-description = "Creates keyless agent businesses from audited global contract code and lists them"
+description = "Creates keyless agent businesses from published global contract code and lists them"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

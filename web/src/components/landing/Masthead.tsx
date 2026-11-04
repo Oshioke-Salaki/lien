@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Mark } from "@/components/Mark";
 import { deployment, isTestnet } from "@/lib/config";
+import { FLAG_TEXT, parseReport } from "@/lib/report";
 import { useMarketPulse } from "./useMarketPulse";
 
 const NAV = [
@@ -14,7 +15,7 @@ const NAV = [
 ];
 
 function Tile({ tone, className = "", children }: { tone: string; className?: string; children: React.ReactNode }) {
-  return <div className={`flex flex-col justify-between overflow-hidden p-3 lg:p-4 ${className}`} style={{ background: tone }}>{children}</div>;
+  return <div className={`flex flex-col justify-between overflow-hidden p-4 ${className}`} style={{ background: tone }}>{children}</div>;
 }
 
 function Photo({ src, alt, className = "", position = "center", drift = false, priority = false }: { src: string; alt: string; className?: string; position?: string; drift?: boolean; priority?: boolean }) {
@@ -29,6 +30,7 @@ export function Masthead() {
   const pulse = useMarketPulse();
   const jobs = pulse.data?.jobs;
   const hash = deployment.sentinel?.hash ?? "";
+  const report = parseReport(pulse.data?.latest?.report ?? null);
   return (
     <section className="flex min-h-svh flex-col">
       <header className="flex items-stretch bg-white text-[15px]">
@@ -47,9 +49,9 @@ export function Masthead() {
       {/* The filing: real documents of the trade beside live facts from the chain. */}
       <div className="grid h-[38svh] grid-cols-3 grid-rows-2 lg:h-[46svh] lg:grid-cols-6">
         <Photo className="col-span-2" src="/pictures/sheriff-s-sale.jpg" alt="A courthouse wall covered in identical sheriff's sale notices" position="35% 45%" drift priority />
-        <Tile tone="var(--accent)" className="lg:row-span-2">
+        <Tile tone="var(--accent)" className="row-span-2">
           <p className="text-[clamp(3rem,7vw,7rem)] leading-none font-medium tracking-[-0.03em]">0</p>
-          <p className="text-[15px] leading-snug lg:text-[17px]">keys on any business. Nobody can spend its money directly.</p>
+          <p className="text-[15px] leading-snug lg:text-[17px]">keys on any business.<span className="hidden lg:inline"> Nobody can spend its money directly.</span></p>
         </Tile>
         <Photo className="hidden lg:block" src="/pictures/couple-of-metallic-padlocks-on-old-door.jpg" alt="Two old metal padlocks on a door frame" />
         <Tile tone="var(--yellow)" className="hidden lg:flex">
@@ -65,10 +67,11 @@ export function Masthead() {
           <p className="text-[15px] leading-snug lg:text-[17px]">Every sale pays lenders first.</p>
         </Tile>
         <Photo className="hidden lg:block" src="/pictures/key-to-the-open-door.jpg" alt="An old key in a door" />
-        <div className="hidden bg-white p-3 lg:col-span-2 lg:block lg:p-4" data-ui>
-          <p className="text-[13px] muted">Latest delivered job{pulse.data?.latestBusiness ? `, ${pulse.data.latestBusiness}` : ""}</p>
-          <p className="mt-1 truncate text-[15px] font-medium">{pulse.data?.latest?.input ?? "Reading the chain…"}</p>
-          <pre className="mt-1 text-[13px] leading-snug whitespace-pre-wrap text-[var(--muted)]"><code>{pulse.data?.latest?.report?.slice(0, 96) ?? ""}</code></pre>
+        <div className="hidden min-w-0 bg-white p-4 lg:col-span-2 lg:block" data-ui>
+          <p className="text-[14px] muted">Newest job{pulse.data?.latestBusiness ? `, sold by ${pulse.data.latestBusiness}` : ""}</p>
+          <p className="mt-2 truncate text-[17px] font-medium">{pulse.data?.latest?.input ?? "Reading the chain…"}</p>
+          {report ? <p className="mt-1 text-[17px]">{report.level[0]!.toUpperCase()}{report.level.slice(1)} risk, <span className="num">score {report.score} of 100</span></p> : null}
+          {report?.flags[0] ? <p className="mt-1 line-clamp-2 text-[14px] muted">{FLAG_TEXT[report.flags[0]] ?? ""}</p> : null}
         </div>
       </div>
 

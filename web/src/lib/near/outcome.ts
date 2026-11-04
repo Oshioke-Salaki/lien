@@ -38,7 +38,7 @@ const FRIENDLY: Array<[RegExp, string]> = [
   [/The account doesn't have enough balance/, "You do not have enough funds for this."],
   [/LackBalanceForState/, "This account does not have enough NEAR to cover its storage."],
   [/AccountAlreadyExists/, "That name is taken. Try another."],
-  [/NotEnoughBalance/, "This account does not have enough NEAR for this transaction."],
+  [/NotEnoughBalance|Not enough balance/i, "This account does not have enough NEAR for this transaction. NEAR holds back gas up front and returns what is unused."],
 ];
 
 export function friendlyError(message: string): string {

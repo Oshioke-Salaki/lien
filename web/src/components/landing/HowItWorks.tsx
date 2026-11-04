@@ -10,8 +10,8 @@ export function HowItWorks() {
   return (
     <section id="how" className="px-[var(--margin)] py-[120px] lg:py-[180px]" aria-labelledby="how-title">
       <div className="lg:ml-[calc(42%-var(--margin))]">
-        <h2 id="how-title" className="text-[var(--step-head)] leading-[1.05] font-medium tracking-[-0.02em]" data-reveal>The life of a loan, to scale</h2>
-        <p className="mt-5 max-w-[56ch] text-[var(--step-body)]" data-reveal style={{ "--d": 1 } as React.CSSProperties}>
+        <h2 id="how-title" className="text-[length:var(--step-head)] leading-[1.05] font-medium tracking-[-0.02em]" data-reveal>The life of a loan, to scale</h2>
+        <p className="mt-5 max-w-[56ch] text-[length:var(--step-body)]" data-reveal style={{ "--d": 1 } as React.CSSProperties}>
           A typical 90 day loan. A borrower who pays only ever sees the long sage stretch. Nobody needs a court, an admin or a keeper for the rest.
         </p>
       </div>

@@ -38,4 +38,4 @@ export const accountUrl = (id: string) => `${EXPLORER}/address/${id}`;
 export const attestationUrl = (tx: string) => `${OUTLAYER_API}/attestations/by-tx/${tx}`;
 
 /** NEAR needed to create a business: storage plus a starting compute tank. */
-export const CREATE_DEPOSIT_NEAR = "1";
+export const CREATE_DEPOSIT_NEAR = "0.5";

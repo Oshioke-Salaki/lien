@@ -30,7 +30,7 @@ export function BusinessScreen({ id }: { id: string }) {
     return (
       <div className="space-y-4" aria-busy="true">
         <Skeleton className="h-10 w-72" />
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_372px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_372px]">
           <Skeleton className="h-64" />
           <Skeleton className="h-64" />
         </div>
@@ -58,7 +58,7 @@ export function BusinessScreen({ id }: { id: string }) {
 
       {foreclosed ? <ForeclosureNotice key={b.current_loan!.id} /> : null}
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_372px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_372px]">
         <div className="space-y-4">
           <DebtPanel business={b} now={now} />
           <WaterfallPanel business={b} now={now} />

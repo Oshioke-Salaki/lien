@@ -103,9 +103,9 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
         <TextField label="Your share of sales, %" value={operator} onChange={setOperator} />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <DurationField label="Payment period" secs={times.window} onChange={(window) => setTimes({ ...times, window })} />
+        <DurationField label="Payment period" testId="offer-window" secs={times.window} onChange={(window) => setTimes({ ...times, window })} />
         <DurationField label="Term" secs={times.term} onChange={(term) => setTimes({ ...times, term })} />
-        <DurationField label="Grace" secs={times.grace} onChange={(grace) => setTimes({ ...times, grace })} />
+        <DurationField label="Grace" testId="offer-grace" secs={times.grace} onChange={(grace) => setTimes({ ...times, grace })} />
         <DurationField label="Raising period" secs={times.funding} onChange={(funding) => setTimes({ ...times, funding })} />
         <DurationField label="Auction" secs={times.auction} onChange={(auction) => setTimes({ ...times, auction })} />
         <TextField label="Lowest first bid, % of debt" value={reserve} onChange={setReserve} />

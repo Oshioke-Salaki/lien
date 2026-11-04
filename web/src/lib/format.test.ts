@@ -9,10 +9,14 @@ describe("amount", () => {
     expect(amount(-1_500_000n)).toBe("-1.50");
   });
   it("never rounds up past what is held", () => expect(amount("999999")).toBe("0.99"));
-  it("keeps small amounts visible", () => {
+  it("is exact, so parts add up on screen", () => {
     expect(smartAmount("20000")).toBe("0.02");
     expect(smartAmount("1234")).toBe("0.001234");
     expect(smartAmount("0")).toBe("0.00");
+    expect(smartAmount("75000")).toBe("0.075");
+    expect(smartAmount("1500000")).toBe("1.50");
+    expect(smartAmount("110000000")).toBe("110.00");
+    expect(smartAmount("1234567000000")).toBe("1,234,567.00");
   });
 });
 

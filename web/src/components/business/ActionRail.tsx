@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ConnectGate, useTx } from "@/components/Tx";
+import { ConnectButtons, ConnectGate as Gate, useTx } from "@/components/Tx";
 import { Panel } from "@/components/ui";
 import { usePay } from "@/hooks/usePay";
 import { useLive } from "@/hooks/useLive";
@@ -19,15 +19,23 @@ import { AmountField, checkAmount, TextField, useMyBalance } from "./fields";
 
 type Props = { business: Business; now: number; refresh: () => Promise<void> };
 
+const ConnectGate = Gate;
+
 export function ActionRail({ business: b, now, refresh }: Props) {
-  const { account } = useWallet();
+  const { account, ready } = useWallet();
   const s = standing({ ...b, now });
   const loan = b.current_loan;
   const isOperator = account === b.operator;
   const foreclosed = loan?.status === "Foreclosed";
 
   return (
-    <aside className="space-y-4 lg:sticky lg:top-6" aria-label="Actions">
+    <aside className="space-y-4" aria-label="Actions">
+      {!account && ready ? (
+        <Panel title="Take part">
+          <p className="mb-3 text-[15px]">Connect to lend, buy, bid or foreclose. Everything else on this page is open to read.</p>
+          <ConnectButtons />
+        </Panel>
+      ) : null}
       {loan?.status === "Funding" ? <LendCard business={b} now={now} refresh={refresh} /> : null}
       {s === "behind" || s === "foreclosable" ? <ForecloseCard business={b} now={now} refresh={refresh} /> : null}
       {foreclosed ? <AuctionCard business={b} now={now} refresh={refresh} /> : null}
@@ -61,7 +69,7 @@ function LendCard({ business: b, now, refresh }: Props) {
     return (
       <Panel title="Raising has ended">
         <p className="mb-3 text-[15px]">This loan did not fill in time. Cancelling lets every lender claim their money back.</p>
-        <ConnectGate reason="Connect to cancel it. Anyone can.">
+        <ConnectGate quiet reason="Connect to cancel it. Anyone can.">
           <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={async () => { await run(tx.cancelOffer(b.id), { requiredOn: b.id, done: "The offer was cancelled" }); await refresh(); }}>Cancel the offer</button>
         </ConnectGate>
       </Panel>
@@ -70,7 +78,7 @@ function LendCard({ business: b, now, refresh }: Props) {
 
   return (
     <Panel title="Lend to this business" aside={`Closes ${fromNow(loan.funding_deadline, now)}`}>
-      <ConnectGate reason="Connect to lend. You can read everything without one.">
+      <ConnectGate quiet reason="Connect to lend. You can read everything without one.">
         <form className="space-y-3" onSubmit={async (e) => {
           e.preventDefault();
           if (!value || check.error) return;
@@ -105,7 +113,7 @@ function ForecloseCard({ business: b, now, refresh }: Props) {
           ? "It missed its payments and its grace period is over. Anyone can take this step, and the business keeps running for lenders."
           : `A payment clears this at once. If none comes, anyone can foreclose ${fromNow(loan.foreclosable_at!, now)}.`}
       </p>
-      <ConnectGate reason="Connect to foreclose. Anyone can.">
+      <ConnectGate quiet reason="Connect to foreclose. Anyone can.">
         <button type="button" data-testid="foreclose" className="btn btn-danger w-full" disabled={busy || !ready} onClick={async () => { await run(tx.foreclose(b.id), { requiredOn: b.id, done: "The business is now in foreclosure" }); await refresh(); }}>
           {ready ? "Foreclose now" : `Foreclose ${fromNow(loan.foreclosable_at!, now)}`}
         </button>
@@ -136,13 +144,13 @@ function AuctionCard({ business: b, now, refresh }: Props) {
         <dt>Working capital included</dt><dd>{money(b.ledger.opex)}</dd>
       </dl>
       {ended ? (
-        <ConnectGate reason="Connect to complete the sale. Anyone can.">
+        <ConnectGate quiet reason="Connect to complete the sale. Anyone can.">
           <button type="button" data-testid="settle" className="btn btn-primary w-full" disabled={busy} onClick={async () => { await run(tx.settleAuction(b.id), { requiredOn: b.id, done: "The sale is complete" }); await refresh(); }}>
             Complete the sale{iWin ? ", you won" : ""}
           </button>
         </ConnectGate>
       ) : (
-        <ConnectGate reason="Connect to bid.">
+        <ConnectGate quiet reason="Connect to bid.">
           <form className="space-y-3" onSubmit={async (e) => {
             e.preventDefault();
             if (!check.value || check.error) return;
@@ -186,7 +194,7 @@ function BuyCard({ business: b, refresh }: { business: Business; refresh: () => 
       <p className="mb-3 text-[15px]">
         Sealed code reads a NEAR account from the chain and scores what could go wrong if you trust it. If the run fails, your money comes back.
       </p>
-      <ConnectGate reason="Connect to buy one.">
+      <ConnectGate quiet reason="Connect to buy one.">
         <form className="space-y-3" onSubmit={async (e) => {
           e.preventDefault();
           if (!input.trim()) return;
@@ -228,7 +236,7 @@ function RepayCard({ business: b, refresh, isOperator }: { business: Business; r
       <p className="mb-3 text-[15px]">
         {foreclosed ? `Paying the full ${money(outstanding)} cancels the sale and returns the business to its operator. Anyone can pay.` : "Anyone can pay. Payments count towards the schedule right away, and anything above the debt comes back."}
       </p>
-      <ConnectGate reason="Connect to pay.">
+      <ConnectGate quiet reason="Connect to pay.">
         <form className="space-y-3" onSubmit={async (e) => {
           e.preventDefault();
           if (!check.value || check.error) return;

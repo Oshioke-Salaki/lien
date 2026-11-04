@@ -83,14 +83,15 @@ export function useTx() {
 }
 
 /** Shows children while connected, or the way to connect when not. */
-export function ConnectGate({ children, reason }: { children: ReactNode; reason: string }) {
+export function ConnectGate({ children, reason, quiet = false }: { children: ReactNode; reason: string; quiet?: boolean }) {
   const { account, ready } = useWallet();
   if (!ready) return <p className="muted">Checking your wallet…</p>;
   if (account) return <>{children}</>;
+  // `quiet` is for screens that already show the connect buttons once.
   return (
     <div className="space-y-3">
-      <p className="muted">{reason}</p>
-      <ConnectButtons />
+      <p className="text-[15px] muted">{reason}</p>
+      {quiet ? null : <ConnectButtons />}
     </div>
   );
 }
@@ -120,7 +121,7 @@ export function ConnectButtons({ compact = false }: { compact?: boolean }) {
   };
 
   return (
-    <div className={compact ? "flex flex-col gap-2" : "flex flex-wrap gap-2"}>
+    <div className={compact ? "flex flex-col gap-2 [&>.btn]:whitespace-normal [&>.btn]:px-2 [&>.btn]:text-[15px]" : "flex flex-wrap gap-2"}>
       <button type="button" className="btn btn-primary" disabled={state !== "idle"} onClick={() => attempt("wallet", connect)}>
         {state === "wallet" ? "Opening…" : "Connect a wallet"}
       </button>
@@ -134,7 +135,7 @@ function GuestButton({ busy, disabled, onClick }: { busy: boolean; disabled: boo
   if (process.env.NEXT_PUBLIC_NETWORK === "mainnet") return null;
   return (
     <button type="button" className="btn btn-secondary" disabled={disabled} onClick={onClick}>
-      {busy ? "Creating your account…" : "Try with a free test account"}
+      {busy ? "Creating your account…" : "Use a free test account"}
     </button>
   );
 }

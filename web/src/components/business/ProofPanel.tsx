@@ -43,7 +43,7 @@ export function ProofPanel({ business: b, listed }: { business: Business; listed
     let alive = true;
     const set = (key: string) => (row: Row) => { if (alive) setRows((all) => ({ ...all, [key]: row })); };
     toRow("Nobody holds its keys", checkNoKeys(id), set("keys"), "Reading the account's access keys");
-    toRow("It runs the audited contract", checkCode(id), set("code"), "Comparing its code with the published hash");
+    toRow("It runs the published contract", checkCode(id), set("code"), "Comparing its code with the published hash");
     toRow("The pinned build is public", checkBuild(url, hash), set("build"), "Downloading the bytes and hashing them here");
     return () => { alive = false; };
   }, [id, url, hash]);
