@@ -17,3 +17,7 @@ scripts/.state/
 # Local agent tooling
 .claude/
 skills-lock.json
+web/AGENTS.md
+web/CLAUDE.md
+web/next-env.d.ts
+web/.next/

@@ -9,7 +9,8 @@
     "create-business": "tsx src/create-business.ts",
     "store-secret": "tsx src/store-secret.ts",
     "keeper": "tsx src/keeper.ts",
-    "e2e": "tsx src/e2e.ts"
+    "e2e": "tsx src/e2e.ts",
+    "seed": "tsx src/seed.ts"
   },
   "dependencies": {
     "@noble/ciphers": "^2.4.0",
