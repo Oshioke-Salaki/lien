@@ -15,7 +15,7 @@ async function startGuest(page: Page) {
   await expect(page.getByText("500.00 tUSD").first()).toBeVisible();
 }
 
-test("one loan, from creation to sale, through the app", async ({ page }) => {
+test("one loan, from creation to foreclosure and redemption, through the app", async ({ page }) => {
   test.setTimeout(420_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await startGuest(page);
