@@ -3,6 +3,8 @@
 import { RPC_URLS, NETWORK, deployment } from "../config";
 import type { AgentView, Business, Job, LoanView, NoteView } from "./types";
 
+const RPC_TIMEOUT_MS = 8_000;
+
 export class RpcError extends Error {}
 
 async function rpc<T>(params: unknown): Promise<T> {
@@ -13,6 +15,8 @@ async function rpc<T>(params: unknown): Promise<T> {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ jsonrpc: "2.0", id: "lien", method: "query", params }),
+        // A hung node must not hold up the next one.
+        signal: AbortSignal.timeout(RPC_TIMEOUT_MS),
       });
       if (!response.ok) throw new RpcError(`RPC answered ${response.status}`);
       const body = (await response.json()) as { result?: T & { error?: string }; error?: { cause?: { name?: string }; message?: string } };

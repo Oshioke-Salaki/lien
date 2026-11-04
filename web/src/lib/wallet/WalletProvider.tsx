@@ -8,6 +8,8 @@ import { readOutcome, type RawOutcome, type TxResult } from "../near/outcome";
 import { isRegistered } from "../near/rpc";
 import { createGuest, forgetGuest, loadGuest, sendAsGuest, type Guest } from "./guest";
 
+const WALLET_RESTORE_MS = 2_500;
+
 export type WalletKind = "wallet" | "guest";
 
 type WalletState = {
@@ -61,6 +63,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           setKind("guest");
         }
       } else {
+        // The wallet list loads over the network. A slow connection must not hold
+        // up the page, so show it as signed out and restore the wallet if it arrives.
+        const giveUp = setTimeout(() => { if (!cancelled) setReady(true); }, WALLET_RESTORE_MS);
         try {
           const instance = await getConnector();
           const { accounts } = await instance.getConnectedWallet();
@@ -70,6 +75,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           }
         } catch {
           // Nobody is connected, which is the normal first visit.
+        } finally {
+          clearTimeout(giveUp);
         }
       }
       if (!cancelled) setReady(true);

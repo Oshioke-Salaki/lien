@@ -25,8 +25,8 @@ export const deployment: Deployment = active;
 export const isTestnet = NETWORK === "testnet";
 
 export const RPC_URLS: Record<Network, string[]> = {
-  testnet: ["https://rpc.testnet.fastnear.com", "https://test.rpc.fastnear.com"],
-  mainnet: ["https://rpc.mainnet.fastnear.com", "https://free.rpc.fastnear.com"],
+  testnet: ["https://rpc.testnet.fastnear.com", "https://test.rpc.fastnear.com", "https://rpc.testnet.near.org"],
+  mainnet: ["https://rpc.mainnet.fastnear.com", "https://free.rpc.fastnear.com", "https://rpc.mainnet.near.org"],
 };
 
 export const OUTLAYER_API = isTestnet ? "https://testnet-api.outlayer.ai" : "https://api.outlayer.ai";

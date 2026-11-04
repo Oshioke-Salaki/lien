@@ -51,7 +51,7 @@ export function Masthead() {
         <Photo className="col-span-2" src="/pictures/sheriff-s-sale.jpg" alt="A courthouse wall covered in identical sheriff's sale notices" position="35% 45%" drift priority />
         <Tile tone="var(--accent)" className="row-span-2">
           <p className="text-[clamp(3rem,7vw,7rem)] leading-none font-medium tracking-[-0.03em]">0</p>
-          <p className="text-[15px] leading-snug lg:text-[17px]">keys on any business.<span className="hidden lg:inline"> Nobody can spend its money directly.</span></p>
+          <p className="text-[15px] leading-snug lg:text-[17px]">keys on any business.<span className="hidden md:inline"> Nobody can spend its money directly.</span></p>
         </Tile>
         <Photo className="hidden lg:block" src="/pictures/couple-of-metallic-padlocks-on-old-door.jpg" alt="Two old metal padlocks on a door frame" />
         <Tile tone="var(--yellow)" className="hidden lg:flex">
@@ -75,7 +75,7 @@ export function Masthead() {
         </div>
       </div>
 
-      <div className="grid flex-1 content-center gap-6 px-[var(--margin)] py-8 lg:grid-cols-[calc(42%-var(--margin))_1fr] lg:gap-0 lg:py-6">
+      <div className="grid flex-1 content-center gap-6 px-[var(--margin)] pt-20 pb-8 lg:grid-cols-[calc(42%-var(--margin))_1fr] lg:gap-0 lg:py-6">
         <h1 className="lines text-[13vw] leading-[1.02] font-medium tracking-[-0.03em] lg:order-2 lg:text-[7.4vw]">
           <span className="line"><span data-line style={{ "--i": 0 } as React.CSSProperties}>Lend to AI.</span></span>
           <span className="line"><span data-line style={{ "--i": 1 } as React.CSSProperties}>Repossess it.</span></span>

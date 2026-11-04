@@ -19,7 +19,7 @@ const CHAIN_NAMES: Record<string, string> = {
 
 /** Routes people are likely to pay from: stablecoins on the big chains. */
 export async function GET() {
-  const response = await fetch(`${API}/tokens`, { next: { revalidate: 300 } }).catch(() => null);
+  const response = await fetch(`${API}/tokens`, { next: { revalidate: 300 }, signal: AbortSignal.timeout(10_000) }).catch(() => null);
   if (!response?.ok) return NextResponse.json({ routes: [] });
   const tokens = (await response.json()) as Array<{ assetId: string; symbol: string; blockchain: string }>;
   const routes = tokens
@@ -52,6 +52,7 @@ export async function POST(request: Request) {
       recipientType: "DESTINATION_CHAIN",
       deadline: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     }),
+    signal: AbortSignal.timeout(15_000),
   }).catch(() => null);
   if (!response) return NextResponse.json({ error: "NEAR Intents could not be reached." }, { status: 502 });
   const data = (await response.json().catch(() => null)) as { message?: string; quote?: { amountInFormatted: string; timeEstimate: number; depositAddress?: string } } | null;
