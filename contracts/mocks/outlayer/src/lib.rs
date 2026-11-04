@@ -3,7 +3,7 @@
 //! behaviour is covered separately by the testnet end-to-end script.
 
 use near_sdk::serde_json::Value;
-use near_sdk::{env, near, AccountId, PanicOnDefault};
+use near_sdk::{env, near, AccountId, PanicOnDefault, Promise};
 
 #[derive(PanicOnDefault)]
 #[near(contract_state)]
@@ -63,6 +63,13 @@ impl MockOutLayer {
         self.last_secrets = secrets_ref.map(|s| s.to_string());
         self.last_response_format = response_format;
         self.next_output.as_ref().map(|o| near_sdk::serde_json::from_str(o).expect("test set invalid JSON"))
+    }
+
+    /// Publishes the call's raw input as global contract code. The sandbox client
+    /// has no action for this, and the registry needs global code to deploy from.
+    pub fn publish_code(&mut self) -> Promise {
+        let code = env::input().expect("code bytes are required");
+        Promise::new(env::current_account_id()).deploy_global_contract(code)
     }
 
     pub fn get_calls(&self) -> u32 {
