@@ -6,6 +6,8 @@ Lien is a market of loans to AI businesses on NEAR. Each business is a contract 
 
 **Live on testnet: [lien-five.vercel.app](https://lien-five.vercel.app)** · no wallet needed.
 
+**Judging? Start with [JUDGES.md](JUDGES.md):** the two-minute tour, every claim with its test and its testnet transaction, and the honest limits.
+
 Built for NEAR HACKATHON, November 2026. Tracks: Agent Economy, Unstoppable DeFi, Autonomous Business, AI Security & Defense.
 
 ## The problem
@@ -40,7 +42,7 @@ Open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally (bel
 | Bid on **Sentinel Sale** | Your bid stands, and the highest bid takes the business when the auction ends |
 | Start your own at `/create`, then choose **Short demo clocks** | Your own keyless business, and a full foreclosure in about ten minutes |
 
-The landing page also has a simulator under **Now stop the payments**, using the contract's waterfall rule.
+The landing page also has a simulator: set the revenue and the lenders' share, then stop the payments. It runs the contract's waterfall rule.
 
 A full run on the live network, with every transaction linked, is in [docs/evidence/testnet-e2e.md](docs/evidence/testnet-e2e.md).
 
@@ -136,6 +138,13 @@ ops                   Deploy, publish, seed, keeper, secrets, live end-to-end
 web                   Next.js app and landing page
 deployments           Addresses of each deployment
 ```
+
+## Disclosures
+
+- **Written during the hackathon.** The first commit is from 4 November 2026; nothing predates the build window.
+- **Libraries:** near-sdk (Rust contracts), cargo-near, near-workspaces (sandbox tests), proptest, near-api-js, @hot-labs/near-connect (wallets), Next.js, React, Tailwind CSS, Vitest and Playwright. OutLayer, FastFS, NEAR Intents 1Click and NEAR AI Cloud are used as services.
+- **Design kit:** the landing page is built on the MIT-licensed [taste-skill](https://github.com/Leonxlnx/taste-skill) design system, whose CSS, scripts and fragments are vendored under `web/public/site/assets`.
+- **AI-generated code:** much of the code, tests and documents were written with an AI coding assistant, then run, tested and reviewed by the author. Every claim in this repository is backed by a test or a linked transaction.
 
 ## License
 

@@ -1,6 +1,36 @@
-# NEAR HACKATHON submission draft
+# NEAR HACKATHON submission
 
-Nothing here has been sent. The form cannot be edited after submitting, and the repository must be public first.
+Nothing here has been sent. The form cannot be edited after submitting (fixes go through nearhackathon.com/request-changes), each repository can be submitted once, and the repository must be public first.
+
+## Requirements checklist
+
+Checked against nearhackathon.com and its HACKATHON.md on 13 November 2026. **Deadline: 14 November 2026, 23:59 UTC.** Judging runs 16 to 18 November; Claude Code and Codex screen every project first for whether it runs and does what the README says, then the human judges decide.
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| Code written during the window (after the 19 October announcement) | Met | First commit 4 November 2026 (`git log --reverse`) |
+| Repository is public, and stays public through judging | **Not yet: the user must flip it** | github.com/Oshioke-Salaki/lien is private. Settings, Danger Zone, Change visibility |
+| README says what it is and what problem it solves | Met | [README.md](../README.md), "The problem" and "What Lien does" |
+| README gives reproducible "do X, see Y" steps | Met | README "Try it", [JUDGES.md](../JUDGES.md) |
+| README discloses existing code, libraries and AI-generated code | Met | README "Disclosures" |
+| A LICENSE file | Met | [LICENSE](../LICENSE), MIT |
+| It runs and does what the README says (AI screening) | Met on the last runs | Live app [lien-five.vercel.app](https://lien-five.vercel.app); test commands in README "Test it"; live run in [evidence/testnet-e2e.md](evidence/testnet-e2e.md) |
+| Demo post on X: says it was built at NEAR HACKATHON, tags @NEARProtocol and #NEARHackathon, has a video or screenshots | **Not yet: the user posts it** | Draft below |
+| Form: project name | Ready | Lien |
+| Form: team lead, email, team size | **The user fills these** | |
+| Form: tracks, one or more | Ready | Agent Economy, Unstoppable DeFi, Autonomous Business, AI Security & Defense |
+| Form: NEAR wallet address for the prize | **The user provides it** | A mainnet account; prizes are paid in NEAR within 30 days of results |
+| Form: repository link | Ready | https://github.com/Oshioke-Salaki/lien |
+| Form: demo post link | **After the X post** | |
+| Form: "What did you build?", 20 to 2,000 characters | Ready | Below |
+| Form: website (optional) | Ready | https://lien-five.vercel.app |
+| Form: consent checkbox | **The user ticks it** | |
+| One submission per project; up to two projects per person, each README naming the other | Met | One project |
+| Testnet is eligible unless an integration is mainnet only | Met | Everything runs on testnet. NEAR Intents has no testnet, so the app shows a live mainnet quote with sending switched off, as HACKATHON.md suggests |
+
+**Only the user can do these,** in this order: make the repository public; record the demo video; post it on X; then submit the form with the post link, the prize wallet, team lead, email and team size. The guest sponsor (`guests.lien-13569.testnet`) should hold enough testnet NEAR for judging: each free account costs 0.45 NEAR, plus 0.6 to start a business.
+
+## Form answers
 
 **Project name:** Lien
 
@@ -22,7 +52,9 @@ Nothing here has been sent. The form cannot be edited after submitting, and the 
 
 **Repository:** https://github.com/Oshioke-Salaki/lien
 
-**You still need to provide:** team lead name, contact email, team size, a NEAR mainnet account for prizes, and the X post link.
+**Website:** https://lien-five.vercel.app
+
+**You still need to provide:** team lead name, contact email, team size, a NEAR mainnet account for prizes, the X post link, and the consent tick.
 
 ## Draft X post
 
@@ -34,8 +66,10 @@ Nothing here has been sent. The form cannot be edited after submitting, and the 
 >
 > Live on testnet. No wallet needed.
 > https://lien-five.vercel.app
+>
+> #NEARHackathon @NEARProtocol
 
-Attach the demo video. Mention @NEARProtocol and @NEAR_hckthn.
+Attach the demo video. Tag @NEARProtocol and #NEARHackathon (both required).
 
 ## Demo video plan, about two minutes
 

@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en" data-type="software" data-radius="sharp" data-buttons="pill" data-motion>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lien: loans to AI businesses, repaid from every sale</title>
+<meta name="description" content="Lend to AI businesses on NEAR that hold no keys and run sealed code. Lenders are paid first from each sale, and anyone can foreclose a business that stops paying.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Lien: loans to AI businesses, repaid from every sale">
+<meta property="og:description" content="AI businesses on NEAR borrow against their own sales. Stop paying, and the business changes owners.">
+<meta property="og:image" content="/site/share.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/site/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0c0a08">
+<meta name="site-kind" content="software">
+<meta name="page-type" content="software">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400..700&family=JetBrains+Mono:wght@400..500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site/assets/system.css">
+<link rel="stylesheet" href="/site/assets/ui/cards.css">
+<link rel="stylesheet" href="/site/assets/motion/motion.css">
+<link rel="stylesheet" href="/site/assets/backgrounds/backgrounds.css">
+<link rel="stylesheet" href="/site/assets/layout/layout.css">
+<link rel="stylesheet" href="/site/assets/icons/icon.css">
+<style>
+:root {
+  --p-bg: #0c0a08; --p-surface: #181512; --p-ink: #ffffff; --p-muted: #8f8a84;
+  --p-accent: #c9a45a; --p-accent-ink: #0c0a08; --p-action: #c9a45a; --p-action-ink: #0c0a08;
+  --p-inv-bg: #ffffff; --p-inv-surface: #ebebeb; --p-inv-ink: #0c0a08; --p-inv-muted: #5c5b59;
+  --p-inv-accent: #0c0a08; --p-inv-accent-ink: #ffffff; --p-inv-action: #0c0a08; --p-inv-action-ink: #ffffff;
+  --font-display: "Epilogue", system-ui, sans-serif;
+  --font-text: "Epilogue", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.035em;
+  --display-tracking-xl: -0.045em;
+  --ly-scale: 0.97;
+}
+</style>
+<link rel="stylesheet" href="/site/assets/ui/base.css">
+<link rel="stylesheet" href="/site/assets/ui/window/fragment.css">
+<link rel="stylesheet" href="/site/assets/ui/toggles/fragment.css">
+<link rel="stylesheet" href="/site/assets/ui/notify/fragment.css">
+<link rel="stylesheet" href="/site/assets/ui/checklist/fragment.css">
+<link rel="stylesheet" href="/site/assets/diagrams/diagram.css">
+<script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
+<script src="/site/assets/backgrounds/backgrounds.js"></script>
+<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
+<link rel="modulepreload" href="/site/assets/moments/moments.js">
+<link rel="modulepreload" href="/site/assets/moments/lib.js">
+<link rel="modulepreload" href="/site/assets/moments/liquid-type/moment.js">
+<link rel="modulepreload" href="/site/assets/moments/iris-opens/moment.js">
+<style>
+  /* inside the visuals only: the business screen the product really shows */
+  .biz { display: grid; gap: 14px; padding: 18px 20px; color: var(--u-ink); font-size: 13px; }
+  .biz__top { display: flex; align-items: center; gap: 10px; }
+  .biz__name { font-size: 17px; font-weight: 500; }
+  .biz__state { margin-left: auto; }
+  .biz__state.is-due { color: #a5541b; }
+  .biz__lead { color: var(--u-muted); font-size: 13px; }
+  .biz__fig { display: flex; align-items: baseline; gap: 6px; }
+  .biz__fig b { font-size: 34px; font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .biz__fig span { color: var(--u-muted); }
+  .biz__bar { height: 8px; background: var(--u-fill-2); border-radius: 4px; overflow: hidden; }
+  .biz__bar i { display: block; height: 100%; width: calc(var(--k, 0.14) * 100%); background: var(--u-ink); border-radius: 4px; }
+  .biz__row { display: flex; justify-content: space-between; gap: 12px; color: var(--u-muted); font-variant-numeric: tabular-nums; }
+  .biz__row b { color: var(--u-ink); font-weight: 500; }
+  .biz__split { display: grid; grid-template-columns: 30fr 20fr 50fr; gap: 3px; height: 26px; }
+  .biz__split i { border-radius: 3px; }
+  .biz__split i:nth-child(1) { background: #c9a45a; }
+  .biz__split i:nth-child(2) { background: var(--u-ink); }
+  .biz__split i:nth-child(3) { background: var(--u-fill-3); }
+  .biz__legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-variant-numeric: tabular-nums; }
+  .biz__legend span { display: grid; color: var(--u-muted); }
+  .biz__legend b { color: var(--u-ink); font-weight: 500; }
+  .biz__jobs { display: grid; border-top: 1px solid var(--u-line); }
+  .biz__jobs li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--u-line); align-items: center; }
+  .biz__jobs li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .biz__lvl { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--u-fill-2); }
+  .biz__lvl.is-high { background: #f6dccd; color: #8a3a12; }
+  .biz__lvl.is-medium { background: #f3ead2; color: #6d5214; }
+  .biz__lend { display: flex; gap: 8px; align-items: center; }
+  .biz__lend .ui-btn { height: 32px; padding: 0 14px; }
+  .biz__input { flex: 1; height: 32px; border-radius: var(--u-r3); box-shadow: inset 0 0 0 1px var(--u-line-2); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; color: var(--u-ink); }
+  .hero__media .stage { position: absolute; inset: 0; }
+  .hero__media .at-corner { width: min(560px, calc(100% - 64px)); }
+  .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); overflow: hidden; }
+  .app__pane--list { border-right: 1px solid var(--u-line); min-width: 0; }
+  .app__pane--list .ui-win { border: 0; border-radius: 0; box-shadow: none; height: 100%; }
+  .app__pane--open { min-width: 0; }
+  .mk { display: grid; grid-template-rows: auto 1fr auto; height: 100%; font-size: 13px; color: var(--u-ink); }
+  .mk__bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--u-line); color: var(--u-muted); }
+  .mk__bar b { color: var(--u-ink); font-weight: 500; } .mk__bar i { font-style: normal; opacity: .6; }
+  .mk__rows { list-style: none; margin: 0; padding: 8px; display: grid; align-content: start; gap: 2px; }
+  .mk__rows li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-radius: var(--u-r3); }
+  .mk__rows li.is-sel { background: var(--u-fill-2); }
+  .mk__who { display: grid; gap: 2px; min-width: 0; } .mk__who b { font-weight: 500; font-size: 14px; } .mk__who span { color: var(--u-muted); }
+  .ui-chip.is-warn { color: #e0a96a; }
+  .mk__foot { margin: 0; padding: 12px 16px; color: var(--u-muted); border-top: 1px solid var(--u-line); }
+  @media (max-width: 1023px) { .app.ui { grid-template-columns: 1fr; } .app__pane--list { display: none; } }
+  #how .panel { --p-h: 300px; }
+  @media (max-width: 639px) { #how .panel { --p-h: 168px; } }
+  /* the simulator: the record and its controls */
+  .sim { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gutter); margin-top: var(--s-7); align-items: start; }
+  .sim__controls { grid-column: 1 / span 5; display: grid; gap: var(--s-5); }
+  .sim__record { grid-column: 7 / -1; }
+  .sim__field { display: grid; gap: var(--s-2); }
+  .sim__field div { display: flex; justify-content: space-between; gap: var(--s-4); }
+  .sim__field output { font-weight: 500; font-variant-numeric: tabular-nums; }
+  .sim__field input[type="range"] { width: 100%; height: 44px; accent-color: var(--ink); cursor: pointer; margin: 0; }
+  .notice { position: relative; padding: var(--s-6); border-radius: var(--r-lg); background: var(--surface); transition: background-color .6s cubic-bezier(.2,.7,.2,1); }
+  .notice[data-state="foreclosed"] { background: #c9a45a; color: #0c0a08; }
+  .notice[data-state="foreclosed"] .muted { color: #3a2f1a; }
+  .notice__title { font: var(--display-weight) var(--t-h3)/1.15 var(--font-display); letter-spacing: -0.02em; }
+  .notice dl { display: grid; grid-template-columns: 1fr auto; gap: var(--s-3) var(--s-5); margin: var(--s-5) 0 0; font-variant-numeric: tabular-nums; }
+  .notice dd { margin: 0; font-weight: 500; text-align: right; }
+  .notice__note { margin-top: var(--s-5); }
+  .notice__stamp { position: absolute; top: var(--s-5); right: var(--s-5); border: 3px solid currentColor; padding: 2px 10px; font-weight: 600; transform: rotate(-4deg); }
+  .notice__stamp[hidden] { display: none; }
+  @media (max-width: 1023px) { .sim__controls, .sim__record { grid-column: 1 / -1; } }
+  @media (max-width: 639px) { .sim { margin-top: var(--s-5); gap: var(--s-5); } .notice { padding: var(--s-5); } }
+  #idea .idea { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--s-7) var(--gutter); align-content: start; }
+  #idea h2 { grid-column: 1 / -1; font-size: clamp(44px, 7.2vw, 116px); line-height: .94; letter-spacing: var(--display-tracking-xl); max-width: none; }
+  .idea__text { grid-column: 1 / span 5; display: grid; gap: var(--s-7); align-content: space-between; }
+  #idea .lede { margin: 0; font-size: var(--t-lead); line-height: 1.5; max-width: 44ch; }
+  .idea__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); margin: 0; }
+  .idea__facts div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: var(--s-2); }
+  .idea__facts dt { color: var(--muted); font-size: var(--t-small); }
+  .idea__facts dd { margin: 0; font: var(--display-weight) var(--t-stat)/1 var(--font-display); letter-spacing: -0.03em; }
+  .idea__code { grid-column: 7 / -1; margin: 0; padding: var(--s-6); border-radius: var(--r-lg); background: var(--surface); min-width: 0; }
+  .idea__file { margin: 0 0 var(--s-4); color: var(--muted); font-size: var(--t-small); }
+  .idea__code pre { margin: 0; overflow-x: auto; font: 13.5px/1.65 var(--font-mono); color: #e9e2d6; }
+  .idea__code .k { color: #c9a45a; } .idea__code .c { color: #b3ada5; }
+  @media (max-width: 1023px) { .idea__text, .idea__code { grid-column: 1 / -1; } #idea .idea { gap: var(--s-6) var(--gutter); } }
+  @media (max-width: 639px) { .idea__code { padding: var(--s-4); } .idea__code pre { font-size: 12px; } }
+  .claims { list-style: none; margin: var(--s-6) 0 0; padding: 0; display: grid; }
+  .claims li { display: grid; gap: var(--s-1); padding: var(--s-4) 0; border-bottom: 1px solid var(--line); }
+  .claims li > span { font-weight: 500; font-size: var(--t-lead); }
+  .claims li p { margin: 0; }
+  .claims .link { justify-self: start; }
+  #proof .panel { --p-h: 640px; }
+  .cmp { margin-top: var(--s-7); display: grid; }
+  .cmp__row { display: grid; grid-template-columns: minmax(0, 2.2fr) repeat(4, minmax(0, 1fr)); gap: var(--gutter); align-items: center; padding: var(--s-4) var(--s-5); border-bottom: 1px solid var(--line); }
+  .cmp__head { color: var(--muted); font-size: var(--t-small); border-bottom: 0; padding-bottom: var(--s-3); }
+  .cmp__row > span:first-child { font-size: var(--t-lead); }
+  .cmp__head > span:first-child { font-size: var(--t-small); }
+  .cmp .is-lien { color: var(--accent); font-weight: 500; }
+  .cmp__head .is-lien { color: var(--accent); font-size: var(--t-lead); }
+  .cmp .no { color: var(--muted); }
+  @media (max-width: 1023px) { .cmp__row { grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr)); gap: var(--s-3); padding: var(--s-4) 0; } .cmp__row > span:first-child { font-size: var(--t-body); } }
+  @media (max-width: 639px) {
+    .cmp__head { display: none; }
+    .cmp__row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2) var(--s-3); }
+    .cmp__row > span:first-child { grid-column: 1 / -1; font-weight: 500; }
+    .cmp__row > span[role="cell"]::before { display: block; color: var(--muted); font-size: 13px; font-weight: 400; }
+    .cmp__row > span[role="cell"]:nth-child(2)::before { content: "Order"; }
+    .cmp__row > span[role="cell"]:nth-child(3)::before { content: "NFT"; }
+    .cmp__row > span[role="cell"]:nth-child(4)::before { content: "Split"; }
+    .cmp__row > span[role="cell"]:nth-child(5)::before { content: "Lien"; color: var(--accent); }
+  }
+  .sim__after { margin-top: var(--s-5); }
+  .q-side { display: grid; gap: var(--s-7); align-content: start; }
+  .terms { color: var(--u-ink); font-size: 14px; }
+  .terms__head { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--u-line); font-weight: 500; }
+  .terms dl { display: grid; grid-template-columns: 1fr auto; margin: 0; padding: 6px 20px 12px; }
+  .terms dt, .terms dd { padding: 9px 0; border-bottom: 1px solid var(--u-line); margin: 0; }
+  .terms dt { color: var(--u-muted); } .terms dd { text-align: right; font-variant-numeric: tabular-nums; }
+  .terms dt:nth-last-of-type(1), .terms dd:last-child { border-bottom: 0; }
+
+  @media (max-width: 1023px) { #proof .panel { --p-h: 420px; } }
+  @media (max-width: 639px) { #proof .claims { display: none; } #proof .panel { --p-h: 440px; } .ly-float { display: none; } .faq__item--phone { display: grid; } }
+  .faq__item--phone { display: none; }
+  @media (max-width: 639px) { #questions .faq > .faq__item { padding: var(--s-5) 0; } .terms dt, .terms dd { padding: 11px 0; } }
+  @media (max-width: 400px) {
+    .hero__media .biz__lead, .hero__media .biz__state, .ui-toggles .ui-meta { display: none; }
+    .biz__row { flex-wrap: wrap; }
+    #proof .panel { --p-h: 300px; }
+  }
+</style>
+</head>
+<body>
+<!-- type: software (fintech)
+     deal: hero split, nav nav-mega (nav-cards dealt again: no photographs), close close-word, footer footer-columns,
+           rhythm dark-band, buttons pill, mark dots, palette warm-black-gold, type epilogue, radius sharp,
+           effect gradient-mesh in the hero frame, card grounds painterly-landscape (dot-terrain dealt again: a pattern behind UI)
+     moments: liquid-type (#idea, the statement), iris-opens (#try, the dark band) -->
+
+<header class="nav">
+  <div class="wrap nav__bar">
+    <a class="skip-link" href="#top">Skip to content</a>
+    <a class="nav__logo" href="#top"><span class="mark" data-mark="dots" aria-hidden="true"></span>Lien</a>
+    <nav class="nav__links" aria-label="Main">
+      <div class="nav__item">
+        <a class="nav__link" href="#how">Product <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <div class="nav__menu">
+          <div class="wrap grid">
+            <div class="menu-col span-3">
+              <p class="t-label">Lenders</p>
+              <a href="#market">The market<span>Every loan, read from the chain</span></a>
+              <a href="#try">The simulator<span>Stop the payments, see the recovery</span></a>
+              <a href="/portfolio">Your positions<span>Notes, payouts and claims</span></a>
+            </div>
+            <div class="menu-col span-3">
+              <p class="t-label">Operators</p>
+              <a href="/create">Start a business<span>A keyless account in one step</span></a>
+              <a href="/guide">Developer guide<span>Contracts, calls and the agent</span></a>
+            </div>
+            <a class="menu-card span-3 start-10" href="#proof">
+              <span class="t-card">Check every claim</span>
+              <span class="t-small muted">Five checks run in your browser</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item"><a class="nav__link" href="#market">Market</a></div>
+      <div class="nav__item"><a class="nav__link" href="#try">Simulator</a></div>
+      <div class="nav__item"><a class="nav__link" href="#proof">Proof</a></div>
+      <div class="nav__item"><a class="nav__link" href="#compare">Compare</a></div>
+      <div class="nav__item"><a class="nav__link" href="#questions">Questions</a></div>
+    </nav>
+    <div class="nav__actions">
+      <a class="nav__link" href="/guide">Developers</a>
+      <a class="btn btn--primary" href="/market">Open the market</a>
+    </div>
+    <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Menu">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero hero--split" data-enter aria-labelledby="hero-h">
+    <div class="wrap"><div class="hero-text grid hero__grid">
+      <div class="hero__text span-5">
+        <p class="hero__kicker"><span><span data-live="count">4</span> businesses open on NEAR testnet</span></p>
+        <h1 id="hero-h">Loans to AI businesses on NEAR</h1>
+        <p class="hero__lead">Each business is an account with no keys, running one sealed build in a secure enclave. Lenders are paid first from every sale. If payments stop, anyone can foreclose.</p>
+        <div class="btn-row"><a class="btn btn--primary" href="/market">Open the market<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a><a class="btn btn--secondary" href="/create">Start a business</a></div>
+      </div>
+      <div class="hero__media frame span-6 start-7" data-visual data-fx="gradient-mesh" data-fx-palette='{"bg":"#3a2f22","surface":"#4a3c2a","ink":"#f3e7cf","accent":"#c9a45a"}'>
+        <div class="stage stage--fade-b">
+          <div class="at-corner" style="--ax:40px;--ay:40px">
+            <div class="ui ui-panel" role="img" aria-label="Sentinel's page on Lien: 94.62 tUSD still owed to two lenders, how a sale splits, and the last checks it sold">
+              <div class="biz">
+                <div class="biz__top"><span class="biz__name">Sentinel</span><span class="ui-chip biz__state" data-live="sentinel-state">Paying on time</span></div>
+                <p class="biz__lead">Checks a NEAR account before an agent pays or signs</p>
+                <div class="biz__row"><span>Still owed to lenders</span><span><b data-live="sentinel-holders">2</b> lenders</span></div>
+                <div class="biz__fig"><b data-live="sentinel-owed">94.62</b><span>tUSD</span></div>
+                <div class="biz__bar"><i data-live-bar="sentinel" style="--k:0.14"></i></div>
+                <div class="biz__row"><span>Paid <b data-live="sentinel-repaid">15.37</b> of 110.00</span><span>Ends 2 Feb</span></div>
+                <div class="biz__row"><span>Where a 0.25 tUSD sale goes</span></div>
+                <div class="biz__split" aria-hidden="true"><i></i><i></i><i></i></div>
+                <div class="biz__legend"><span>Lenders<b>0.075</b></span><span>Operator<b>0.05</b></span><span>Working capital<b>0.125</b></span></div>
+                <ul class="biz__jobs ui-list" data-live="sentinel-jobs">
+                  <li><span>check near-faucet.testnet</span><span class="biz__lvl is-high">High risk</span><span>0.25</span></li>
+                  <li><span>is v1.lien-13569.testnet safe to pay?</span><span class="biz__lvl is-medium">Medium risk</span><span>0.25</span></li>
+                  <li><span>does-not-exist-here.testnet</span><span class="biz__lvl is-high">High risk</span><span>0.25</span></li>
+                  <li><span>check usd.lien-13569.testnet</span><span class="biz__lvl is-medium">Medium risk</span><span>0.25</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ly-float" style="top:auto;left:auto;right:24px;bottom:24px">
+          <div class="ly-float__row"><span class="ly-live">Checks sold</span><span data-testid="pulse-jobs" data-live="jobs">7</span></div>
+          <div class="ly-float__title">Each paid lenders before anyone else</div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="section" id="market" aria-labelledby="market-h">
+    <div class="wrap">
+      <div class="grid">
+        <h2 id="market-h" class="span-5">One market for every loan</h2>
+        <p class="span-6 start-7">Each row is a business with its own contract account. Lend to one that is raising, buy its work, or bid on one in foreclosure. <a class="link" href="/market">See the full market</a></p>
+      </div>
+      <div class="ui app fill" role="img" aria-label="The Lien market: four businesses with their loan states, and Sentinel North open, raising 50 tUSD with 20 funded" data-ui-pause-host>
+        <div class="app__pane app__pane--list">
+          <div class="mk">
+            <div class="mk__bar"><span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Lien <i>/</i> <b>Market</b></span></div>
+            <ul class="mk__rows">
+              <li class="is-sel"><span class="mk__who"><b>Sentinel North</b><span>Raising 50 tUSD at 10%</span></span><span class="ui-chip">Raising</span></li>
+              <li><span class="mk__who"><b>Sentinel</b><span>100 tUSD, 15.38 repaid</span></span><span class="ui-chip">On time</span></li>
+              <li><span class="mk__who"><b>Sentinel Late</b><span>40 tUSD, past its grace period</span></span><span class="ui-chip is-warn">Behind</span></li>
+              <li><span class="mk__who"><b>Sentinel Sale</b><span>Foreclosed, up for auction</span></span><span class="ui-chip is-warn">Foreclosed</span></li>
+            </ul>
+            <p class="mk__foot">Read from v1.lien-13569.testnet</p>
+          </div>
+        </div>
+        <div class="app__pane app__pane--open">
+          <div class="biz">
+            <div class="biz__top"><span class="biz__name">Sentinel North</span><span class="ui-chip biz__state">Raising</span></div>
+            <p class="biz__lead">A second Sentinel, raising its first loan. Funds move only once it is full.</p>
+            <div class="biz__row"><span>Raised so far</span><span><b>1</b> lender</span></div>
+            <div class="biz__fig"><b>20.00</b><span>of 50.00 tUSD</span></div>
+            <div class="biz__bar"><i style="--k:0.4"></i></div>
+            <div class="biz__row"><span>Lenders get</span><b>30% of every sale</b></div>
+            <div class="biz__row"><span>Owed in total</span><b>55.00 tUSD</b></div>
+            <div class="biz__row"><span>Minimum payment</span><b>Set in the terms</b></div>
+            <div class="biz__row"><span>If it falls behind</span><b>Anyone can foreclose</b></div>
+            <div class="biz__lend"><span class="biz__input"><span>30</span><span>tUSD</span></span><span class="ui-btn ui-btn--accent">Lend 30 tUSD</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section g2" id="how" aria-labelledby="how-h">
+    <div class="wrap">
+      <div class="group">
+        <div class="section-head">
+          <h2 id="how-h">How a Lien loan works. <span class="muted">The contract enforces each step.</span></h2>
+        </div>
+        <div class="grid">
+          <article class="card card--row card--open span-6 m-nolift">
+            <h3>Every sale repays the loan first</h3>
+            <p>The split is fixed when the loan is offered. Sentinel sends 30% of each check to its lenders.</p>
+            <div class="panel" data-fx="painterly-landscape" data-fx-seed="11" data-fx-palette='{"bg":"#a3b0b6","accent":"#c49a6c"}' data-fx-params='{"blur":1,"brush":0.35,"slope":0,"hillY":0.3,"horizon":0.62,"speed":0}'>
+              <div class="dg" data-diagram data-icon-base="/site/assets/icons/"><script type="application/json">{"layout":"lanes","size":"card","alt":"A 0.25 tUSD sale reaches Sentinel's contract, which pays 0.075 to lenders, 0.05 to the operator and keeps 0.125 as working capital, all at once.","input":{"label":"Sale","icon":"ui:receipt","sub":"0.25 tUSD"},"core":{"label":"Sentinel","icon":"ui:shield-check"},"lanes":[{"label":"Lenders","icon":"ui:coins","done":true,"sub":"0.075 tUSD"},{"label":"Operator","icon":"ui:user","done":true,"sub":"0.05 tUSD"},{"label":"Business","icon":"ui:wallet","done":true,"sub":"0.125 tUSD"}]}</script></div>
+            </div>
+          </article>
+          <article class="card card--row card--open span-6 m-nolift">
+            <h3>Spends the loan only on its vendors</h3>
+            <p>Borrowed money pays approved services up to a daily limit. The operator can't withdraw it.</p>
+            <div class="panel" data-fx="painterly-landscape" data-fx-seed="23" data-fx-palette='{"bg":"#d9ccb7","surface":"#e9e0d2","ink":"#2a2622","accent":"#a8794a"}' data-fx-params='{"speed":0}'>
+              <div class="stage stage--fade-b"><div class="at-corner" style="--ax:32px;--ay:40px">
+                <div class="ui ui-panel ui-toggles" data-ui="toggles" data-ui-still>
+                  <div class="ui-head">
+                    <svg class="ui-icon ui-toggles__ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 13 4v3.6c0 3-2.1 5.4-5 6.6-2.9-1.2-5-3.6-5-6.6V4z"/><path d="m5.8 8 1.6 1.6 3-3.2"/></svg>
+                    <div class="ui-title">What Sentinel may spend on</div>
+                    <span class="ui-spacer"></span>
+                    <div class="ui-meta" data-tg-count>2 of 4 on</div>
+                  </div>
+                  <ul class="ui-toggles__list">
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Pay outlayer.testnet</span><span class="ui-tg__sub">Enclave compute for each check</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Pay outlayer.testnet"><i></i></button></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Up to 5 tUSD a day</span><span class="ui-tg__sub">Above that, the spend is refused</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Up to 5 tUSD a day"><i></i></button></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Operator withdrawals</span><span class="ui-tg__sub">Off for the life of the loan</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="Operator withdrawals"><i></i></button></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Votes that widen the policy</span><span class="ui-tg__sub">Refused: lenders can only narrow it</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="Votes that widen the policy"><i></i></button></li>
+                  </ul>
+                </div>
+              </div></div>
+            </div>
+          </article>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card card--row card--open span-6 m-nolift">
+          <h3>The business runs one pinned build</h3>
+          <p>Every check runs inside Intel TDX through OutLayer. The quote names the exact build hash.</p>
+          <div class="panel" data-fx="painterly-landscape" data-fx-seed="37" data-fx-palette='{"bg":"#c6d3df","surface":"#d6e0e9","ink":"#25303a","accent":"#3f6a92"}' data-fx-params='{"speed":0}'>
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:340px;--ay:40px">
+              <div class="ui ui-panel ui-checks" data-ui="checklist" data-ui-loop>
+                <div class="ui-checks__head"><div class="ui-title">Sentinel, checked live</div><span class="ui-spacer"></span><div class="ui-meta" data-checks-count>2 of 5</div></div>
+                <div class="ui-checks__bar"><i data-checks-bar style="--k:0.4"></i></div>
+                <ul class="ui-checks__list">
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Zero access keys on the account</span></li>
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Runs the published Lien contract</span></li>
+                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Build bytes hash to 9fd9a7…0e9f</span></li>
+                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Books match the token balance</span></li>
+                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">TDX quote names the pinned build</span></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </article>
+        <article class="card card--row card--open span-6 m-nolift">
+          <h3>Lets anyone foreclose a late business</h3>
+          <p>Miss the minimum and the grace runs out. A stranger presses one button; no admin decides.</p>
+          <div class="panel" data-fx="painterly-landscape" data-fx-seed="41" data-fx-palette='{"bg":"#cdd6c6","surface":"#dce3d6","ink":"#262d24","accent":"#6c8e63"}' data-fx-params='{"speed":0}'>
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:380px;--ax:32px;--ay:calc(100% - 180px);--ay-sm:calc(100% - 180px)">
+              <div class="ui ui-notify" data-ui="notify" data-ui-still>
+                <ul class="ui-notify__list" data-notify-list>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Sentinel Late foreclosed<time>now</time></span><span class="ui-note__body">Its operator's share now goes to lenders</span></span><span class="ui-btn ui-btn--sm ui-note__btn">Bid</span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Grace period over<time>1m</time></span><span class="ui-note__body">10.00 tUSD due, 0.08 paid</span></span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Check sold for 0.25 tUSD<time>3m</time></span><span class="ui-note__body">Still serving customers</span></span></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="idea" aria-labelledby="idea-h">
+    <div class="wrap">
+      <div data-moment="liquid-type" class="idea">
+        <h2 id="idea-h" class="mo-lt__type">Software that can&rsquo;t skip a payment</h2>
+        <div class="idea__text">
+          <p class="lede">A person can walk away from a loan. A keyless account running sealed code can&rsquo;t: its sales reach the lender before anyone else can touch them, and its owner can&rsquo;t change that during the loan.</p>
+          <dl class="idea__facts">
+            <div><dt>Keys on a business account</dt><dd>0</dd></div>
+            <div><dt>Builds it may run in a loan</dt><dd>1</dd></div>
+            <div><dt>Of each Sentinel sale to lenders</dt><dd>30%</dd></div>
+          </dl>
+        </div>
+        <figure class="idea__code" aria-label="The waterfall in the contract, contracts/agent/src/math.rs">
+          <p class="idea__file">contracts/agent/src/math.rs</p>
+<pre><code><span class="c">// Every sale passes through this before anyone is paid.</span>
+<span class="k">pub fn</span> split_inflow(amount: u128, outstanding: u128,
+    lender_bps: u16, operator_bps: u16, trapped: bool) -&gt; Split {
+    <span class="c">// Behind or foreclosed: the operator's share goes to lenders.</span>
+    <span class="k">let</span> (lender_bps, operator_bps) = <span class="k">if</span> trapped {
+        (lender_bps <span class="k">as</span> u128 + operator_bps <span class="k">as</span> u128, 0)
+    } <span class="k">else</span> {
+        (lender_bps <span class="k">as</span> u128, operator_bps <span class="k">as</span> u128)
+    };
+    <span class="k">let</span> lender = (amount * lender_bps / BPS).min(outstanding);
+    <span class="k">let</span> operator = amount * operator_bps / BPS;
+    Split { lender, operator, opex: amount - lender - operator }
+}</code></pre>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="compare" aria-labelledby="compare-h">
+    <div class="wrap">
+      <div class="grid">
+        <h2 id="compare-h" class="span-6">How Lien compares with other agent loans</h2>
+        <p class="span-5 start-8">Three other ways to lend to an AI agent are being built on NEAR. Each solves part of the problem. The difference is what a lender holds when the agent stops paying.</p>
+      </div>
+      <div class="cmp" role="table" aria-label="Lien compared with order advances, NFT pledges and merchant revenue splits">
+        <div class="cmp__row cmp__head" role="row"><span role="columnheader"></span><span role="columnheader">Order advance</span><span role="columnheader">NFT pledge</span><span role="columnheader">Revenue split</span><span role="columnheader" class="is-lien">Lien</span></div>
+        <div class="cmp__row" role="row"><span role="rowheader">Loan can be larger than one order</span><span role="cell" class="no">No</span><span role="cell" class="yes">Yes</span><span role="cell" class="yes">Yes</span><span role="cell" class="yes is-lien">Yes</span></div>
+        <div class="cmp__row" role="row"><span role="rowheader">Repaid from every sale, automatically</span><span role="cell" class="yes">One order</span><span role="cell" class="no">No</span><span role="cell" class="yes">Yes</span><span role="cell" class="yes is-lien">Yes</span></div>
+        <div class="cmp__row" role="row"><span role="rowheader">Borrower holds no keys</span><span role="cell" class="no">No</span><span role="cell" class="yes">Vault only</span><span role="cell" class="yes">Yes</span><span role="cell" class="yes is-lien">Yes</span></div>
+        <div class="cmp__row" role="row"><span role="rowheader">Code pinned and proved in an enclave</span><span role="cell" class="no">No</span><span role="cell" class="no">Inference only</span><span role="cell" class="no">No</span><span role="cell" class="yes is-lien">Yes</span></div>
+        <div class="cmp__row" role="row"><span role="rowheader">Anyone can foreclose, no admin</span><span role="cell" class="no">No</span><span role="cell" class="no">Lender only</span><span role="cell" class="no">No</span><span role="cell" class="yes is-lien">Yes</span></div>
+        <div class="cmp__row" role="row"><span role="rowheader">Keeps paying lenders after default</span><span role="cell" class="no">No</span><span role="cell" class="no">No</span><span role="cell" class="no">No</span><span role="cell" class="yes is-lien">Yes</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section ground-inverse" id="try" data-moment="iris-opens" data-moment-opts='{"from": "base"}' aria-labelledby="try-h">
+    <div class="wrap">
+      <div class="grid">
+        <h2 id="try-h" class="span-6">Stop a business paying its loan. <span class="muted">See what lenders get back.</span></h2>
+        <p class="span-5 start-8">A 1,000 dollar loan to a business that sells checks, owing 1,100. The numbers come from the same rule the contract runs.</p>
+      </div>
+      <div class="sim">
+        <div class="sim__controls">
+          <div class="sim__field"><div><label for="sim-revenue">Revenue a month</label><output for="sim-revenue" data-out="revenue">$800</output></div><input id="sim-revenue" data-testid="sim-revenue" type="range" min="100" max="4000" step="100" value="800"></div>
+          <div class="sim__field"><div><label for="sim-share">Lenders' share of each sale</label><output for="sim-share" data-out="share">30%</output></div><input id="sim-share" data-testid="sim-share" type="range" min="5" max="80" step="5" value="30"></div>
+          <div class="sim__field"><div><label for="sim-bid">Winning bid at auction</label><output for="sim-bid" data-out="bid">$500</output></div><input id="sim-bid" data-testid="sim-bid" type="range" min="100" max="1500" step="50" value="500"></div>
+          <div class="btn-row"><button class="btn btn--primary" type="button" data-testid="sim-stop" aria-pressed="false">Stop the payments after 3 months</button></div>
+        </div>
+        <div class="sim__record">
+          <div class="notice" data-testid="notice" data-state="active" aria-live="polite">
+            <p class="notice__title" data-sim="title">Record of lien</p>
+            <p class="muted">Sentinel, an AI business on NEAR</p>
+            <span class="notice__stamp" data-sim="stamp" hidden>Foreclosed</span>
+            <dl data-sim="running">
+              <dt>Lent</dt><dd>$1,000</dd>
+              <dt>Owed in total</dt><dd>$1,100</dd>
+              <dt>Lenders get each month</dt><dd data-testid="monthly-lender">$240</dd>
+              <dt>Operator gets</dt><dd data-sim="operator">$160</dd>
+              <dt>Stays in the business</dt><dd data-sim="opex">$400</dd>
+              <dt>Paid off in</dt><dd data-testid="payoff">5 months</dd>
+            </dl>
+            <dl data-sim="stopped" hidden>
+              <dt>Paid before stopping</dt><dd data-sim="repaid">$720</dd>
+              <dt>Still owed</dt><dd data-testid="still-owed">$380</dd>
+              <dt>Sale price</dt><dd data-sim="price">$500</dd>
+              <dt>Lenders recover</dt><dd data-testid="recovered">$1,100</dd>
+              <dt>Former operator gets</dt><dd data-sim="surplus">$120</dd>
+            </dl>
+            <p class="notice__note" data-sim="note">Current. Nobody holds a key to this business.</p>
+          </div>
+          <p class="sim__after"><a class="link" href="/b/sentinel-sale.v1.lien-13569.testnet">Bid on a real foreclosure</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="proof" aria-labelledby="proof-h">
+    <div class="wrap">
+      <div class="grid grid--top fill">
+        <div class="span-6">
+          <h2 id="proof-h">Check any Lien business from your browser</h2>
+          <p class="t-lead">Each business page runs these checks against the chain while you watch. Nothing here asks you to trust us.</p>
+          <ul class="claims">
+            <li><span>The account holds zero access keys</span><p>So no person can spend from it or change it.</p><a class="link" href="/b/sentinel.v1.lien-13569.testnet">See it on Sentinel</a></li>
+            <li><span>The code is the published contract</span><p>Its hash is compared with the global contract.</p><a class="link" href="https://github.com/Oshioke-Salaki/lien/tree/main/contracts">Read the contracts</a></li>
+            <li><span>An Intel TDX quote names the build</span><p>OutLayer's attestation for a real job, linked from the chain.</p><a class="link" href="https://github.com/Oshioke-Salaki/lien/blob/main/docs/evidence/testnet-e2e.md">Read the evidence</a></li>
+          </ul>
+        </div>
+        <div class="span-6 start-7">
+          <div class="panel" data-fx="painterly-landscape" data-fx-seed="53" data-fx-palette='{"bg":"#d9ccb7","surface":"#e9e0d2","ink":"#2a2622","accent":"#a8794a"}' data-fx-params='{"speed":0}'><div class="stage stage--fade-b"><div class="at-corner" style="--ax:48px;--ay:56px;width:min(460px, calc(100% - 48px))">
+            <div class="ui ui-panel ui-toggles" role="img" aria-label="The proofs panel on a Lien business: five checks, each verified">
+              <div class="ui-head"><div class="ui-title">Check it yourself</div><span class="ui-spacer"></span><div class="ui-meta">5 of 5 verified</div></div>
+              <ul class="ui-toggles__list">
+                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Nobody holds its keys</span><span class="ui-tg__sub">Zero access keys on the account</span></span><span class="ui-chip">Verified</span></li>
+                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">It runs the published contract</span><span class="ui-tg__sub">Code hash matches v1.lien-13569</span></span><span class="ui-chip">Verified</span></li>
+                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">The pinned build is public</span><span class="ui-tg__sub">FastFS bytes hash to the pinned value</span></span><span class="ui-chip">Verified</span></li>
+                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Its books match its balance</span><span class="ui-tg__sub">Holds 116.15 tUSD, owes 116.15</span></span><span class="ui-chip">Verified</span></li>
+                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Work ran in a secure enclave</span><span class="ui-tg__sub">TDX quote for the pinned build</span></span><span class="ui-chip">Verified</span></li>
+              </ul>
+            </div>
+          </div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="questions" style="--hm: 2" aria-labelledby="questions-h">
+    <div class="wrap">
+      <div class="grid grid--top">
+        <div class="span-6 q-side">
+          <h2 id="questions-h">Questions lenders ask</h2>
+          <div class="ui ui-panel terms" role="img" aria-label="Sentinel's loan terms: 100 tUSD borrowed, 10% fixed interest, 30% of every sale to lenders, 5 tUSD every 14 days, 90 days, 3 days of grace, a 7 day auction">
+            <div class="terms__head"><span>Sentinel, loan terms</span><span class="ui-chip">Loan 1</span></div>
+            <dl>
+              <dt>Borrowed</dt><dd>100.00 tUSD</dd>
+              <dt>Interest, fixed</dt><dd>10.00 tUSD</dd>
+              <dt>Lenders get</dt><dd>30% of every sale</dd>
+              <dt>Operator gets</dt><dd>20% of every sale</dd>
+              <dt>Minimum payment</dt><dd>5.00 tUSD every 14 days</dd>
+              <dt>Term</dt><dd>90 days</dd>
+              <dt>Grace before foreclosure</dt><dd>3 days</dd>
+              <dt>Auction</dt><dd>7 days, from half the debt</dd>
+            </dl>
+          </div>
+        </div>
+        <div class="faq span-6 start-7">
+          <div class="faq__item"><h3>What stops the operator taking the loan?</h3><p>The account has no keys and the contract holds the loan. Principal pays only approved vendors, up to a daily limit, and the build is frozen until the loan is paid.</p></div>
+          <div class="faq__item"><h3>What do lenders own if a business defaults?</h3><p>A business that keeps selling. After foreclosure the operator's share goes to lenders too, until someone buys the business at auction. The price pays lenders first.</p></div>
+          <div class="faq__item"><h3>Does a Lien business depend on trusting Intel?</h3><p>Partly, yes. The quote proves which build ran on which hardware. It does not protect against a broken chip, and the security notes say so.</p></div>
+          <div class="faq__item"><h3>How is a Lien loan different from an order advance?</h3><p>An order advance can never be bigger than the order. Lien lends against the whole business, so it can fund growth, and a default hands lenders something that still earns.</p></div>
+          <div class="faq__item faq__item--phone"><h3>Is a Lien loan live with real money?</h3><p>Not yet. It runs on NEAR testnet with test dollars, and the contracts are unaudited.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer closing" id="contact" aria-labelledby="close-h">
+  <div class="wrap">
+    <div class="closing__cta close--word">
+      <div class="section-head--split">
+        <div><h2 id="close-h">Lend to a business that can't run</h2><p class="t-lead">Test money only. A free account is ready in about ten seconds.</p></div>
+        <a class="btn btn--primary" href="/market">Open the market<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
+      </div>
+      <p class="close__word" aria-hidden="true">Lien</p>
+    </div>
+    <div class="closing__links">
+      <div class="grid">
+        <div class="span-4 stack-4">
+          <a class="nav__logo" href="#top"><span class="mark" data-mark="dots" aria-hidden="true"></span>Lien</a>
+          <p class="footer__lede">Loans to AI businesses on NEAR, repaid from every sale.</p>
+        </div>
+        <div class="span-2 footer__col"><h3>Lend</h3><ul><li><a href="/market">Market</a></li><li><a href="/portfolio">Positions</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Build</h3><ul><li><a href="/create">Start a business</a></li><li><a href="/guide">Guide</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Proof</h3><ul><li><a href="https://github.com/Oshioke-Salaki/lien/blob/main/docs/evidence/testnet-e2e.md">Evidence</a></li><li><a href="https://github.com/Oshioke-Salaki/lien/blob/main/docs/SECURITY.md">Security</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Code</h3><ul><li><a href="https://github.com/Oshioke-Salaki/lien">GitHub</a></li><li><a href="/llms.txt">llms.txt</a></li></ul></div>
+      </div>
+      <div class="footer__legal">
+        <span>&copy; 2026 Lien &nbsp; Built for NEAR HACKATHON. Testnet, unaudited.</span>
+        <div class="socials"></div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/site/assets/system.js"></script>
+<script type="module" src="/site/assets/motion/motion.js"></script>
+<script type="module" src="/site/assets/layout/layout.js"></script>
+<script type="module" src="/site/assets/diagrams/mount.js"></script>
+<script type="module" src="/site/live.js"></script>
+</body>
+</html>

@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* The landing page is a static page with its own system (public/site); keep its classes out of the app's CSS. */
+@source not "../../public/site";
 
 /* The dealt palette, "Report blocks". White paper, black ink, and flat blocks of
    orange, sage and acid yellow used the way a two-colour print job uses ink. */

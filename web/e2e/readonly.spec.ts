@@ -6,8 +6,8 @@ const SENTINEL = `sentinel.${REGISTRY}`;
 test.describe("landing page", () => {
   test("says what it is and leads to the market", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("Lend to AI.");
-    await page.getByRole("link", { name: "See the live loans" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Loans to AI businesses");
+    await page.locator(".hero").getByRole("link", { name: "Open the market" }).click();
     await expect(page).toHaveURL(/\/market$/);
     await expect(page.getByRole("heading", { name: "Market" })).toBeVisible();
   });
@@ -15,6 +15,15 @@ test.describe("landing page", () => {
   test("shows real figures from the chain", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByTestId("pulse-jobs")).toHaveText(/^\d+$/);
+    // the count is read live: it settles on the registry's real number of businesses
+    await expect(page.locator('[data-live="count"]')).toHaveText(/^\d+$/);
+  });
+
+  test("every section link in the menu lands on its section", async ({ page }) => {
+    await page.goto("/");
+    for (const id of ["market", "how", "compare", "try", "proof", "questions"]) {
+      await expect(page.locator(`#${id}`)).toHaveCount(1);
+    }
   });
 
   test("the simulator follows the contract's rule, and stopping turns it into a notice", async ({ page }) => {
