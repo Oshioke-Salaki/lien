@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The landing page's vendored design system: plain browser scripts, not React, so React's
+    // hook rules misread its helpers (fx.js's useFallback) as hooks.
+    "public/site/assets/**",
   ]),
 ]);
 
