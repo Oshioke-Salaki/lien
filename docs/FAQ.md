@@ -65,6 +65,9 @@ Not solved. Businesses on Lien share dependencies, at least OutLayer and the sta
 **Can a lender get out before the loan ends?**
 Yes. A note can be transferred to another account with `transfer_note`, so a secondary market can price it. There is no order book for notes yet.
 
+**Can a business sell at auction for less than the money inside it?**
+Yes, if its loan's terms allow it. The lowest bid is a share of the debt that the owner offers and lenders accept before lending (`auction_reserve_bps`), and the running money a buyer receives is set by the loan, so a low floor can price the business below its cash. The app says so on the auction and on the lend form, before anyone lends. Lien's own sample businesses now set the floor at the whole debt; the two older samples, Lookout and Sentinel Late, keep the lower floors their loans were made with, because terms never change after funding.
+
 **Who calls foreclose when nobody is paid to?**
 The lenders, who are the ones it protects. It is one call, open to anyone, and it needs no keeper reward because the contract derives the breach from the schedule rather than waiting for someone to report it.
 
