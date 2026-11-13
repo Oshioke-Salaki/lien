@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify": "node ../scripts/verify.mjs"
   },
   "dependencies": {
     "@hot-labs/near-connect": "^0.12.0",
