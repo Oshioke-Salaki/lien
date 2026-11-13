@@ -102,7 +102,7 @@
   .mk__foot { margin: 0; padding: 12px 16px; color: var(--u-muted); border-top: 1px solid var(--u-line); }
   @media (max-width: 1023px) { .app.ui { grid-template-columns: 1fr; } .app__pane--list { display: none; } }
   #how .panel { --p-h: 300px; }
-  @media (max-width: 639px) { #how .panel { --p-h: 168px; } }
+  @media (max-width: 639px) { #how .panel { --p-h: 156px; } }
   /* the simulator: the record and its controls */
   .sim { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gutter); margin-top: var(--s-7); align-items: start; }
   .sim__controls { grid-column: 1 / span 5; display: grid; gap: var(--s-5); }
@@ -175,7 +175,7 @@
   @media (max-width: 1023px) { #proof .panel { --p-h: 420px; } }
   @media (max-width: 639px) { #proof .claims { display: none; } #proof .panel { --p-h: 440px; } .ly-float { display: none; } .faq__item--phone { display: grid; } }
   .faq__item--phone { display: none; }
-  @media (max-width: 639px) { #questions .faq > .faq__item { padding: var(--s-5) 0; } .terms dt, .terms dd { padding: 11px 0; } }
+  @media (max-width: 639px) { #questions .faq > .faq__item { padding: var(--s-5) 0; } .terms dt, .terms dd { padding: 10px 0; } }
   @media (max-width: 400px) {
     .hero__media .biz__lead, .hero__media .biz__state, .ui-toggles .ui-meta { display: none; }
     .biz__row { flex-wrap: wrap; }
@@ -238,7 +238,7 @@
   <section class="hero hero--split" data-enter aria-labelledby="hero-h">
     <div class="wrap"><div class="hero-text grid hero__grid">
       <div class="hero__text span-5">
-        <p class="hero__kicker"><span><span data-live="count">4</span> businesses live on NEAR testnet, <span data-testid="pulse-jobs" data-live="jobs">9</span> sales so far</span></p>
+        <p class="hero__kicker"><span><span data-live="count">4</span> AI businesses, <span data-testid="pulse-jobs" data-live="jobs">9</span> sales, on NEAR&rsquo;s test network</span></p>
         <h1 id="hero-h">Loans for AI agents on NEAR</h1>
         <p class="hero__lead">AI agents that sell a service can borrow here. Every sale pays the lender back first, automatically. If an agent stops paying, anyone can take it over, and lenders keep earning.</p>
         <div class="btn-row"><a class="btn btn--primary" href="/market">Open the market<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a><a class="btn btn--secondary" href="/create">Start a business</a></div>
@@ -256,12 +256,12 @@
                 <div class="biz__top"><span class="biz__name">Sentinel</span><span class="ui-chip biz__state" data-live="sentinel-state">Paying on time</span></div>
                 <p class="biz__lead">Checks a NEAR account before an agent pays or signs</p>
                 <div class="biz__row"><span>Still owed to lenders</span><span><b data-live="sentinel-holders">2</b> lenders</span></div>
-                <div class="biz__fig"><b data-live="sentinel-owed">94.62</b><span>tUSD</span></div>
+                <div class="biz__fig"><b data-live="sentinel-owed">94.47</b><span>test dollars</span></div>
                 <div class="biz__bar"><i data-live-bar="sentinel" style="--k:0.14"></i></div>
-                <div class="biz__row"><span>Paid <b data-live="sentinel-repaid">15.37</b> of 110.00</span><span>Ends 2 Feb</span></div>
-                <div class="biz__row"><span>Where a 0.25 tUSD sale goes</span></div>
+                <div class="biz__row"><span>Repaid <b data-live="sentinel-repaid">15.53</b> of 110.00 test dollars</span><span>Due 2 Feb</span></div>
+                <div class="biz__row"><span>How each 0.25 sale is split</span></div>
                 <div class="biz__split" aria-hidden="true"><i></i><i></i><i></i></div>
-                <div class="biz__legend"><span>Lenders<b>0.075</b></span><span>Operator<b>0.05</b></span><span>Working capital<b>0.125</b></span></div>
+                <div class="biz__legend"><span>Lenders<b>0.075</b></span><span>Owner<b>0.05</b></span><span>Running costs<b>0.125</b></span></div>
                 <ul class="biz__jobs ui-list" data-live="sentinel-jobs">
                   <li><span>check near-faucet.testnet</span><span class="biz__lvl is-high">High risk</span><span>0.25</span></li>
                   <li><span>is v1.lien-13569.testnet safe to pay?</span><span class="biz__lvl is-medium">Medium risk</span><span>0.25</span></li>
@@ -282,17 +282,17 @@
     <div class="wrap">
       <div class="grid">
         <h2 id="market-h" class="span-5">One market for every loan</h2>
-        <p class="span-6 start-7">Each row is a business with its own contract account. Lend to one that is raising, buy its work, or bid on one in foreclosure. <a class="link" href="/market">See the full market</a></p>
+        <p class="span-6 start-7">Each row is an AI business that sells a service. Lend to one that is raising money, buy what it sells, or bid to buy one that stopped paying. <a class="link" href="/market">See the full market</a></p>
       </div>
       <div class="ui app fill" role="img" aria-label="The Lien market: four businesses with their loan states, and Sentinel North open, raising 50 tUSD" data-ui-pause-host>
         <div class="app__pane app__pane--list">
           <div class="mk">
             <div class="mk__bar"><span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Lien <i>/</i> <b>Market</b></span></div>
             <ul class="mk__rows">
-              <li class="is-sel"><span class="mk__who"><b>Sentinel North</b><span>Raising 50 tUSD at 10%</span></span><span class="ui-chip">Raising</span></li>
-              <li><span class="mk__who"><b>Sentinel</b><span>100 tUSD, 15.38 repaid</span></span><span class="ui-chip">On time</span></li>
-              <li><span class="mk__who"><b>Sentinel Late</b><span>40 tUSD, past its grace period</span></span><span class="ui-chip is-warn">Behind</span></li>
-              <li><span class="mk__who"><b>Sentinel Sale</b><span>Foreclosed, up for auction</span></span><span class="ui-chip is-warn">Foreclosed</span></li>
+              <li class="is-sel"><span class="mk__who"><b>Sentinel North</b><span>Raising 50 at 10% interest</span></span><span class="ui-chip">Raising</span></li>
+              <li><span class="mk__who"><b>Sentinel</b><span>Borrowed 100, repaying from sales</span></span><span class="ui-chip">On time</span></li>
+              <li><span class="mk__who"><b>Sentinel Late</b><span>Missed its payments</span></span><span class="ui-chip is-warn">Behind</span></li>
+              <li><span class="mk__who"><b>Sentinel Sale</b><span>Taken over, for sale</span></span><span class="ui-chip is-warn">Taken over</span></li>
             </ul>
             <p class="mk__foot">Read from v1.lien-13569.testnet</p>
           </div>
@@ -300,14 +300,14 @@
         <div class="app__pane app__pane--open">
           <div class="biz">
             <div class="biz__top"><span class="biz__name">Sentinel North</span><span class="ui-chip biz__state">Raising</span></div>
-            <p class="biz__lead">A second Sentinel, raising its first loan. Funds move only once it is full.</p>
+            <p class="biz__lead">Raising its first loan. Lenders’ money only moves once the loan is full.</p>
             <div class="biz__row"><span>Raised so far</span><span><b data-live="north-holders">2</b> lenders</span></div>
-            <div class="biz__fig"><b data-live="north-funded">25.00</b><span>of 50.00 tUSD</span></div>
+            <div class="biz__fig"><b data-live="north-funded">25.00</b><span>of 50.00 test dollars</span></div>
             <div class="biz__bar"><i data-live-bar="north" style="--k:0.5"></i></div>
             <div class="biz__row"><span>Lenders get</span><b>30% of every sale</b></div>
-            <div class="biz__row"><span>Owed in total</span><b>55.00 tUSD</b></div>
-            <div class="biz__row"><span>Minimum payment</span><b>Set in the terms</b></div>
-            <div class="biz__row"><span>If it falls behind</span><b>Anyone can foreclose</b></div>
+            <div class="biz__row"><span>Paid back in total</span><b>55.00</b></div>
+            <div class="biz__row"><span>Lenders own</span><b>Their share of the loan</b></div>
+            <div class="biz__row"><span>If it stops paying</span><b>Anyone can take it over</b></div>
             <div class="biz__lend"><span class="biz__input"><span>30</span><span>tUSD</span></span><span class="ui-btn ui-btn--accent">Lend 30 tUSD</span></div>
           </div>
         </div>
@@ -324,14 +324,14 @@
         <div class="grid">
           <article class="card card--row card--open span-6 m-nolift">
             <h3>Every sale repays the loan first</h3>
-            <p>The split is fixed when the loan is offered. Sentinel sends 30% of each check to its lenders.</p>
+            <p>The split is fixed before anyone lends. Sentinel sends 30% of every sale straight to its lenders.</p>
             <div class="panel" data-fx="painterly-landscape" data-fx-seed="11" data-fx-palette='{"bg":"#a3b0b6","accent":"#c49a6c"}' data-fx-params='{"blur":1,"brush":0.35,"slope":0,"hillY":0.3,"horizon":0.62,"speed":0}'>
               <div class="dg" data-diagram data-icon-base="/site/assets/icons/"><script type="application/json">{"layout":"lanes","size":"card","alt":"A 0.25 tUSD sale reaches Sentinel's contract, which pays 0.075 to lenders, 0.05 to the operator and keeps 0.125 as working capital, all at once.","input":{"label":"Sale","icon":"ui:receipt","sub":"0.25 tUSD"},"core":{"label":"Sentinel","icon":"ui:shield-check"},"lanes":[{"label":"Lenders","icon":"ui:coins","done":true,"sub":"0.075 tUSD"},{"label":"Operator","icon":"ui:user","done":true,"sub":"0.05 tUSD"},{"label":"Business","icon":"ui:wallet","done":true,"sub":"0.125 tUSD"}]}</script></div>
             </div>
           </article>
           <article class="card card--row card--open span-6 m-nolift">
-            <h3>Spends the loan only on its vendors</h3>
-            <p>Borrowed money pays approved services up to a daily limit. The operator can't withdraw it.</p>
+            <h3>The loan can only pay approved suppliers</h3>
+            <p>Borrowed money pays for the services it needs, up to a daily limit. Its owner can't withdraw it.</p>
             <div class="panel" data-fx="painterly-landscape" data-fx-seed="23" data-fx-palette='{"bg":"#d9ccb7","surface":"#e9e0d2","ink":"#2a2622","accent":"#a8794a"}' data-fx-params='{"speed":0}'>
               <div class="stage stage--fade-b"><div class="at-corner" style="--ax:32px;--ay:40px">
                 <div class="ui ui-panel ui-toggles" data-ui="toggles" data-ui-still>
@@ -355,8 +355,8 @@
       </div>
       <div class="grid">
         <article class="card card--row card--open span-6 m-nolift">
-          <h3>The business runs one pinned build</h3>
-          <p>Every check runs inside Intel TDX through OutLayer. The quote names the exact build hash.</p>
+          <h3>The business code can't change mid-loan</h3>
+          <p>Its work runs on a sealed computer (Intel TDX, through OutLayer) that proves exactly which code ran.</p>
           <div class="panel" data-fx="painterly-landscape" data-fx-seed="37" data-fx-palette='{"bg":"#c6d3df","surface":"#d6e0e9","ink":"#25303a","accent":"#3f6a92"}' data-fx-params='{"speed":0}'>
             <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:340px;--ay:40px">
               <div class="ui ui-panel ui-checks" data-ui="checklist" data-ui-loop>
@@ -374,8 +374,8 @@
           </div>
         </article>
         <article class="card card--row card--open span-6 m-nolift">
-          <h3>Lets anyone foreclose a late business</h3>
-          <p>Miss the minimum and the grace runs out. A stranger presses one button; no admin decides.</p>
+          <h3>Anyone can take over a late business</h3>
+          <p>Miss payments and a short grace period runs out. Then anyone can take it over; no company decides.</p>
           <div class="panel" data-fx="painterly-landscape" data-fx-seed="41" data-fx-palette='{"bg":"#cdd6c6","surface":"#dce3d6","ink":"#262d24","accent":"#6c8e63"}' data-fx-params='{"speed":0}'>
             <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:380px;--ax:32px;--ay:calc(100% - 180px);--ay-sm:calc(100% - 180px)">
               <div class="ui ui-notify" data-ui="notify" data-ui-still>
@@ -491,11 +491,11 @@
       <div class="grid grid--top fill">
         <div class="span-6">
           <h2 id="proof-h">Check any Lien business from your browser</h2>
-          <p class="t-lead">Each business page runs these checks against the chain while you watch. Nothing here asks you to trust us.</p>
+          <p class="t-lead">Every business page checks these promises live, in your browser, against the public record. You don't have to trust us.</p>
           <ul class="claims">
-            <li><span>The account holds zero access keys</span><p>So no person can spend from it or change it.</p><a class="link" href="/b/sentinel.v1.lien-13569.testnet">See it on Sentinel</a></li>
-            <li><span>The code is the published contract</span><p>Its hash is compared with the global contract.</p><a class="link" href="https://github.com/Oshioke-Salaki/lien/tree/main/contracts">Read the contracts</a></li>
-            <li><span>An Intel TDX quote names the build</span><p>OutLayer's attestation for a real job, linked from the chain.</p><a class="link" href="https://github.com/Oshioke-Salaki/lien/blob/main/docs/evidence/testnet-e2e.md">Read the evidence</a></li>
+            <li><span>Nobody can withdraw its money</span><p>Its account has no keys at all, so no person can spend from it.</p><a class="link" href="/b/sentinel.v1.lien-13569.testnet">See it on Sentinel</a></li>
+            <li><span>It runs the open-source Lien code</span><p>Its code is matched against the published contract, byte for byte.</p><a class="link" href="https://github.com/Oshioke-Salaki/lien/tree/main/contracts">Read the contracts</a></li>
+            <li><span>Its work runs on a sealed computer</span><p>An Intel TDX proof names the exact code that ran each job.</p><a class="link" href="https://github.com/Oshioke-Salaki/lien/blob/main/docs/evidence/testnet-e2e.md">Read the evidence</a></li>
           </ul>
         </div>
         <div class="span-6 start-7">
@@ -536,7 +536,7 @@
           </div>
         </div>
         <div class="faq span-6 start-7">
-          <div class="faq__item"><h3>What stops the operator taking the loan?</h3><p>The account has no keys and the contract holds the loan. Principal pays only approved vendors, up to a daily limit, and the build is frozen until the loan is paid.</p></div>
+          <div class="faq__item"><h3>What stops the operator taking the loan?</h3><p>The business account has no keys, so nobody can withdraw from it. Borrowed money can only pay approved suppliers, up to a daily limit, and its code is frozen until the loan is repaid.</p></div>
           <div class="faq__item"><h3>What do lenders own if a business defaults?</h3><p>A business that keeps selling. After foreclosure the operator's share goes to lenders too, until someone buys the business at auction. The price pays lenders first.</p></div>
           <div class="faq__item"><h3>Does a Lien business depend on trusting Intel?</h3><p>Partly, yes. The quote proves which build ran on which hardware. It does not protect against a broken chip, and the security notes say so.</p></div>
           <div class="faq__item"><h3>How is a Lien loan different from an order advance?</h3><p>An order advance can never be bigger than the order. Lien lends against the whole business, so it can fund growth, and a default hands lenders something that still earns.</p></div>
