@@ -121,3 +121,48 @@ export const CLAIMS: Claim[] = [
     evidence: [{ label: "A lend built by the MCP server and signed by the lender", href: tx("Ekqhm3JQNbtoxqDTN37Q8nLWD8HxFWvudoajQLb3sV3D") }],
   },
 ];
+
+export type Attack = {
+  attack: string;
+  /** What the contract does instead, in its own words where it has them. */
+  result: string;
+  tests: Array<{ name: string; href: string }>;
+  /** Real testnet transactions only. When no refusal was recorded with a hash, this is empty
+   *  and `note` says what the live run did record. */
+  evidence: Array<{ label: string; href: string }>;
+  note: string;
+};
+
+/** "Try to rob it": the three ways someone might take a business's money, each refused. */
+export const ATTACKS: Attack[] = [
+  {
+    attack: "The operator tries to withdraw the business's money during a loan",
+    result: "The contract answers \"not allowed while a loan is open\". The account has no keys to sign with either, so nobody can move its money by hand.",
+    tests: [{ name: "the_operator_cannot_reach_the_money_during_a_loan", href: code(`${SANDBOX}#L242`) }],
+    evidence: [{ label: "The business was created with zero keys", href: tx("7zfvSeZ3idNUK1gxAtyP4hCLNLA4H1yAkNhT6SfdgUMc") }],
+    note: "The live testnet run recorded withdraw_opex refused during its loan, without keeping that transaction's hash, so the refusal itself is proven by the test.",
+  },
+  {
+    attack: "Compromised code tries to pay someone outside the spend policy",
+    result: "The payment is not made, and the business counts it in spends_blocked. Only approved vendors, under per-payment and daily limits, can be paid.",
+    tests: [
+      { name: "compromised_code_cannot_pay_anyone_outside_the_policy", href: code(`${SANDBOX}#L266`) },
+      { name: "compromised_code_cannot_pay_the_operator", href: code(`${UNIT}#L1124`) },
+    ],
+    evidence: [],
+    note: "No blocked payment has happened on testnet, so this one is proven by the tests. The live run did make one payment inside the policy, to the approved vendor.",
+  },
+  {
+    attack: "Someone swaps the code mid-loan without lender approval",
+    result: "The contract answers \"not allowed while a loan is open\". During a loan, the only way to change the pinned build is a proposal that lenders holding more than half the loan approve.",
+    tests: [
+      { name: "operator_cannot_change_the_code_during_a_loan", href: code(`${UNIT}#L396`) },
+      { name: "a_change_applies_only_when_more_than_half_of_principal_agrees", href: code(`${UNIT}#L1256`) },
+    ],
+    evidence: [
+      { label: "The way it did change on testnet: the owner proposes", href: tx("9X2VEWuuNSmNfkwDyQRSKDyy48VthqZ2uQNNtVt7crmv") },
+      { label: "and the majority lender approves", href: tx("5iG4UPPizMQvJuEkeT8yE4ChTC15KnvkagJzLMYSEyAg") },
+    ],
+    note: "The live run recorded update_service refused during its loan, without keeping that transaction's hash, so the refusal itself is proven by the tests.",
+  },
+];
