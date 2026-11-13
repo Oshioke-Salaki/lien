@@ -8,8 +8,8 @@
   "agentCode": "5h7GXbekbD4VcpG3VQbjX422jScuFvZPrfyrXwicaww1",
   "collectorCode": "s9UZi2DdpngukguA7mvJ8qEQ8nG3pd6YLSNaYQo9D7h",
   "sentinel": {
-    "url": "https://test.fastfs.io/lien-13569.testnet/outlayer.testnet/636ee8be94fd970a87a963883135cdd64e76197bcf54e5d987a73d3eba29df15.wasm",
-    "hash": "636ee8be94fd970a87a963883135cdd64e76197bcf54e5d987a73d3eba29df15",
+    "url": "https://test.fastfs.io/lien-13569.testnet/outlayer.testnet/e43536c53c888cb2cc1527260dd428b81c7c10c5d30d6876ed33098148523814.wasm",
+    "hash": "e43536c53c888cb2cc1527260dd428b81c7c10c5d30d6876ed33098148523814",
     "buildTarget": "wasm32-wasip2",
     "vendor": "lien-f6-3876.testnet"
   }

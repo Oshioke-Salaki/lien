@@ -7,6 +7,7 @@
 //! is what the contract settles on. Printing `ok: false` refunds the customer.
 
 mod chain;
+mod http;
 mod model;
 mod risk;
 

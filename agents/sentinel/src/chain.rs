@@ -3,7 +3,6 @@
 
 use serde_json::{json, Value};
 use std::time::Duration;
-use wasi_http_client::Client;
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Facts {
@@ -32,17 +31,11 @@ fn rpc_urls(network: &str) -> &'static [&'static str] {
 }
 
 fn query_one(url: &str, body: &str) -> Result<Value, String> {
-    let response = Client::new()
-        .post(url)
-        .header("Content-Type", "application/json")
-        .connect_timeout(Duration::from_secs(8))
-        .body(body.as_bytes())
-        .send()
-        .map_err(|_| "the chain could not be reached".to_string())?;
-    if !(200..300).contains(&response.status()) {
+    // A hard 5 second bound per node: a node that accepts and then stalls is skipped.
+    let (status, bytes) = crate::http::post_json(url, body, Duration::from_secs(5))?;
+    if !(200..300).contains(&status) {
         return Err("the chain returned an error".to_string());
     }
-    let bytes = response.body().map_err(|_| "the chain response could not be read".to_string())?;
     let value: Value = serde_json::from_slice(&bytes).map_err(|_| "the chain response was not valid".to_string())?;
     // A node problem (rate limit, timeout, not synced) is not an answer about the account.
     if let Some(error) = value.get("error") {
@@ -58,8 +51,13 @@ fn query_one(url: &str, body: &str) -> Result<Value, String> {
 fn query(urls: &[&str], params: Value) -> Result<Value, String> {
     let body = json!({ "jsonrpc": "2.0", "id": "sentinel", "method": "query", "params": params }).to_string();
     let mut last = "the chain could not be reached".to_string();
+    // Every read shares one budget, so the whole check always answers inside the enclave's limit.
+    let started = std::time::Instant::now();
     for _round in 0..2 {
         for url in urls {
+            if started.elapsed() > Duration::from_secs(20) {
+                return Err(last);
+            }
             match query_one(url, &body) {
                 Ok(value) => return Ok(value),
                 Err(error) => last = error,
