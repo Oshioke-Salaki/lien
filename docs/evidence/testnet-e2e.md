@@ -91,3 +91,13 @@ On 13 November 2026 Sentinel's checks were failing when its single RPC provider 
 - **Alice, holding 60% of the loan, approved it, and it took effect at once** ([tx](https://testnet.nearblocks.io/txns/5iG4UPPizMQvJuEkeT8yE4ChTC15KnvkagJzLMYSEyAg))
   - ok: the next four checks were delivered from the new pinned build, each attested and paying lenders first
   - ok: the owner alone could not have changed it (`operator_cannot_change_the_code_during_a_loan` and `a_change_applies_only_when_more_than_half_of_principal_agrees` in the contract tests)
+
+## A loan repaid in full, with interest
+
+On 13 November 2026 the sample business Beacon (`beacon-repaid-7978.v1.lien-13569.testnet`) raised a $20 loan owing $22, sold a real check, and its owner repaid the whole $22; the lender then collected it:
+
+- **Funded by a lender** ([tx](https://testnet.nearblocks.io/txns/Fyrzy8AYLrLLoJXVMJ4kQUxfNBbmiypGJUzzTiS5U5XA))
+- **One real sale through the waterfall** ([tx](https://testnet.nearblocks.io/txns/EMbhVATMbnE6u8Fuj4U1SsUWnTZPccRRQoWjNW28NCrB))
+- **Repaid in full by the owner** ([tx](https://testnet.nearblocks.io/txns/EdvDryN9ZhFGMjCkLQNB5EH4V3i7fD6HTXcD4M42d66B))
+- **Collected by the lender** ([tx](https://testnet.nearblocks.io/txns/8ALsEeH4kHGEJbD8SzPmx7LNKzizNJ6BAJmc9drkanuT))
+  - ok: the loan closed as Repaid, $22 of $22

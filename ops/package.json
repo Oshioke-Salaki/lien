@@ -12,7 +12,8 @@
     "seed": "tsx src/seed.ts",
     "heartbeat": "tsx src/heartbeat.ts",
     "restock": "tsx src/restock.ts",
-    "upgrade": "tsx src/upgrade.ts"
+    "upgrade": "tsx src/upgrade.ts",
+    "sample-repaid": "tsx src/sample-repaid.ts"
   },
   "dependencies": {
     "@noble/ciphers": "^2.4.0",

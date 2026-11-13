@@ -51,6 +51,14 @@ export function network(): Network {
   return value;
 }
 
+/**
+ * Transactions go through one provider, so a refusal (not enough balance, a contract
+ * error) is reported as itself instead of being retried on every provider and lost.
+ */
+export function sendProvider(net: Network = network()) {
+  return new JsonRpcProvider({ url: RPC[net] });
+}
+
 export function provider(net: Network = network()) {
   return new FailoverRpcProvider(RPC_FALLBACKS[net].map((url) => new JsonRpcProvider({ url })));
 }
@@ -58,14 +66,14 @@ export function provider(net: Network = network()) {
 export function account(accountId: string, net: Network = network()): Account {
   // In CI the key comes from a secret, for exactly one named account, and is never written to disk.
   if (process.env.NEAR_ACCOUNT_ID === accountId && process.env.NEAR_PRIVATE_KEY) {
-    return new Account(accountId, provider(net), process.env.NEAR_PRIVATE_KEY as KeyPairString);
+    return new Account(accountId, sendProvider(net), process.env.NEAR_PRIVATE_KEY as KeyPairString);
   }
   const path = join(homedir(), ".near-credentials", net, `${accountId}.json`);
   if (!existsSync(path)) {
     throw new Error(`No key for ${accountId} at ${path}. Run: near account import-account, or create it with the CLI.`);
   }
   const { private_key: key } = JSON.parse(readFileSync(path, "utf8")) as { private_key: KeyPairString };
-  return new Account(accountId, provider(net), key);
+  return new Account(accountId, sendProvider(net), key);
 }
 
 export type CallOptions = { deposit?: bigint; tgas?: bigint };
