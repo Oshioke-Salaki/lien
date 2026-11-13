@@ -14,7 +14,9 @@ jobs:
           targets: wasm32-unknown-unknown, wasm32-wasip2
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo install cargo-near --locked
+      # cargo-near links hidapi for hardware wallets, which needs libudev to build.
+      - run: sudo apt-get update && sudo apt-get install -y libudev-dev pkg-config
+      - run: cargo install cargo-near --version 0.22.0 --locked
       - run: cargo test -p lien-agent -p lien-registry
       - run: cargo clippy --target wasm32-unknown-unknown -p lien-agent -p lien-collector -p lien-registry -- -D warnings
       - run: ./scripts/build.sh
@@ -23,6 +25,13 @@ jobs:
         working-directory: agents/sentinel
       - run: cargo build --release --locked --target wasm32-wasip2
         working-directory: agents/sentinel
+      # The site states its test counts; this fails if they drift from what the runners report.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: web
+      - run: node scripts/check-facts.mjs
 
   web:
     runs-on: ubuntu-latest
@@ -39,8 +48,6 @@ jobs:
       - run: npx eslint src
       - run: npx vitest run
       - run: npx next build
-      - run: node ../scripts/check-facts.mjs
-        working-directory: .
 
   ops:
     runs-on: ubuntu-latest
