@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
-import { Bar, ErrorState, Skeleton, StandingLabel } from "@/components/ui";
+import { Bar, EmptyState, ErrorState, PageHead, Skeleton, StandingLabel, STANDING_TONE } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
-import { amount, money, percent, share, shortAccount, smartAmount, symbol } from "@/lib/format";
+import { percent, share, shortAccount, smartAmount, symbol } from "@/lib/format";
 import { listBusinesses } from "@/lib/near/rpc";
 import type { Business } from "@/lib/near/types";
 import { isAlert, standing, type Standing } from "@/lib/status";
@@ -24,6 +24,8 @@ function nextStep(s: Standing) {
   }
 }
 
+const COLS = "lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1.6fr)_minmax(0,1fr)_auto]";
+
 export function MarketScreen() {
   const live = useLive(listBusinesses, "market", 8_000);
   const router = useRouter();
@@ -31,65 +33,68 @@ export function MarketScreen() {
     () => [...(live.data ?? [])].sort((a, b) => ORDER[standing(a)] - ORDER[standing(b)]),
     [live.data],
   );
-  const open = rows.filter((b) => standing(b) === "funding").length;
+  const count = (s: Standing[]) => rows.filter((b) => s.includes(standing(b))).length;
+  const raisingCount = count(["funding"]);
+  const paying = count(["current"]);
   const alerts = rows.filter((b) => isAlert(standing(b))).length;
-  const raising = rows
-    .filter((b) => standing(b) === "funding")
-    .reduce((sum, b) => sum + BigInt(b.current_loan!.terms.principal) - BigInt(b.current_loan!.funded), 0n);
+  const lent = rows.reduce((sum, b) => sum + (b.current_loan && b.current_loan.status !== "Funding" ? BigInt(b.current_loan.funded) : 0n), 0n);
+  const repaid = rows.reduce((sum, b) => sum + (b.current_loan ? BigInt(b.current_loan.repaid) : 0n), 0n);
+  const sold = rows.reduce((sum, b) => sum + b.stats.jobs_done, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[28px] leading-tight font-medium tracking-[-0.01em]">Market</h1>
-          <p className="mt-1 text-[17px]" data-testid="market-finding">
+    <div className="space-y-8">
+      <PageHead
+        title="Market"
+        lead={
+          <p data-testid="market-finding">
             {live.loaded
               ? rows.length === 0
                 ? "No businesses yet. Be the first to start one."
-                : `${open} ${open === 1 ? "loan" : "loans"} raising ${money(raising)}, ${alerts} ${alerts === 1 ? "business needs" : "businesses need"} attention.`
+                : `${raisingCount} raising, ${paying} paying on time, ${alerts} ${alerts === 1 ? "needs" : "need"} attention.`
               : "Reading the chain…"}
           </p>
-        </div>
-        <Link href="/create" className="btn btn-primary">Start a business</Link>
-      </div>
+        }
+        action={<Link href="/create" className="btn btn-primary">Start a business</Link>}
+      />
 
       {live.error && !live.data ? (
         <ErrorState message="The network could not be reached, so the market cannot be shown right now." onRetry={() => void live.refresh()} />
       ) : (
-        <div className="panel overflow-x-auto">
-          <table className="table min-w-[860px]">
-            <caption className="sr-only">Every business on Lien, with what needs attention first</caption>
-            <thead>
-              <tr>
-                <th scope="col">Business</th>
-                <th scope="col">Standing</th>
-                <th scope="col" className="r">Loan, {symbol}</th>
-                <th scope="col" className="r">Paid back</th>
-                <th scope="col" className="r">Lenders get</th>
-                <th scope="col" className="r">Jobs done</th>
-                <th scope="col" className="r">Customers</th>
-                <th scope="col"><span className="sr-only">Next step</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {!live.loaded
-                ? [0, 1, 2].map((i) => (
-                    <tr key={i}>
-                      <td colSpan={8}><Skeleton className="h-9 w-full" /></td>
-                    </tr>
-                  ))
-                : rows.map((b) => <MarketRow key={b.id} business={b} onOpen={() => router.push(`/b/${b.id}`)} />)}
-              {live.loaded && rows.length === 0 ? (
-                <tr><td colSpan={8} className="py-10 text-center muted">Nothing here yet.</td></tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {[
+              { label: "Lent to businesses now", value: live.loaded ? `${smartAmount(lent)} ${symbol}` : null },
+              { label: "Repaid on open loans", value: live.loaded ? `${smartAmount(repaid)} ${symbol}` : null },
+              { label: "Work sold by these businesses", value: live.loaded ? sold.toLocaleString("en-US") : null },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-[16px] bg-[var(--surface)] p-5">
+                <dt className="text-[14px] muted">{stat.label}</dt>
+                <dd className="num mt-2 text-[28px] leading-none font-medium tracking-[-0.02em]">{stat.value ?? <span className="skeleton inline-block h-7 w-32 align-middle" />}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <section aria-label="Every business on Lien, with what needs attention first" className="space-y-2">
+            <div className={`hidden gap-6 px-5 pb-1 text-[13px] muted lg:grid ${COLS}`} aria-hidden>
+              <span>Business</span><span>State</span><span>Loan</span><span>Lenders get</span><span className="w-[112px]" />
+            </div>
+            {!live.loaded ? (
+              [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[92px] w-full lg:h-[76px]" />)
+            ) : rows.length === 0 ? (
+              <EmptyState title="Nothing is listed yet" body="A business is a keyless account that sells work and can borrow against it. Start one and it appears here." action={{ href: "/create", label: "Start a business" }} />
+            ) : (
+              <ul className="space-y-2">
+                {rows.map((b) => <MarketRow key={b.id} business={b} onOpen={() => router.push(`/b/${b.id}`)} />)}
+              </ul>
+            )}
+          </section>
+
+          {live.loaded ? <TryIt rows={rows} /> : null}
+          <p className="max-w-[72ch] text-[14px] muted">
+            Every figure is read live from the contracts. Each business is its own keyless account, so nothing here depends on Lien being honest.
+          </p>
+        </>
       )}
-      {live.loaded ? <TryIt rows={rows} /> : null}
-      <p className="text-[14px] muted">
-        Every figure is read live from the contracts. Each business is its own keyless account, so nothing here depends on Lien being honest.
-      </p>
     </div>
   );
 }
@@ -109,13 +114,21 @@ function TryIt({ rows }: { rows: Business[] }) {
   ].filter((s): s is { href: string; action: string; result: string } => Boolean(s));
   if (!steps.length) return null;
   return (
-    <section className="panel" aria-labelledby="try-title">
-      <div className="panel-head"><h2 id="try-title">Things to try</h2><span className="text-[14px] muted">Free on testnet, nothing to install</span></div>
-      <ul className="grid gap-x-8 gap-y-4 p-[18px] sm:grid-cols-2">
+    <section aria-labelledby="try-title" className="space-y-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="try-title" className="text-[22px] font-medium tracking-[-0.015em]">Things to try</h2>
+        <span className="text-[14px] muted">Free on testnet, nothing to install</span>
+      </div>
+      <ul className="grid gap-3 sm:grid-cols-2">
         {steps.map((step) => (
           <li key={step.action}>
-            <Link className="link text-[17px] font-medium" href={step.href}>{step.action}</Link>
-            <p className="mt-1 text-[15px] muted">{step.result}</p>
+            <Link className="group flex h-full items-start justify-between gap-4 rounded-[16px] bg-[var(--surface)] p-5 transition-[background-color,transform] duration-200 hover:-translate-y-[2px] hover:bg-[var(--surface-2)]" href={step.href}>
+              <span>
+                <span className="block text-[17px] font-medium">{step.action}</span>
+                <span className="mt-1 block text-[15px] text-[var(--ink-2)]">{step.result}</span>
+              </span>
+              <span aria-hidden className="mt-1 text-[var(--accent)] transition-transform duration-200 group-hover:translate-x-1">→</span>
+            </Link>
           </li>
         ))}
       </ul>
@@ -126,34 +139,37 @@ function TryIt({ rows }: { rows: Business[] }) {
 function MarketRow({ business: b, onOpen }: { business: Business; onOpen: () => void }) {
   const s = standing(b);
   const loan = b.current_loan;
-  const funded = loan ? share(loan.funded, loan.terms.principal) : 0;
-  const repaid = loan ? share(loan.repaid, loan.terms.total_due) : 0;
+  const raising = loan?.status === "Funding";
+  const progress = loan ? (raising ? share(loan.funded, loan.terms.principal) : share(loan.repaid, loan.terms.total_due)) : 0;
   return (
-    <tr data-row="link" data-testid={`row-${b.id}`} onClick={onOpen}>
-      <td>
-        <Link className="font-medium hover:underline" href={`/b/${b.id}`} onClick={(e) => e.stopPropagation()}>{b.name}</Link>
-        <div className="max-w-[300px] truncate text-[13px] muted" title={b.id}>{shortAccount(b.id, 36)}</div>
-      </td>
-      <td><StandingLabel standing={s} /></td>
-      <td className="r">
-        {loan ? amount(loan.terms.principal) : <span className="muted">-</span>}
-        {s === "funding" ? <div className="mt-2 ml-auto w-24"><Bar value={funded} label={`${funded}% funded`} /></div> : null}
-      </td>
-      <td className="r">
-        {loan && loan.status !== "Funding" ? (
+    <li
+      data-testid={`row-${b.id}`}
+      onClick={onOpen}
+      className={`grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 rounded-[16px] bg-[var(--surface)] p-5 transition-colors duration-150 hover:bg-[var(--surface-2)] lg:gap-6 lg:py-4 ${COLS}`}
+    >
+      <div className="min-w-0">
+        <Link className="text-[17px] font-medium hover:underline" href={`/b/${b.id}`} onClick={(e) => e.stopPropagation()}>{b.name}</Link>
+        <div className="truncate text-[13px] muted" title={b.id}>{shortAccount(b.id, 36)}</div>
+      </div>
+      <div className="justify-self-end lg:justify-self-start"><StandingLabel standing={s} /></div>
+      <div className="col-span-2 min-w-0 lg:col-span-1">
+        {loan ? (
           <>
-            {smartAmount(loan.repaid)}
-            <div className="text-[13px] muted">of {smartAmount(loan.terms.total_due)}</div>
+            <div className="mb-2 flex justify-between gap-3 text-[14px]">
+              <span className="num">{raising ? `${smartAmount(loan.funded)} of ${smartAmount(loan.terms.principal)} raised` : `${smartAmount(loan.repaid)} of ${smartAmount(loan.terms.total_due)} repaid`}</span>
+              <span className="num muted">{progress}%</span>
+            </div>
+            <Bar value={progress} tone={raising ? "var(--accent)" : STANDING_TONE[s]} label={raising ? `${progress}% raised` : `${progress}% repaid`} />
           </>
-        ) : <span className="muted">-</span>}
-        {loan && loan.status !== "Funding" ? <span className="sr-only">{repaid}%</span> : null}
-      </td>
-      <td className="r">{loan ? `${percent(loan.terms.lender_bps)} of sales` : <span className="muted">-</span>}</td>
-      <td className="r">{b.stats.jobs_done.toLocaleString("en-US")}</td>
-      <td className="r">{b.stats.unique_payers.toLocaleString("en-US")}</td>
-      <td className="text-right">
-        <Link className="btn btn-secondary btn-sm" href={`/b/${b.id}`} onClick={(e) => e.stopPropagation()}>{nextStep(s)}</Link>
-      </td>
-    </tr>
+        ) : <span className="text-[14px] muted">No loan. {b.stats.jobs_done} checks sold.</span>}
+      </div>
+      <div className="text-[14px] lg:text-[15px]">
+        <span className="muted lg:hidden">Lenders get </span>
+        {loan ? <span className="num">{percent(loan.terms.lender_bps)} of sales</span> : <span className="muted">-</span>}
+      </div>
+      <div className="justify-self-end">
+        <Link className={`btn btn-sm min-w-[112px] ${s === "funding" || isAlert(s) ? "btn-primary" : "btn-secondary"}`} href={`/b/${b.id}`} onClick={(e) => e.stopPropagation()}>{nextStep(s)}</Link>
+      </div>
+    </li>
   );
 }

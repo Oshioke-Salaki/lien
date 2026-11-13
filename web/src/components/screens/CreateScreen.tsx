@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AmountField, TextField } from "@/components/business/fields";
 import { ConnectGate, useTx } from "@/components/Tx";
-import { Panel } from "@/components/ui";
+import { PageHead, Panel } from "@/components/ui";
 import { CREATE_DEPOSIT_NEAR, deployment, REPO_URL } from "@/lib/config";
 import { money, parseAmount, shortHash, toYocto } from "@/lib/format";
 import { createBusiness } from "@/lib/near/actions";
@@ -89,52 +89,73 @@ export function CreateScreen() {
     if (result?.events.some((e) => e.event === "agent_created")) router.push(`/b/${label}.${deployment.registry}`);
   };
 
-  return (
-    <div className="space-y-5">
+  const step = (title: string, body: string, children: React.ReactNode) => (
+    <section className="grid gap-5 rounded-[16px] bg-[var(--surface)] p-5 sm:p-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
       <div>
-        <h1 className="text-[28px] leading-tight font-medium tracking-[-0.01em]">Start a business</h1>
-        <p className="mt-1 max-w-[70ch] text-[17px]">You get a keyless account that runs your build, sells its work and can borrow against what it earns. You keep control until you take a loan.</p>
+        <h2 className="text-[17px] font-medium tracking-[-0.01em]">{title}</h2>
+        <p className="mt-1 text-[14px] leading-snug muted">{body}</p>
       </div>
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_372px]">
-        <Panel>
-          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="create-form">
+      <div className="min-w-0 space-y-4">{children}</div>
+    </section>
+  );
+
+  return (
+    <div className="space-y-8">
+      <PageHead title="Start a business" lead="You get a keyless account that runs your build, sells its work and can borrow against what it earns. You keep control until you take a loan." />
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="create-form">
+          {step("Its name", "The account name is permanent. The business name is what customers see.", <>
             <TextField label="Account name" testId="create-label" value={label} onChange={(v) => setLabel(v.toLowerCase())} placeholder="scout"
               error={labelError ?? (taken ? "That name is taken." : null)}
-              hint={label && !labelError && taken === false ? `${label}.${deployment.registry} is free. Income arrives at ${label}-in.${deployment.registry}.` : `Becomes <name>.${deployment.registry}`} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <TextField label="Business name" testId="create-name" value={name} onChange={setName} />
-              <AmountField label="Price of one job" testId="create-price" value={price} onChange={setPrice} error={priceValue === null && price ? "Enter an amount." : null} />
-            </div>
+              hint={label && !labelError && taken === false ? `${label}.${deployment.registry} is free. Income arrives at ${label}-in.${deployment.registry}.` : label && !labelError ? "Checking the name…" : `Becomes <name>.${deployment.registry}`} />
+            <TextField label="Business name" testId="create-name" value={name} onChange={setName} />
+          </>)}
+          {step("What it sells", "One job, one price. Customers pay the contract, which holds the money until the work is done.", <>
+            <AmountField label="Price of one job" testId="create-price" value={price} onChange={setPrice} error={priceValue === null && price ? "Enter an amount." : null} />
             <TextField label="What it does" value={description} onChange={setDescription} multiline />
-            <TextField label="Vendors it may pay" value={vendors} onChange={setVendors} error={vendorError} hint="Accounts, separated by commas. It can pay nobody else, whatever its code asks." />
+          </>)}
+          {step("What it may spend", "Its code can only pay these accounts, up to these limits, whatever it asks for.", <>
+            <TextField label="Vendors it may pay" value={vendors} onChange={setVendors} error={vendorError} hint="Accounts, separated by commas." />
             <div className="grid gap-4 sm:grid-cols-2">
               <AmountField label="Most per payment" value={perTx} onChange={setPerTx} error={limitError} />
               <AmountField label="Most per day" value={perDay} onChange={setPerDay} />
             </div>
+          </>)}
+          {step("Its build", "It starts with Sentinel, our open example agent. Paste your own to run something else.", <>
             <details>
-              <summary className="cursor-pointer text-[15px] font-medium">Use your own build</summary>
-              <div className="mt-3 space-y-3">
-                <p className="hint">Starts with Sentinel, whose source is in the repository. To run yours, publish it to FastFS and paste its URL and SHA-256 here.</p>
+              <summary className="cursor-pointer rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[15px] font-medium transition-colors hover:bg-[var(--surface-3)]">Use your own build</summary>
+              <div className="mt-4 space-y-4">
+                <p className="hint">Publish it to FastFS and paste its URL and SHA-256. Sentinel&rsquo;s source is in the repository.</p>
                 <TextField label="Build URL" value={url} onChange={setUrl} error={urlError} />
                 <TextField label="SHA-256 of the build" value={hash} onChange={setHash} error={hashError} />
               </div>
             </details>
+          </>)}
+          <div className="rounded-[16px] bg-[var(--surface)] p-5 sm:p-6">
             <ConnectGate reason="Connect to create it. The account that creates a business operates it.">
-              <button type="submit" className="btn btn-primary w-full sm:w-auto" data-testid="create-submit" disabled={!ready || busy || preparing}>{preparing ? "Preparing your account…" : `Create it for ${CREATE_DEPOSIT_NEAR} NEAR`}</button>
+              <div className="flex flex-wrap items-center gap-4">
+                <button type="submit" className="btn btn-primary w-full sm:w-auto" data-testid="create-submit" disabled={!ready || busy || preparing}>{preparing ? "Preparing your account…" : `Create it for ${CREATE_DEPOSIT_NEAR} NEAR`}</button>
+                <p className="text-[14px] muted">{ready ? "Your wallet asks you to confirm." : "Fill in a free name to continue."}</p>
+              </div>
               {prepareError ? <p role="alert" className="hint" data-error="true">{prepareError}</p> : null}
             </ConnectGate>
-          </form>
-        </Panel>
-        <Panel title="What you are creating">
-          <dl className="dl">
-            <dt>Keys on the account</dt><dd>None, ever</dd>
-            <dt>Contract</dt><dd><code>{shortHash(deployment.agentCode)}</code></dd>
-            <dt>Build it runs</dt><dd><code>{hash ? shortHash(hash) : "-"}</code></dd>
-            <dt>Job price</dt><dd>{priceValue ? money(priceValue) : "-"}</dd>
-            <dt>Cost</dt><dd>{CREATE_DEPOSIT_NEAR} NEAR</dd>
-          </dl>
-          <p className="mt-3 text-[14px] muted">Most of that NEAR stays in the business to pay for its compute. Without a loan you can withdraw it.</p>
-        </Panel>
+          </div>
+        </form>
+        <aside className="space-y-4 xl:sticky xl:top-10">
+          <Panel title="What you are creating">
+            <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
+              {name.trim() || "Your business"} sells one job for {priceValue ? money(priceValue) : "its price"}, at {label && !labelError ? <code>{label}.{deployment.registry}</code> : "its own account"}. It can pay {vendorList.length ? vendorList.length === 1 ? "one vendor" : `${vendorList.length} vendors` : "nobody"}, at most {perDayValue !== null ? money(perDayValue) : "-"} a day.
+            </p>
+            <dl className="dl">
+              <dt>Keys on the account</dt><dd>None, ever</dd>
+              <dt>Contract</dt><dd><code>{shortHash(deployment.agentCode)}</code></dd>
+              <dt>Build it runs</dt><dd><code>{hash ? shortHash(hash) : "-"}</code></dd>
+              <dt>Job price</dt><dd>{priceValue ? money(priceValue) : "-"}</dd>
+              <dt>Cost</dt><dd>{CREATE_DEPOSIT_NEAR} NEAR</dd>
+            </dl>
+            <p className="mt-4 text-[14px] leading-snug muted">Most of that NEAR stays in the business to pay for its compute. Without a loan you can withdraw it.</p>
+          </Panel>
+        </aside>
       </div>
     </div>
   );

@@ -21,17 +21,21 @@ function PaymentClock({ loan, now }: { loan: LoanView; now: number }) {
   return (
     <div className="mt-5 space-y-3" data-testid="payment-clock">
       <div>
-        <div className="mb-1 flex justify-between text-[13px] muted"><span>Paid to lenders</span><span className="num">{paidPct}%</span></div>
-        <div className="h-5 bg-[#eef0ee]" role="img" aria-label={`${paidPct}% of the debt has been paid`}>
-          <div className="h-full bg-[var(--data)] transition-[width] duration-1000" style={{ width: `${paidPct}%`, transitionTimingFunction: "var(--ease-out)" }} />
+        <div className="mb-2 flex justify-between text-[14px] muted"><span>Paid to lenders</span><span className="num text-[var(--ink)]">{paidPct}%</span></div>
+        <div className="track h-[10px]" role="img" aria-label={`${paidPct}% of the debt has been paid`}>
+          <i style={{ width: `${paidPct}%` }} />
         </div>
       </div>
       <div>
-        <div className="mb-1 flex justify-between text-[13px] muted"><span>Term</span><span>Ends {dateTime(end)}</span></div>
-        <div className="relative h-5 bg-[#eef0ee]" role="img" aria-label={`Term progress: ${Math.round(at(now))}% elapsed`}>
-          <div className="h-full bg-black transition-[width] duration-1000" style={{ width: `${at(now)}%` }} />
-          {breach !== null ? <span className="absolute inset-y-0 w-[2px] bg-[var(--data)]" style={{ left: `${at(breach)}%` }} title="Falls behind" /> : null}
-          {foreclosable !== null && foreclosable !== breach ? <span className="absolute inset-y-0 w-[2px] bg-[var(--danger)]" style={{ left: `${at(foreclosable)}%` }} title="Can be foreclosed" /> : null}
+        <div className="mb-2 flex justify-between text-[14px] muted"><span>Term</span><span>Ends {dateTime(end)}</span></div>
+        <div className="relative h-[10px] rounded-full bg-[var(--surface-3)]" role="img" aria-label={`Term progress: ${Math.round(at(now))}% elapsed`}>
+          <div className="h-full rounded-full bg-[var(--ink-2)] transition-[width] duration-1000" style={{ width: `${at(now)}%` }} />
+          {breach !== null ? <span className="absolute -inset-y-[3px] w-[3px] rounded-full bg-[var(--warn)]" style={{ left: `${at(breach)}%` }} title="Falls behind" /> : null}
+          {foreclosable !== null && foreclosable !== breach ? <span className="absolute -inset-y-[3px] w-[3px] rounded-full bg-[var(--danger)]" style={{ left: `${at(foreclosable)}%` }} title="Can be foreclosed" /> : null}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px] muted">
+          {breach !== null ? <span className="flex items-center gap-2"><i aria-hidden className="h-[10px] w-[3px] rounded-full bg-[var(--warn)]" />Falls behind</span> : null}
+          {foreclosable !== null && foreclosable !== breach ? <span className="flex items-center gap-2"><i aria-hidden className="h-[10px] w-[3px] rounded-full bg-[var(--danger)]" />Can be foreclosed</span> : null}
         </div>
       </div>
     </div>
@@ -59,23 +63,23 @@ export function DebtPanel({ business: b, now }: { business: Business; now: numbe
     const revenue = BigInt(b.stats.job_revenue) + BigInt(b.stats.external_revenue);
     return (
       <Panel>
-        <p className="text-[17px]" data-testid="headline">{headline(b, now)}</p>
-        <p className="num mt-3 text-[40px] leading-none font-medium tracking-[-0.02em]">{smartAmount(revenue)} <span className="text-[17px] font-normal muted">{symbol} earned</span></p>
+        <p className="text-[17px] leading-snug" data-testid="headline">{headline(b, now)}</p>
+        <p className="num mt-5 text-[clamp(40px,5vw,56px)] leading-none font-medium tracking-[-0.03em]">{smartAmount(revenue)} <span className="text-[17px] font-normal tracking-normal muted">{symbol} earned</span></p>
       </Panel>
     );
   }
   const raising = loan.status === "Funding";
   return (
     <Panel>
-      <p className="text-[17px]" data-testid="headline">{headline(b, now)}</p>
-      <div className="mt-4 flex flex-wrap items-end justify-between gap-x-10 gap-y-3">
+      <p className="text-[17px] leading-snug" data-testid="headline">{headline(b, now)}</p>
+      <div className="mt-6 flex flex-wrap items-end justify-between gap-x-10 gap-y-3">
         <div>
           <p className="text-[14px] muted">{raising ? "Still to raise" : "Still owed to lenders"}</p>
-          <p className="num text-[48px] leading-none font-medium tracking-[-0.02em]" data-testid="big-figure">
-            {smartAmount(raising ? BigInt(loan.terms.principal) - BigInt(loan.funded) : loan.outstanding)} <span className="text-[17px] font-normal muted">{symbol}</span>
+          <p className="num mt-1 text-[clamp(44px,5.4vw,64px)] leading-none font-medium tracking-[-0.03em]" data-testid="big-figure">
+            {smartAmount(raising ? BigInt(loan.terms.principal) - BigInt(loan.funded) : loan.outstanding)} <span className="text-[17px] font-normal tracking-normal muted">{symbol}</span>
           </p>
         </div>
-        <dl className="num grid grid-cols-[auto_auto] gap-x-5 gap-y-1 text-[15px]">
+        <dl className="num grid grid-cols-[auto_auto] gap-x-6 gap-y-2 text-[15px]">
           <dt className="muted">{raising ? "Raised" : "Paid"}</dt>
           <dd className="text-right">{smartAmount(raising ? loan.funded : loan.repaid)}</dd>
           <dt className="muted">{raising ? "Goal" : "Total due"}</dt>
@@ -85,9 +89,9 @@ export function DebtPanel({ business: b, now }: { business: Business; now: numbe
         </dl>
       </div>
       {raising ? (
-        <div className="mt-5 h-5 bg-[#eef0ee]" role="img" aria-label={`${share(loan.funded, loan.terms.principal)}% raised`}>
-          <div className="h-full bg-[var(--data)] transition-[width] duration-1000" style={{ width: `${share(loan.funded, loan.terms.principal)}%` }} />
-        </div>
+        <div className="mt-6"><div className="mb-2 flex justify-between text-[14px] muted"><span>Raised</span><span className="num text-[var(--ink)]">{share(loan.funded, loan.terms.principal)}%</span></div><div className="track h-[10px]" role="img" aria-label={`${share(loan.funded, loan.terms.principal)}% raised`}>
+          <i style={{ width: `${share(loan.funded, loan.terms.principal)}%` }} />
+        </div></div>
       ) : <PaymentClock loan={loan} now={now} />}
     </Panel>
   );
@@ -104,22 +108,22 @@ export function WaterfallPanel({ business: b, now }: { business: Business; now: 
     ? splitInflow(price, BigInt(loan.outstanding), loan.terms.lender_bps, loan.terms.operator_bps, trapped)
     : { lender: 0n, operator: 0n, opex: price };
   const parts = [
-    { key: "Lenders", value: split.lender, color: "var(--data)" },
-    { key: "Operator", value: split.operator, color: "#000" },
-    { key: "Working capital", value: split.opex, color: "#b9c7bc" },
+    { key: "Lenders", value: split.lender, color: "var(--accent)" },
+    { key: "Operator", value: split.operator, color: "var(--ink-2)" },
+    { key: "Working capital", value: split.opex, color: "#6b6158" },
   ];
   return (
     <Panel title={`Where a ${smartAmount(price)} ${symbol} sale goes`} aside={trapped ? "Operator's share is locked" : undefined}>
-      <div className="flex h-8 gap-[3px]" role="img" aria-label={parts.map((p) => `${p.key} ${smartAmount(p.value)}`).join(", ")}>
+      <div className="flex h-9 gap-[3px] overflow-hidden rounded-[8px]" role="img" aria-label={parts.map((p) => `${p.key} ${smartAmount(p.value)}`).join(", ")}>
         {parts.filter((p) => p.value > 0n).map((p) => (
           <div key={p.key} className="transition-[flex-grow] duration-700" style={{ flexGrow: Number(p.value), background: p.color }} />
         ))}
       </div>
-      <dl className="mt-3 grid grid-cols-1 gap-x-8 gap-y-1 text-[15px] sm:grid-cols-3">
+      <dl className="mt-4 grid grid-cols-1 gap-x-8 gap-y-2 text-[15px] sm:grid-cols-3">
         {parts.map((p) => (
           <div key={p.key} className="flex items-baseline justify-between gap-3 sm:block">
-            <dt className="flex items-center gap-2 muted"><span aria-hidden className="h-[9px] w-[9px]" style={{ background: p.color }} />{p.key}</dt>
-            <dd className="num">{smartAmount(p.value)} {symbol}</dd>
+            <dt className="flex items-center gap-2 muted"><span aria-hidden className="h-[10px] w-[10px] rounded-[3px]" style={{ background: p.color }} />{p.key}</dt>
+            <dd className="num text-[18px] font-medium sm:mt-1">{smartAmount(p.value)} {symbol}</dd>
           </div>
         ))}
       </dl>

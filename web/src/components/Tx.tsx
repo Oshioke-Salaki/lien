@@ -8,7 +8,7 @@ import { useWallet } from "@/lib/wallet/WalletProvider";
 
 export type Prepared = { summary: string; prepare: () => Promise<TxRequest> };
 
-type Notice = { id: number; tone: "pending" | "done" | "error"; text: string; hash?: string };
+type Notice = { id: number; tone: "pending" | "done" | "error"; title: string; text: string; hash?: string };
 
 type TxContextValue = {
   /**
@@ -39,7 +39,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
   const run = useCallback<TxContextValue["run"]>(async (request, options = {}) => {
     const id = ++counter.current;
     setBusy(true);
-    setNotices((all) => [...all.slice(-2), { id, tone: "pending", text: `${request.summary}: waiting for the network` }]);
+    setNotices((all) => [...all.slice(-2), { id, tone: "pending", title: request.summary, text: "Waiting for the network. This usually takes a few seconds." }]);
     const finish = (notice: Omit<Notice, "id">) => {
       setNotices((all) => all.map((n) => (n.id === id ? { id, ...notice } : n)));
       if (notice.tone === "done") setTimeout(() => dismiss(id), 9_000);
@@ -47,11 +47,11 @@ export function TxProvider({ children }: { children: ReactNode }) {
     try {
       const ready = "prepare" in request ? await request.prepare() : request;
       const result = await send(ready, options.requiredOn);
-      if (result.ok) finish({ tone: "done", text: options.done ?? `${request.summary}: done`, hash: result.hash });
-      else finish({ tone: "error", text: result.error ?? "The transaction failed.", hash: result.hash });
+      if (result.ok) finish({ tone: "done", title: options.done ?? `${request.summary}: done`, text: "Confirmed on chain.", hash: result.hash });
+      else finish({ tone: "error", title: `${request.summary} did not go through`, text: result.error ?? "The transaction failed. Nothing was taken that was not given back.", hash: result.hash });
       return result;
     } catch (error) {
-      finish({ tone: "error", text: describeThrown(error) });
+      finish({ tone: "error", title: `${request.summary} did not go through`, text: describeThrown(error) });
       return null;
     } finally {
       setBusy(false);
@@ -61,25 +61,41 @@ export function TxProvider({ children }: { children: ReactNode }) {
   return (
     <TxContext.Provider value={{ run, busy }}>
       {children}
-      <div aria-live="polite" className="fixed right-4 bottom-4 left-4 z-50 flex flex-col items-end gap-2 sm:left-auto sm:w-[400px]">
+      <div aria-live="polite" className="pointer-events-none fixed right-4 bottom-4 left-4 z-50 flex flex-col items-end gap-2 sm:left-auto sm:w-[400px]">
         {notices.map((notice) => (
-          <div key={notice.id} role={notice.tone === "error" ? "alert" : "status"} data-tone={notice.tone} className="notice w-full">
-            <p className="min-w-0 flex-1">
-              {notice.text}
-              {notice.hash ? (
-                <>
-                  {" "}
-                  <a className="link" href={txUrl(notice.hash)} target="_blank" rel="noreferrer">View transaction</a>
-                </>
-              ) : null}
-            </p>
+          <div key={notice.id} role={notice.tone === "error" ? "alert" : "status"} data-tone={notice.tone} className="notice pointer-events-auto w-full">
+            <NoticeIcon tone={notice.tone} />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{notice.title}</p>
+              <p className="mt-[2px] text-[14px] text-[var(--ink-2)]">
+                {notice.text}
+                {notice.hash ? (
+                  <>
+                    {" "}
+                    <a className="link" href={txUrl(notice.hash)} target="_blank" rel="noreferrer">View transaction</a>
+                  </>
+                ) : null}
+              </p>
+            </div>
             {notice.tone !== "pending" ? (
-              <button type="button" className="shrink-0 underline-offset-2 hover:underline" onClick={() => dismiss(notice.id)} aria-label="Dismiss">Close</button>
-            ) : <span className="spinner" aria-hidden />}
+              <button type="button" className="-m-2 grid h-10 w-10 shrink-0 place-items-center rounded-full text-[var(--muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink)]" onClick={() => dismiss(notice.id)} aria-label="Dismiss">
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+              </button>
+            ) : null}
           </div>
         ))}
       </div>
     </TxContext.Provider>
+  );
+}
+
+function NoticeIcon({ tone }: { tone: Notice["tone"] }) {
+  if (tone === "pending") return <span className="spinner mt-[3px]" aria-hidden />;
+  const ok = tone === "done";
+  return (
+    <span aria-hidden className="mt-[1px] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full" style={{ background: ok ? "rgb(127 211 160 / 0.16)" : "rgb(255 122 110 / 0.16)", color: ok ? "var(--ok)" : "var(--danger)" }}>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{ok ? <path d="M2.5 6.2l2.3 2.3 4.7-5" /> : <path d="M6 3v3.6M6 9h.01" />}</svg>
+    </span>
   );
 }
 
@@ -92,12 +108,15 @@ export function useTx() {
 /** Shows children while connected, or the way to connect when not. */
 export function ConnectGate({ children, reason, quiet = false }: { children: ReactNode; reason: string; quiet?: boolean }) {
   const { account, ready } = useWallet();
-  if (!ready) return <p className="muted">Checking your wallet…</p>;
+  if (!ready) return <div className="skeleton h-11" />;
   if (account) return <>{children}</>;
   // `quiet` is for screens that already show the connect buttons once.
   return (
     <div className="space-y-3">
-      <p className="text-[15px] muted">{reason}</p>
+      <p className="flex items-center gap-2 text-[14px] text-[var(--ink-2)]">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden fill="none" stroke="var(--muted)" strokeWidth="1.4"><rect x="2.5" y="6" width="9" height="6" rx="1.5" /><path d="M4.5 6V4.5a2.5 2.5 0 0 1 5 0V6" /></svg>
+        {reason}
+      </p>
       {quiet ? null : <ConnectButtons />}
     </div>
   );
@@ -128,12 +147,12 @@ export function ConnectButtons({ compact = false }: { compact?: boolean }) {
   };
 
   return (
-    <div className={compact ? "flex flex-col gap-2 [&>.btn]:whitespace-normal [&>.btn]:px-2 [&>.btn]:text-[15px]" : "flex flex-wrap gap-2"}>
+    <div className={compact ? "flex flex-col gap-2 [&>.btn]:w-full [&>.btn]:whitespace-normal" : "flex flex-wrap gap-2"}>
       <button type="button" className="btn btn-primary" disabled={state !== "idle"} onClick={() => attempt("wallet", connect)}>
         {state === "wallet" ? "Opening…" : "Connect a wallet"}
       </button>
       <GuestButton busy={state === "guest"} disabled={state !== "idle"} onClick={() => attempt("guest", startGuest)} />
-      {error ? <p role="alert" className="w-full text-[var(--danger)]">{error}</p> : null}
+      {error ? <p role="alert" className="w-full text-[14px] text-[var(--danger)]">{error}</p> : null}
     </div>
   );
 }

@@ -9,11 +9,23 @@ import type { Business } from "@/lib/near/types";
 
 type Row = { label: string; state: "checking" | "ok" | "fail" | "unknown"; detail: string };
 
+function StateDot({ state }: { state: Row["state"] }) {
+  if (state === "checking") return <span className="spinner mt-[3px]" aria-hidden />;
+  const ok = state === "ok";
+  const tone = ok ? "var(--ok)" : state === "fail" ? "var(--danger)" : "var(--muted)";
+  return (
+    <span aria-hidden className="mt-[1px] grid h-[18px] w-[18px] place-items-center rounded-full" style={{ background: `color-mix(in oklab, ${tone} 18%, transparent)`, color: tone }}>
+      <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{ok ? <path d="M2.5 6.2l2.3 2.3 4.7-5" /> : <path d="M6 3v3.6M6 9h.01" />}</svg>
+    </span>
+  );
+}
+
 function Result({ row }: { row: Row }) {
   const word = row.state === "checking" ? "Checking" : row.state === "ok" ? "Verified" : row.state === "fail" ? "Failed" : "Could not check";
   const color = row.state === "ok" ? "var(--ok)" : row.state === "fail" ? "var(--danger)" : "var(--muted)";
   return (
-    <li className="grid grid-cols-[1fr_auto] gap-x-4 py-[10px]" data-testid="proof-row" data-state={row.state}>
+    <li className="grid grid-cols-[auto_1fr_auto] items-start gap-x-3 py-3" data-testid="proof-row" data-state={row.state}>
+      <StateDot state={row.state} />
       <div className="min-w-0">
         <p className="text-[15px]">{row.label}</p>
         <p className="text-[14px] break-words muted">{row.detail}</p>
@@ -72,13 +84,13 @@ export function ProofPanel({ business: b, listed }: { business: Business; listed
   return (
     <Panel title="Check it yourself" aside="Runs in your browser" id="proof">
       {listed === false ? (
-        <p role="alert" className="mb-2 bg-[var(--yellow)] p-3 text-[15px]">This account is not in the Lien registry. Its figures may not mean what they say.</p>
+        <p role="alert" className="callout mb-3">This account is not in the Lien registry. Its figures may not mean what they say.</p>
       ) : null}
-      <ul className="divide-y divide-[var(--line)]">
+      <ul className="divide-y divide-[var(--line)]" aria-live="polite">
         {order.map((key) => (rows[key] ? <Result key={key} row={rows[key]} /> : null))}
         <AttestationRow attestation={jobsDone === 0 ? null : attestation} pinned={hash} jobsDone={jobsDone} />
       </ul>
-      <dl className="dl mt-3 text-[14px]">
+      <dl className="dl mt-4 rounded-[12px] bg-[var(--surface-2)] p-4 text-[14px]">
         <dt>Pinned build</dt><dd><a className="link" href={url} target="_blank" rel="noreferrer"><code>{shortHash(hash)}</code></a></dd>
         <dt>Contract code</dt><dd><code>{shortHash(deployment.agentCode)}</code></dd>
         <dt>Compute</dt><dd><AccountLink id={b.outlayer} /></dd>
@@ -95,7 +107,8 @@ function AttestationRow({ attestation, pinned, jobsDone }: { attestation: Attest
   }
   const matches = attestation.executed_wasm_sha256 === pinned;
   return (
-    <li className="grid grid-cols-[1fr_auto] gap-x-4 py-[10px]" data-testid="proof-row" data-state={matches ? "ok" : "fail"}>
+    <li className="grid grid-cols-[auto_1fr_auto] items-start gap-x-3 py-3" data-testid="proof-row" data-state={matches ? "ok" : "fail"}>
+      <StateDot state={matches ? "ok" : "fail"} />
       <div className="min-w-0">
         <p className="text-[15px]">Work ran in a secure enclave</p>
         <p className="text-[14px] muted">

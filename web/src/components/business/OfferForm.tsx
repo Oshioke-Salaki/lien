@@ -111,7 +111,7 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
         <TextField label="Lowest first bid, % of debt" value={reserve} onChange={setReserve} />
       </div>
 
-      <div className="space-y-2 bg-[var(--paper-sage)] p-3 text-[15px]" data-testid="offer-preview">
+      <div className="inset space-y-2 text-[15px]" data-testid="offer-preview">
         <AmountField label={`If you earn this much every ${duration(times.window)}`} value={revenue} onChange={setRevenue} />
         {terms && projection ? (
           <>
