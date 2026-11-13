@@ -6,8 +6,9 @@ import { Info, Panel, Term } from "@/components/ui";
 import { usePay } from "@/hooks/usePay";
 import { useLive } from "@/hooks/useLive";
 import { isTestnet } from "@/lib/config";
-import { CENT, centsUp, dateTime, duration, fromNow, inputAmount, money, moneyUp, nearAmount, owedMoney, parseAmount, pct, percent, share, toYocto } from "@/lib/format";
-import { hasAccountName } from "@/lib/accounts";
+import { CENT, centsUp, dateTime, duration, fromNow, inputAmount, money, moneyUp, nearAmount, owedMoney, pct, percent, share, toYocto } from "@/lib/format";
+import { checkInputProblem, hasAccountName } from "@/lib/accounts";
+import { REFRESH_EVENT } from "@/lib/events";
 import { GLOSSARY } from "@/lib/glossary";
 import * as tx from "@/lib/near/actions";
 import { getCredit, getJob, getLoans, getNote } from "@/lib/near/rpc";
@@ -70,6 +71,7 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
   const noteShare = value ? share(value, principal) : 0;
   const returns = value ? (BigInt(loan.terms.total_due) * value) / principal : 0n;
   const interest = Number(((BigInt(loan.terms.total_due) - principal) * 10_000n) / principal);
+  const floor = (BigInt(loan.terms.total_due) * BigInt(loan.terms.auction_reserve_bps)) / 10_000n;
 
   if (expired) {
     return (
@@ -85,7 +87,7 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
   return (
     <Panel featured={featured} title="Lend to this business" aside={`Closes ${fromNow(loan.funding_deadline, now)}`}>
       <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
-        It pays lenders back from every sale, {percent(loan.terms.lender_bps)} of each one, until they have {percent(interest)} more than they lent. When you lend, your money leaves your balance and is held by the contract; it reaches the business only once the whole loan is raised. If the loan isn&rsquo;t fully raised by {dateTime(loan.funding_deadline)}, you can take it back.
+        It pays lenders back from every sale, {percent(loan.terms.lender_bps)} of each one, until they have {percent(interest)} more than they lent.
       </p>
       <ConnectGate quiet reason="Connect to lend. You can read everything without one.">
         <form className="space-y-3" onSubmit={async (e) => {
@@ -97,15 +99,17 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
         }}>
           <AmountField label="How much to lend" testId="lend-amount" value={text} onChange={setText} error={check.error} hint={`${money(remaining)} left to raise. The smallest loan is ${money(min)}.`} />
           <button type="button" className="link text-[14px]" onClick={() => { const most = balance.data !== undefined && balance.data < remaining ? balance.data : remaining; setText(inputAmount(most - (most % CENT))); }}>Lend the most I can</button>
+          <button type="submit" data-testid="lend-submit" className="btn btn-primary w-full" disabled={busy || !value || !!check.error}>{value && !check.error ? `Lend ${money(value)}` : "Enter an amount to lend"}</button>
           {value && !check.error ? (
             <dl className="dl rounded-[12px] bg-[var(--surface-2)] p-4" data-testid="lend-preview">
               <dt><Term tip={GLOSSARY.share}>Your share</Term> of the full loan</dt><dd>{pct(noteShare)}</dd>
               <dt>You get back in total</dt><dd>{money(returns)}</dd>
               <dt>If it stops paying</dt><dd>Anyone can take it over</dd>
-              <dt>If it is then sold<Info label="sale floor" tip="After a takeover the business is auctioned. The price can't go below this floor, which the owner set in the terms. The sale pays lenders first." /></dt><dd>For at least {moneyUp((BigInt(loan.terms.total_due) * BigInt(loan.terms.auction_reserve_bps)) / 10_000n)}</dd>
+              <dt>If it is then sold<Info label="sale floor" tip="After a takeover the business is auctioned. The whole loan's sale can't go below this floor, which the owner set in the terms. The sale pays lenders first, split by their shares." /></dt>
+              <dd>The whole loan sells for at least {moneyUp(floor)}; your share: at least {moneyUp((floor * value) / principal)}</dd>
             </dl>
           ) : null}
-          <button type="submit" data-testid="lend-submit" className="btn btn-primary w-full" disabled={busy || !value || !!check.error}>{value && !check.error ? `Lend ${money(value)}` : "Enter an amount to lend"}</button>
+          <p className="hint">Your money leaves your balance at once and is held by the contract. It reaches the business only when the whole loan is raised; if it isn&rsquo;t by {dateTime(loan.funding_deadline)}, you can take it back.</p>
         </form>
       </ConnectGate>
     </Panel>
@@ -114,7 +118,7 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
 
 function ForecloseCard({ business: b, now, refresh, featured }: Props) {
   const loan = b.current_loan!;
-  const { busy, run, notify } = useTx();
+  const { busy, run } = useTx();
   const ready = loan.foreclosable_at !== null && now >= loan.foreclosable_at;
   return (
     <Panel featured={featured} title={ready ? "Anyone can take over this business" : "This business is behind on payments"}>
@@ -125,9 +129,8 @@ function ForecloseCard({ business: b, now, refresh, featured }: Props) {
       </p>
       <ConnectGate quiet reason="Connect to take it over. Anyone can.">
         <button type="button" data-testid="foreclose" className="btn btn-warn w-full" disabled={busy || !ready} onClick={async () => {
-          const result = await run(tx.foreclose(b.id), { requiredOn: b.id, done: "You took over the business for its lenders" });
-          const seized = result?.events.find((e) => e.event === "foreclosed")?.data.seized;
-          if (result?.ok && seized && BigInt(String(seized)) > 0n) notify("Money moved to lenders", `${money(String(seized))} of the owner's share and spare running money went straight to lenders at takeover.`);
+          // One notice: the page's own takeover notice explains what moved to lenders.
+          await run(tx.foreclose(b.id), { requiredOn: b.id, done: "You took over the business for its lenders" });
           await refresh();
         }}>
           {ready ? "Take over this business" : `Possible ${fromNow(loan.foreclosable_at!, now)}`}
@@ -227,7 +230,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
   const tankEmpty = BigInt(b.tank) < BigInt(b.service.compute_deposit);
   // Checked before any money moves: a check needs an account to look at.
   const named = hasAccountName(input);
-  const inputError = input.trim() && !named ? "Type the account you want checked, like outlayer.testnet." : null;
+  const inputError = input.trim() && !named ? checkInputProblem(input) : null;
   const owner = `${b.id}:${account ?? ""}`;
   const list = checks.for === owner ? checks.list : [];
 
@@ -270,7 +273,10 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
           settleNotice(latest.status === "Done"
             ? { summary: "Buy a safety check", tone: "done", title: "Check delivered", text: "The report is ready on this page, and the lenders were paid their share." }
             : { summary: "Buy a safety check", tone: "done", title: "Check refunded", text: `It couldn't finish, so your ${money(price)} came back automatically.` });
+          // The lenders' share lands with the result: re-read the loan now and once more for a lagging node.
           void refresh();
+          window.dispatchEvent(new Event(REFRESH_EVENT));
+          setTimeout(() => { void refresh(); window.dispatchEvent(new Event(REFRESH_EVENT)); }, 2_500);
         }
       }
     }, 2_500);
@@ -487,7 +493,8 @@ function OperatorCard({ business: b, now, refresh }: Props) {
   const s = standing({ ...b, now });
   const locked = isTrapped(s);
   const withdrawCheck = checkAmount(withdraw, { max: opex });
-  const priceValue = parseAmount(price);
+  const priceCheck = checkAmount(price, { max: 1_000n * CENT * 100n });
+  const priceValue = priceCheck.error ? null : priceCheck.value;
   const hashValid = /^[0-9a-f]{64}$/.test(newHash);
   const urlValid = newUrl.startsWith("https://");
 
@@ -501,7 +508,7 @@ function OperatorCard({ business: b, now, refresh }: Props) {
           <dt>Spends its rules refused</dt><dd>{b.stats.spends_blocked}</dd>
         </dl>
         <button type="button" className="btn btn-primary w-full" data-testid="withdraw-share" disabled={busy || operatorShare === 0n || locked} onClick={async () => { await run(tx.withdrawOperator(b.id), { requiredOn: b.id, done: "Your share was paid out" }); await refresh(); }}>
-          {locked ? "Your share is locked until it catches up" : operatorShare === 0n ? "Nothing to withdraw yet" : `Withdraw ${money(operatorShare)}`}
+          {locked ? "Your share is locked until it catches up" : operatorShare === 0n ? (opex > 0n ? "No share of sales to withdraw yet (running-cost money is below)" : "No share of sales to withdraw yet") : `Withdraw your share: ${money(operatorShare)}`}
         </button>
 
         {loan?.status === "Funding" ? (
@@ -536,7 +543,7 @@ function OperatorCard({ business: b, now, refresh }: Props) {
                 setPrice("");
                 await refresh();
               }}>
-                <AmountField label="New price" value={price} onChange={setPrice} hint={`Now ${money(b.service.price)}.`} />
+                <AmountField label="New price" value={price} onChange={setPrice} error={priceCheck.error} hint={`Now ${money(b.service.price)}. Up to $1,000.`} />
                 <button className="btn btn-secondary btn-sm" disabled={busy || !priceValue}>Update</button>
               </form>
             </details>

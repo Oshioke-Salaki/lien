@@ -4,6 +4,7 @@
 import { RPC_URLS, NETWORK } from "../config";
 import type { TxRequest } from "../near/actions";
 import type { RawOutcome } from "../near/outcome";
+import { GUEST_PAUSED, readGuestCapacity } from "../guestCapacity";
 import { acrossNodes, prepareSigned, sendSigned } from "../near/send";
 
 const STORAGE_KEY = "lien.guest";
@@ -65,6 +66,8 @@ export async function restoreGuest(text: string): Promise<Guest> {
 }
 
 export async function createGuest(): Promise<Guest> {
+  // Say so at once when the sponsor can't pay for one, instead of after a long wait.
+  if (!(await readGuestCapacity(true)).available) throw new Error(GUEST_PAUSED);
   const { KeyPair } = await import("near-api-js");
   const pair = KeyPair.fromRandom("ed25519");
   const response = await fetch("/api/guest", {
@@ -95,6 +98,7 @@ export async function createGuest(): Promise<Guest> {
  * once a guest has spent what it started with. Returns the NEAR added ("0" if none was needed).
  */
 export async function topUpGuest(accountId: string, reason: "business" | "fees" = "business"): Promise<string> {
+  if (reason === "business" && (await readGuestCapacity(true)).businesses === 0) throw new Error(GUEST_PAUSED);
   const response = await fetch("/api/guest", {
     method: "POST",
     headers: { "content-type": "application/json" },

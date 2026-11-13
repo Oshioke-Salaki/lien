@@ -1,7 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useGuestCapacity } from "@/hooks/useGuestCapacity";
 import { txUrl } from "@/lib/config";
+import { GUEST_PAUSED } from "@/lib/guestCapacity";
 import { REFRESH_EVENT, SETTLE_EVENT, type SettleDetail } from "@/lib/events";
 import type { TxRequest } from "@/lib/near/actions";
 import { friendlyError, isFeeShortfall, type TxResult } from "@/lib/near/outcome";
@@ -48,7 +50,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
     const finish = (notice: Omit<Notice, "id">) => {
       // A notice already settled by its outcome keeps saying so when the transaction confirms.
       setNotices((all) => all.map((n) => (n.id === id ? (n.settled && notice.tone === "done" ? { ...n, hash: notice.hash ?? n.hash } : { id, ...notice }) : n)));
-      if (notice.tone === "done") setTimeout(() => dismiss(id), 9_000);
+      if (notice.tone === "done") setTimeout(() => dismiss(id), 6_000);
     };
     const update = (text: string) => setNotices((all) => all.map((n) => (n.id === id ? { ...n, text } : n)));
     // Once signed, the hash is known: the notice links it, so a slow confirmation is never a mystery.
@@ -84,7 +86,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
       const { summary, title, text, tone } = (event as CustomEvent<SettleDetail>).detail;
       setNotices((all) => all.map((n) => {
         if (n.tone !== "pending" || n.summary !== summary) return n;
-        setTimeout(() => dismiss(n.id), 9_000);
+        setTimeout(() => dismiss(n.id), 6_000);
         return { ...n, tone, title, text, settled: true };
       }));
     };
@@ -95,13 +97,13 @@ export function TxProvider({ children }: { children: ReactNode }) {
   const notify = useCallback((title: string, text: string) => {
     const id = ++counter.current;
     setNotices((all) => [...all.slice(-2), { id, tone: "done", title, text }]);
-    setTimeout(() => dismiss(id), 9_000);
+    setTimeout(() => dismiss(id), 6_000);
   }, [dismiss]);
 
   return (
     <TxContext.Provider value={{ run, busy, notify }}>
       {children}
-      <div aria-live="polite" className="pointer-events-none fixed top-[64px] right-3 left-3 z-50 flex flex-col items-end gap-2 sm:top-4 sm:right-4 sm:left-auto sm:w-[380px] lg:top-5">
+      <div aria-live="polite" className="pointer-events-none fixed right-3 bottom-[max(12px,env(safe-area-inset-bottom))] left-3 z-50 flex flex-col items-end gap-2 sm:right-4 sm:bottom-4 sm:left-auto sm:w-[360px]">
         {notices.map((notice) => (
           <div key={notice.id} role={notice.tone === "error" ? "alert" : "status"} data-tone={notice.tone} className="notice pointer-events-auto w-full">
             <NoticeIcon tone={notice.tone} />
@@ -171,6 +173,8 @@ export function ConnectGate({ children, reason, quiet = false }: { children: Rea
 export function ConnectButtons({ compact = false }: { compact?: boolean }) {
   const { connect, startGuest } = useWallet();
   const { notify } = useTx();
+  const capacity = useGuestCapacity();
+  const guestPaused = process.env.NEXT_PUBLIC_NETWORK !== "mainnet" && capacity?.available === false;
   const [state, setState] = useState<"idle" | "guest" | "wallet">("idle");
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -195,23 +199,28 @@ export function ConnectButtons({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className={compact ? "flex flex-col gap-2 [&>.btn]:w-full [&>.btn]:whitespace-nowrap [&>.btn]:px-3 [&>.btn]:text-[14px]" : "flex flex-wrap gap-2"}>
-      <GuestButton busy={state === "guest"} disabled={state !== "idle"} onClick={() => attempt("guest", async () => {
+      <GuestButton busy={state === "guest"} paused={guestPaused} disabled={state !== "idle" || guestPaused} onClick={() => attempt("guest", async () => {
         await startGuest();
         notify("Your free test account is ready", "It has $500 of test dollars to try everything. It lives only in this browser.");
       })} />
-      <button type="button" className={`btn ${process.env.NEXT_PUBLIC_NETWORK === "mainnet" ? "btn-primary" : "btn-secondary"}`} disabled={state !== "idle"} onClick={() => attempt("wallet", connect)}>
+      <button type="button" className={`btn ${process.env.NEXT_PUBLIC_NETWORK === "mainnet" || guestPaused ? "btn-primary" : "btn-secondary"}`} disabled={state !== "idle"} onClick={() => attempt("wallet", connect)}>
         {state === "wallet" ? "Opening…" : "Connect a wallet"}
       </button>
+      {guestPaused && !error ? (
+        <p role="status" data-testid="guest-paused" className="w-full text-[14px] leading-snug text-[var(--ink-2)]">
+          {GUEST_PAUSED} <a className="link" href="https://near-faucet.io" target="_blank" rel="noreferrer">Get testnet NEAR for a wallet</a>
+        </p>
+      ) : null}
       {error ? <p role="alert" className="w-full text-[14px] text-[var(--danger)]">{error}</p> : null}
     </div>
   );
 }
 
-function GuestButton({ busy, disabled, onClick }: { busy: boolean; disabled: boolean; onClick: () => void }) {
+function GuestButton({ busy, paused, disabled, onClick }: { busy: boolean; paused: boolean; disabled: boolean; onClick: () => void }) {
   if (process.env.NEXT_PUBLIC_NETWORK === "mainnet") return null;
   return (
-    <button type="button" className="btn btn-primary" disabled={disabled} onClick={onClick}>
-      {busy ? "Creating your account…" : "Use a free test account"}
+    <button type="button" className={`btn ${paused ? "btn-secondary" : "btn-primary"}`} disabled={disabled} onClick={onClick}>
+      {busy ? "Creating your account…" : paused ? "Free test accounts paused" : "Use a free test account"}
     </button>
   );
 }

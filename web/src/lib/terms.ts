@@ -24,7 +24,7 @@ export function validateTerms(t: LoanTerms): string | null {
   if (t.lender_bps <= 0) return "Lenders must receive a share of revenue.";
   if (t.lender_bps + t.operator_bps > 10_000) return "Lenders' share and yours cannot add up to more than 100%.";
   if (t.auction_reserve_bps > 10_000) return "The reserve cannot exceed 100%.";
-  for (const [value, name] of [[t.funding_secs, "Raising period"], [t.term_secs, "Term"], [t.window_secs, "Payment period"], [t.auction_secs, "Auction"]] as const) {
+  for (const [value, name] of [[t.funding_secs, "Raising period"], [t.term_secs, "Length of the loan"], [t.window_secs, "Payment period"], [t.auction_secs, "Auction"]] as const) {
     if (value <= 0) return `${name} must be longer than zero.`;
     if (value > 10 * 365 * DAY) return `${name} can be at most ten years.`;
   }

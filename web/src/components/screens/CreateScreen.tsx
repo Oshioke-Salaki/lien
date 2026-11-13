@@ -12,6 +12,8 @@ import { createBusiness } from "@/lib/near/actions";
 import { accountExists } from "@/lib/near/rpc";
 import { checkBuild } from "@/lib/near/proof";
 import type { Service } from "@/lib/near/types";
+import { useGuestCapacity } from "@/hooks/useGuestCapacity";
+import { GUEST_PAUSED } from "@/lib/guestCapacity";
 import { topUpGuest } from "@/lib/wallet/guest";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 
@@ -29,7 +31,20 @@ export function CreateScreen() {
   const [prepareError, setPrepareError] = useState<string | null>(null);
   const sentinel = deployment.sentinel;
   const [label, setLabel] = useState("");
-  const [name, setName] = useState("Sentinel");
+  const [name, setName] = useState("");
+  // Names already in the market, so two businesses never share one.
+  const [usedNames, setUsedNames] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/market", { signal: AbortSignal.timeout(15_000) })
+      .then((r) => r.json() as Promise<{ businesses?: Array<{ name: string }> }>)
+      .then((snap) => { if (alive) setUsedNames(new Set((snap.businesses ?? []).map((b) => b.name.trim().toLowerCase()))); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
+  const capacity = useGuestCapacity();
+  const depositCovered = kind === "guest" && capacity?.businesses !== 0;
+  const guestPaused = kind === "guest" && capacity?.businesses === 0;
   const [description, setDescription] = useState("Checks a NEAR account before an agent pays or signs.");
   const [price, setPrice] = useState("0.25");
   const [url, setUrl] = useState(sentinel?.url ?? "");
@@ -72,13 +87,16 @@ export function CreateScreen() {
   }, [vendorKey]);
   const missingVendors = vendorCheck?.key === vendorKey ? vendorCheck.missing : [];
   const emptyVendor = vendors.trim() !== "" && vendors.split(",").some((v) => v.trim() === "");
+  const duplicateVendor = vendorList.find((v, i) => vendorList.indexOf(v) !== i);
   const vendorError = emptyVendor ? "There is an empty item between commas. Remove the extra comma."
+    : duplicateVendor ? `${duplicateVendor} is listed twice. Name each vendor once.`
     : badVendors.length
     ? `${badVendors.length === 1 ? `"${badVendors[0]}" is not` : `${badVendors.length} of these are not`} a NEAR account name. Account names look like vendor.testnet; separate several with commas.`
     : missingVendors.length ? `There is no account called ${missingVendors[0]} on this network.`
     : account && vendorList.includes(account) ? "You cannot be your own vendor: lenders would never accept it, and the contract refuses it." : null;
   const trimmedName = name.trim();
-  const nameError = !trimmedName ? "Give it a name customers will see." : trimmedName.length < 2 ? "Use at least 2 characters." : trimmedName.length > 40 ? "Use at most 40 characters." : !/^[\p{L}\p{N} .,'&()-]+$/u.test(trimmedName) ? "Use letters, numbers, spaces and simple punctuation." : null;
+  const nameError = !trimmedName ? "Give it a name customers will see." : trimmedName.length < 2 ? "Use at least 2 characters." : trimmedName.length > 40 ? "Use at most 40 characters." : !/^[\p{L}\p{N} .,'&()-]+$/u.test(trimmedName) ? "Use letters, numbers, spaces and simple punctuation."
+    : usedNames?.has(trimmedName.toLowerCase()) ? `Another business is already called ${trimmedName}. Pick a name of its own, so customers can tell them apart.` : null;
   const priceCheck = price.trim() === "" ? { value: null, error: "Set a price for one sale." } : checkAmount(price, { max: MAX_PRICE });
   const priceValue = priceCheck.error ? null : priceCheck.value;
   const perTxCheck = perTx.trim() === "" ? { value: 0n, error: null } : checkAmount(perTx, {});
@@ -109,7 +127,8 @@ export function CreateScreen() {
   const limitError = perTxValue !== null && perDayValue !== null && perTxValue > perDayValue ? "The limit per payment cannot be above the daily limit." : null;
 
   // The first thing still missing, said plainly next to the button.
-  const blocker = !label ? "Choose an account name to continue."
+  const blocker = guestPaused ? GUEST_PAUSED
+    : !label ? "Choose an account name to continue."
     : labelError ? `Account name: ${labelError}`
     : taken === null ? "Checking that the account name is free…"
     : taken ? "That account name is taken. Try another."
@@ -175,7 +194,7 @@ export function CreateScreen() {
             <TextField label="Account name" testId="create-label" value={label} onChange={(v) => setLabel(v.toLowerCase())} placeholder="scout"
               error={labelError ?? (taken ? "That name is taken." : null)}
               hint={label && !labelError && taken === false ? `${label}.${deployment.registry} is free. Income arrives at ${label}-in.${deployment.registry}.` : label && !labelError ? "Checking the name…" : `Becomes <name>.${deployment.registry}`} />
-            <TextField label="Business name" testId="create-name" value={name} onChange={setName} error={name !== "" ? nameError : null} />
+            <TextField label="Business name" testId="create-name" value={name} onChange={setName} error={name !== "" ? nameError : null} placeholder="A name of its own, like Harbor Checks" />
           </>)}
           {step("What it sells", "One service at one price. Customers pay the business, which holds the money until the work is done, and refunds it if the work fails.", <>
             <AmountField label="Price of one sale" testId="create-price" value={price} onChange={setPrice} error={priceCheck.error} hint="Up to $1,000 a sale." />
@@ -184,7 +203,7 @@ export function CreateScreen() {
           {step("What it may spend on", "It can only pay these accounts, up to these limits, whatever its program asks for. This is what keeps a loan safe.", <>
             <TextField label="Vendors it may pay" value={vendors} onChange={(v) => setVendors(v.toLowerCase())} error={vendorError} hint={vendorList.length ? "Accounts it may pay, separated by commas." : "With no vendors it can't pay anyone for its work. Add at least one, like the service it buys compute from."} />
             <div className="grid gap-4 sm:grid-cols-2">
-              <AmountField label="Most per payment" value={perTx} onChange={setPerTx} error={perTxCheck.error ?? limitError} />
+              <AmountField label="Most per payment" value={perTx} onChange={setPerTx} error={perTxCheck.error ?? limitError} hint={perTx.trim() === "" ? "Left empty, the limit is $0: its program will not be able to pay any vendor." : undefined} />
               <AmountField label="Most per day" value={perDay} onChange={setPerDay} error={perDayCheck.error} />
             </div>
           </>)}
@@ -203,7 +222,7 @@ export function CreateScreen() {
               <div className="flex flex-wrap items-center gap-4">
                 <button type="submit" className="btn btn-primary w-full sm:w-auto" data-testid="create-submit" disabled={!ready || busy || preparing}>{preparing ? "Preparing your account…" : kind === "guest" ? "Create it, free on your test account" : `Create it for ${CREATE_DEPOSIT_NEAR} NEAR`}</button>
                 <p className="text-[14px]" data-error={!!blocker} style={{ color: blocker ? "var(--warn)" : "var(--ink-2)" }}>
-                  {blocker ?? (kind === "guest" ? `Ready. The one-time ${CREATE_DEPOSIT_NEAR} NEAR network deposit is covered for you; it takes about 20 seconds.` : "Ready. Your wallet will ask you to confirm.")}
+                  {blocker ?? (depositCovered ? `Ready. The one-time ${CREATE_DEPOSIT_NEAR} NEAR network deposit is covered for you; it takes about 20 seconds.` : "Ready. Your wallet will ask you to confirm.")}
                 </p>
               </div>
               {prepareError ? <p role="alert" className="hint" data-error="true">{prepareError}</p> : null}
@@ -220,10 +239,10 @@ export function CreateScreen() {
               <dt>Contract</dt><dd><code>{shortHash(deployment.agentCode)}</code></dd>
               <dt>Build it runs</dt><dd><code>{hash ? shortHash(hash) : "-"}</code></dd>
               <dt>Job price</dt><dd>{priceValue ? money(priceValue) : "-"}</dd>
-              <dt>Network deposit</dt><dd>{kind === "guest" ? "Covered for you" : `${CREATE_DEPOSIT_NEAR} NEAR`}</dd>
+              <dt>Network deposit</dt><dd>{depositCovered ? "Covered for you" : guestPaused ? "Paused: test funds are being refilled" : `${CREATE_DEPOSIT_NEAR} NEAR`}</dd>
             </dl>
             <p className="mt-4 text-[14px] leading-snug muted">
-              NEAR is the network&rsquo;s own currency, used for fees. Creating a business takes a one-time {CREATE_DEPOSIT_NEAR} NEAR deposit, which mostly stays in the business to pay for its computing.{kind === "guest" ? " On a free test account it is covered for you." : " Without a loan you can withdraw it."}
+              NEAR is the network&rsquo;s own currency, used for fees. Creating a business takes a one-time {CREATE_DEPOSIT_NEAR} NEAR deposit, which mostly stays in the business to pay for its computing.{depositCovered ? " On a free test account it is covered for you." : guestPaused ? " Free test accounts can't cover it right now, while we refill test funds." : " Without a loan you can withdraw it."}
             </p>
           </Panel>
         </aside>

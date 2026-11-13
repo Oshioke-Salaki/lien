@@ -38,8 +38,10 @@ describe("time", () => {
   it("reads durations", () => {
     expect(duration(30)).toBe("30s");
     expect(duration(120)).toBe("2 min");
-    expect(duration(7_200)).toBe("2 h");
-    expect(duration(86_400)).toBe("1 day");
+    expect(duration(7_200)).toBe("2 hours");
+    expect(duration(86_400)).toBe("24 hours");
+    expect(duration(46.9 * 86_400)).toBe("47 days");
+    expect(duration(4.9 * 86_400)).toBe("5 days");
     expect(duration(-5)).toBe("0s");
   });
   it("reads relative moments", () => {

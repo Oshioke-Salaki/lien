@@ -52,10 +52,19 @@ export const money = (value: bigint | string) => {
 };
 
 /**
- * What is still owed, shown as the total minus what was repaid after rounding both to the cent,
- * so "repaid" and "still owed" on one screen always add up to the total shown beside them.
+ * One rule for debts: what is still owed is rounded UP to the cent, everywhere, so "Still owed
+ * $90.73" and "Pay it all: $90.73" are always the same number and paying it always clears it.
  */
-export const owedMoney = (totalDue: bigint | string, repaid: bigint | string) => money(toCents(totalDue) - toCents(repaid));
+export const owedMoney = (totalDue: bigint | string, repaid: bigint | string) => {
+  const left = BigInt(totalDue) - BigInt(repaid);
+  return moneyUp(left > 0n ? left : 0n);
+};
+
+/** What was repaid, shown so that it and owedMoney always add up to the rounded total. */
+export const repaidMoney = (totalDue: bigint | string, repaid: bigint | string) => {
+  const left = BigInt(totalDue) - BigInt(repaid);
+  return money(toCents(totalDue) - centsUp(left > 0n ? left : 0n));
+};
 
 /** A minimum, rounded up to the cent, so typing the shown number always clears it. */
 export const moneyUp = (value: bigint | string) => dollars(BigInt(value), amount(centsUp(value)));
@@ -103,12 +112,13 @@ export function duration(totalSecs: number): string {
   const secs = Math.max(0, Math.round(totalSecs));
   if (secs < 60) return `${secs}s`;
   if (secs < 3_600) return `${Math.round(secs / 60)} min`;
-  if (secs < 86_400) {
-    const hours = Math.round((secs / 3_600) * 10) / 10;
-    return `${hours} h`;
+  // Hours below two days ("31 hours"), whole days above ("47 days"): never "46.9 days".
+  if (secs < 2 * 86_400) {
+    const hours = Math.round(secs / 3_600);
+    return `${hours} ${hours === 1 ? "hour" : "hours"}`;
   }
-  const days = Math.round((secs / 86_400) * 10) / 10;
-  return `${days} ${days === 1 ? "day" : "days"}`;
+  const days = Math.round(secs / 86_400);
+  return `${days} days`;
 }
 
 /** Live wording for a moment relative to chain time. */

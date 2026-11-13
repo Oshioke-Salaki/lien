@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { hasAccountName, isAccountId, isPayableAccount, labelProblem } from "./accounts";
+import { checkInputProblem, hasAccountName, isAccountId, isPayableAccount, labelProblem } from "./accounts";
 
 describe("hasAccountName", () => {
   it("finds an account, alone or in a sentence", () => {
     for (const ok of ["outlayer.testnet", "is outlayer.testnet safe?", "check usd.lien-13569.testnet", "wrap.near", "a".repeat(64)]) {
       expect(hasAccountName(ok)).toBe(true);
     }
+  });
+  it("refuses account names longer than NEAR allows", () => {
+    expect(hasAccountName(`${"a".repeat(200)}.testnet`)).toBe(false);
+    expect(checkInputProblem(`${"a".repeat(200)}.testnet`)).toMatch(/at most 64 characters/);
+    expect(checkInputProblem("outlayer.testnet")).toBeNull();
   });
   it("refuses text with no account in it", () => {
     for (const bad of ["hello world", "there is no account in this sentence", "a".repeat(300), "<script>", "testnet", ".testnet", ""]) {
