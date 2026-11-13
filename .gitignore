@@ -26,3 +26,4 @@ web/.next/
 .vercel
 .env*
 !.env.example
+.agents/

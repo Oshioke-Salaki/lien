@@ -13,8 +13,8 @@ export function usePay(agent: string) {
   return useCallback(
     async (amount: bigint, msg: TransferMsg, summary: string, done: string) => {
       if (!account) return null;
-      const registered = await isRegistered(account);
-      return run(payAgent(agent, amount, msg, summary, { register: !registered, account }), { requiredOn: agent, done });
+      const prepare = async () => payAgent(agent, amount, msg, summary, { register: !(await isRegistered(account)), account });
+      return run({ summary, prepare }, { requiredOn: agent, done });
     },
     [account, agent, run],
   );

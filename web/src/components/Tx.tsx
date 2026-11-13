@@ -6,11 +6,17 @@ import type { TxRequest } from "@/lib/near/actions";
 import { friendlyError, type TxResult } from "@/lib/near/outcome";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 
+export type Prepared = { summary: string; prepare: () => Promise<TxRequest> };
+
 type Notice = { id: number; tone: "pending" | "done" | "error"; text: string; hash?: string };
 
 type TxContextValue = {
-  /** Sends a transaction, tells the user how it went, and returns the result. */
-  run: (request: TxRequest, options?: { requiredOn?: string; done?: string }) => Promise<TxResult | null>;
+  /**
+   * Sends a transaction, tells the user how it went, and returns the result.
+   * Pass a function when the request needs a network read first: a failure there
+   * then shows as a notice like any other, instead of a click that does nothing.
+   */
+  run: (request: TxRequest | Prepared, options?: { requiredOn?: string; done?: string }) => Promise<TxResult | null>;
   busy: boolean;
 };
 
@@ -39,7 +45,8 @@ export function TxProvider({ children }: { children: ReactNode }) {
       if (notice.tone === "done") setTimeout(() => dismiss(id), 9_000);
     };
     try {
-      const result = await send(request, options.requiredOn);
+      const ready = "prepare" in request ? await request.prepare() : request;
+      const result = await send(ready, options.requiredOn);
       if (result.ok) finish({ tone: "done", text: options.done ?? `${request.summary}: done`, hash: result.hash });
       else finish({ tone: "error", text: result.error ?? "The transaction failed.", hash: result.hash });
       return result;

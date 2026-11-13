@@ -28,8 +28,8 @@ function AccountBox() {
   if (!account) return <ConnectButtons compact />;
 
   const topUp = async () => {
-    const registered = await isRegistered(account);
-    await run(faucet(account, 100n * 10n ** BigInt(deployment.tokenDecimals), { register: !registered }), { done: "100 test tokens added" });
+    const prepare = async () => faucet(account, 100n * 10n ** BigInt(deployment.tokenDecimals), { register: !(await isRegistered(account)) });
+    await run({ summary: "Get test funds", prepare }, { done: "100 test tokens added" });
     await balance.refresh();
   };
 
