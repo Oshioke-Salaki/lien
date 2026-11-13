@@ -90,6 +90,10 @@ Lien is an MCP server at `https://lien-five.vercel.app/api/mcp`. Any MCP client 
 
 Every three hours a [scheduled GitHub Action](.github/workflows/heartbeat.yml) has a customer buy one real Sentinel check on testnet: the job runs on the pinned build inside Intel TDX through OutLayer, the report lands on chain, and the sale repays Sentinel's lenders first. Each run's summary in the [Actions tab](https://github.com/Oshioke-Salaki/lien/actions/workflows/heartbeat.yml) links its transaction. It only buys work, so the businesses waiting to be foreclosed or sold stay that way for you to try.
 
+## Revenue on other chains
+
+A business can also hold money on another chain without anyone holding a key to it. `contracts/xvault` is a small, separate contract deployed per business with no access keys. Through NEAR Chain Signatures (`v1.signer-prod.testnet`, path `evm-1`) it controls one EVM address, and it builds every transaction itself: it will only have the MPC network sign a transfer on Base Sepolia (chain id 84532) to one settlement address fixed at init. Another recipient, another chain or any contract call is refused on NEAR before the signer is asked. Sentinel's vault is `sentinel-x.v1.lien-13569.testnet`, controlling [`0x7004…8546`](https://sepolia.basescan.org/address/0x700441434653017a1faa40107382cff2b6248546): [created with no key](https://testnet.nearblocks.io/txns/BnePWEP4dsThAg4zw2GD9XbE26kGkxa1Nmha9xF2XX73), [a transfer elsewhere refused](https://testnet.nearblocks.io/txns/8iSsZzTiWLeHLYy8nezqSvicz98C4f2JraBd9b6cLrtV), and [a transfer to the settlement address signed by MPC](https://testnet.nearblocks.io/txns/unu5o2Jaub6VqzTZVTpXrfBWifTwMMAShbL1oUSJ3c8). That signed transfer has not reached Base Sepolia yet, because the vault holds no test ETH. Details and limits are in the [evidence](docs/evidence/testnet-e2e.md#chain-signatures-revenue-on-base-sepolia-that-can-only-go-one-way); run it with `cd ops && npx tsx src/xvault.ts address|sign|send|refuse`.
+
 ## How it works
 
 ```mermaid
@@ -116,6 +120,7 @@ A job is one round trip. The customer's payment is held, `request_execution` run
 | **OutLayer** | Runs the pinned WASM in Intel TDX and returns the result on chain |
 | **Yield and resume** | The contract pauses while the enclave works and resumes with the result |
 | **NEAR Intents, 1Click API** | Income from other chains reaches a business's inbox. The app shows a live route and price |
+| **Chain Signatures** | A keyless vault controls an EVM address and has the MPC network sign only transfers to one fixed address on Base Sepolia |
 | **Keyless accounts** | Sub-accounts deployed with no access keys, so nobody can spend or change them |
 | **Global contracts (NEP-591)** | Every business runs the same published code, checkable by hash |
 | **FastFS** | The agent build is published on chain so anyone can fetch and hash it |
@@ -128,7 +133,7 @@ A job is one round trip. The customer's payment is held, `request_execution` run
 - **Real on testnet:** every contract, loan, job, foreclosure and sale. Jobs run on OutLayer's live workers and produce real Intel TDX quotes.
 - **A test stablecoin:** testnet uses tUSD. Mainnet is configured for native USDC.
 - **NEAR Intents is a quote only.** Intents has no testnet, so the app asks the mainnet 1Click API for a live route and price as a dry run, with sending switched off: no Intents payment has reached a Lien inbox. The inbox and its forwarding into the waterfall are tested live with a plain transfer, which is what an Intents payout looks like.
-- **Chain Signatures is not used.** A business only needs to receive money from other chains, which Intents covers. Letting a keyless business sign transactions on other chains would widen what its code can do with money, past what the spend policy guards today. It would suit businesses that must hold assets elsewhere, and is not built.
+- **Chain Signatures is a narrow vault, not yet proven end to end.** The keyless vault, its refusals and an MPC signature are on testnet; the signed transfer has not been broadcast to Base Sepolia because the vault holds no test ETH. The settlement address is held by the Lien team, and nothing yet moves money from it into the business's inbox.
 - **Not live yet:** a mainnet deployment, and a NEAR AI verdict on a real key.
 - **Not audited.** See [docs/SECURITY.md](docs/SECURITY.md), which lists what is and is not protected.
 
@@ -150,6 +155,7 @@ Free test accounts need a sponsor in `web/.env.local` (see `web/.env.example`). 
 ```bash
 ./scripts/build.sh                               # needs cargo-near
 cargo test -p lien-agent                         # contract rules and money properties
+cargo test -p lien-xvault                        # the Chain Signatures vault's policy and payloads
 cargo test --release -p lien-integration-tests   # full lifecycles on a local NEAR node
 (cd agents/sentinel && cargo test)               # the agent
 (cd web && npm test)                             # app logic
@@ -177,6 +183,7 @@ What each suite proves, and what it does not, is in [docs/TESTING.md](docs/TESTI
 contracts/agent       The business: loans, waterfall, foreclosure, auction, jobs
 contracts/collector   The inbox for income from anywhere
 contracts/registry    Creates businesses and lists them
+contracts/xvault      Keyless Chain Signatures vault: Base Sepolia transfers to one fixed address
 contracts/mocks       Test stablecoin and a stand-in for OutLayer
 agents/sentinel       The example agent, built to WASI P2
 tests/integration     Sandbox lifecycles

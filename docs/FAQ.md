@@ -27,8 +27,8 @@ Their exit window is at least a day and unlocking is one-way, so foreclosure wou
 **Why NEAR?**
 Yield and resume lets a contract wait for an enclave. Keyless sub-accounts and global contracts make a business cheap and provably immutable. Intents brings income from any chain. Named accounts mean a business's identity reads as a name that can outlast its owner. The same idea elsewhere would need several more pieces.
 
-**Why not Chain Signatures?**
-Intents already brings money in from any chain, and a signature gate on arbitrary foreign transactions would widen what a business's code can do. It would be a natural extension for businesses that must hold assets elsewhere.
+**How is Chain Signatures used?**
+Narrowly. A signature gate on arbitrary foreign transactions would widen what a business's code can do, so Lien does not give the business contract one. Instead `contracts/xvault` is a separate keyless contract per business that controls one EVM address and only ever has the MPC network sign a transfer on Base Sepolia to one settlement address fixed at init. Anything else is refused on NEAR. On testnet the vault, a refusal and an MPC signature are recorded; the signed transfer is not yet on Base Sepolia, and the settlement address is held by the Lien team. See [the evidence](evidence/testnet-e2e.md#chain-signatures-revenue-on-base-sepolia-that-can-only-go-one-way).
 
 **Who sets the interest rate?**
 The operator offers terms and lenders take them or leave them. There is no oracle or protocol rate.
