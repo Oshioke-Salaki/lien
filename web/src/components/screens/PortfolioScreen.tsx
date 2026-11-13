@@ -1,44 +1,62 @@
 "use client";
 
 import Link from "next/link";
+import { Fragment, useState } from "react";
 import { ConnectButtons, useTx } from "@/components/Tx";
 import { EmptyState, ErrorState, PageHead, Panel, Skeleton, StandingLabel } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
 import { money, share, smartAmount, symbol } from "@/lib/format";
-import { claim, withdrawCredit } from "@/lib/near/actions";
-import { getCredit, getLoans, getNote, listBusinesses } from "@/lib/near/rpc";
+import { claim, transferNote, withdrawCredit } from "@/lib/near/actions";
+import { accountExists, getCredit, getLoans, getNote, listBusinesses } from "@/lib/near/rpc";
 import type { Business, LoanStatus, LoanView, NoteView } from "@/lib/near/types";
 import { standing } from "@/lib/status";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 
 type Position = { business: Business; loan: LoanView; note: NoteView };
-type Data = { positions: Position[]; credits: Array<{ business: Business; amount: bigint }>; operated: Business[] };
+type Data = { positions: Position[]; credits: Array<{ business: Business; amount: bigint }>; operated: Business[]; unread: number };
 
 const CLOSED: Partial<Record<LoanStatus, string>> = { Repaid: "Paid in full", Sold: "Foreclosed and sold", Cancelled: "Cancelled" };
 
-async function load(account: string): Promise<Data> {
-  const businesses = await listBusinesses({ includeTests: true });
-  const perBusiness = await Promise.all(
-    businesses.map(async (business) => {
+/** Reads one business's loans and this account's place in them, retrying once if a node drops it. */
+async function readOne(business: Business, account: string) {
+  for (let attempt = 0; ; attempt++) {
+    try {
       const [loans, credit] = await Promise.all([getLoans(business.id), getCredit(business.id, account)]);
       const notes = await Promise.all(loans.map(async (loan) => ({ loan, note: await getNote(business.id, loan.id, account) })));
-      return {
-        business,
-        credit,
-        positions: notes.flatMap(({ loan, note }) => (note ? [{ business, loan, note }] : [])),
-      };
-    }),
-  );
+      return { business, credit, positions: notes.flatMap(({ loan, note }) => (note ? [{ business, loan, note }] : [])) };
+    } catch (error) {
+      if (attempt >= 1) throw error;
+    }
+  }
+}
+
+async function load(account: string): Promise<Data> {
+  // Every business is checked, test ones too, since a position can sit in any of them.
+  // Small batches keep public RPC nodes from refusing a burst, and one unreadable
+  // business never hides all the others.
+  const businesses = await listBusinesses({ includeTests: true });
+  const read: Awaited<ReturnType<typeof readOne>>[] = [];
+  let unread = 0;
+  for (let i = 0; i < businesses.length; i += 4) {
+    const batch = await Promise.allSettled(businesses.slice(i, i + 4).map((b) => readOne(b, account)));
+    for (const r of batch) {
+      if (r.status === "fulfilled") read.push(r.value);
+      else unread++;
+    }
+  }
+  if (businesses.length > 0 && read.length === 0) throw new Error("Your positions could not be read from the network.");
   return {
-    positions: perBusiness.flatMap((p) => p.positions),
-    credits: perBusiness.filter((p) => p.credit > 0n).map((p) => ({ business: p.business, amount: p.credit })),
+    positions: read.flatMap((p) => p.positions),
+    credits: read.filter((p) => p.credit > 0n).map((p) => ({ business: p.business, amount: p.credit })),
     operated: businesses.filter((b) => b.operator === account),
+    unread,
   };
 }
 
 export function PortfolioScreen() {
   const { account, ready } = useWallet();
   const { run, busy } = useTx();
+  const [moving, setMoving] = useState<string | null>(null);
   const live = useLive(account ? () => load(account) : null, `portfolio:${account}`, 12_000);
 
   if (ready && !account) {
@@ -87,6 +105,7 @@ export function PortfolioScreen() {
             </Panel>
           ) : null}
 
+          {data.unread > 0 ? <p role="status" className="rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]">{data.unread} {data.unread === 1 ? "business" : "businesses"} could not be read just now, so a position there may be missing. This page checks again every few seconds.</p> : null}
           <Panel title="Notes" aside={`${data.positions.length}`}>
             {data.positions.length === 0 ? <EmptyState title="No notes yet" body="Lend to a business that is raising and your note appears here, with every sale's share ready to collect." action={{ href: "/market", label: "See what is raising" }} /> : (
               <div className="-mx-[18px] sm:-mx-[22px] overflow-x-auto">
@@ -97,15 +116,20 @@ export function PortfolioScreen() {
                       const ready = BigInt(note.claimable);
                       const open = business.current_loan?.id === loan.id;
                       return (
-                        <tr key={`${business.id}:${loan.id}`}>
+                        <Fragment key={`${business.id}:${loan.id}`}>
+                        <tr>
                           <td><Link className="font-medium hover:underline" href={`/b/${business.id}`}>{business.name}</Link><div className="text-[13px] muted">Loan {loan.id + 1}</div></td>
                           <td>{open ? <StandingLabel standing={standing(business)} /> : <span className="chip">{CLOSED[loan.status] ?? loan.status}</span>}</td>
                           <td className="r">{smartAmount(note.principal)}</td>
                           <td className="r">{share(note.principal, loan.funded)}%</td>
                           <td className="r">{smartAmount(note.claimed)}</td>
                           <td className="r">{smartAmount(ready)}</td>
-                          <td className="text-right"><button type="button" className={`btn btn-sm ${ready === 0n ? "btn-secondary" : "btn-primary"}`} disabled={busy || ready === 0n} onClick={async () => { await run(claim(business.id, loan.id), { requiredOn: business.id, done: `Collected ${money(ready)}` }); await live.refresh(); }}>Collect</button></td>
+                          <td className="text-right whitespace-nowrap"><button type="button" className={`btn btn-sm ${ready === 0n ? "btn-secondary" : "btn-primary"}`} disabled={busy || ready === 0n} onClick={async () => { await run(claim(business.id, loan.id), { requiredOn: business.id, done: `Collected ${money(ready)}` }); await live.refresh(); }}>Collect</button>{" "}<button type="button" className="btn btn-sm btn-secondary" aria-expanded={moving === `${business.id}:${loan.id}`} onClick={() => setMoving(moving === `${business.id}:${loan.id}` ? null : `${business.id}:${loan.id}`)}>Transfer</button></td>
                         </tr>
+                        {moving === `${business.id}:${loan.id}` ? (
+                          <tr><td colSpan={7}><TransferNote business={business.id} loanId={loan.id} ready={ready} onDone={async () => { setMoving(null); await live.refresh(); }} /></td></tr>
+                        ) : null}
+                        </Fragment>
                       );
                     })}
                   </tbody>
@@ -131,5 +155,35 @@ export function PortfolioScreen() {
         </>
       )}
     </div>
+  );
+}
+
+/** Sells or moves a note: the whole position, including anything not yet collected, goes to the other account. */
+function TransferNote({ business, loanId, ready, onDone }: { business: string; loanId: number; ready: bigint; onDone: () => Promise<void> }) {
+  const { run, busy } = useTx();
+  const { account } = useWallet();
+  const [to, setTo] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = to.trim().toLowerCase();
+    setError(null);
+    if (!/^(?=.{2,64}$)(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/.test(id)) return setError("Write a NEAR account, like buyer.testnet.");
+    if (id === account) return setError("That is your own account.");
+    if (!(await accountExists(id).catch(() => true))) return setError("That account does not exist on this network.");
+    const result = await run(transferNote(business, loanId, id), { requiredOn: business, done: `Note sent to ${id}` });
+    if (result?.ok) await onDone();
+  };
+  return (
+    <form onSubmit={submit} className="grid gap-3 rounded-[12px] bg-[var(--surface-2)] p-4 sm:grid-cols-[1fr_auto] sm:items-end" data-testid="transfer-note">
+      <div className="grid gap-2">
+        <label htmlFor={`to-${business}-${loanId}`} className="text-[14px]">Send this note to</label>
+        <input id={`to-${business}-${loanId}`} className="input" value={to} onChange={(e) => setTo(e.target.value)} placeholder="buyer.testnet" autoComplete="off" spellCheck={false} aria-invalid={!!error} aria-describedby={`to-help-${business}-${loanId}`} />
+        <p id={`to-help-${business}-${loanId}`} className={`text-[14px] ${error ? "text-[var(--danger)]" : "muted"}`}>
+          {error ?? (ready > 0n ? `Collect the ${money(ready)} that is ready first: anything not collected moves with the note.` : "The whole position moves, with every future share of sales. Agree a price with the buyer first.")}
+        </p>
+      </div>
+      <button type="submit" className="btn btn-primary" disabled={busy || !to.trim()}>Send the note</button>
+    </form>
   );
 }

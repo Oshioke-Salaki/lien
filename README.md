@@ -46,6 +46,14 @@ The landing page also has a simulator: set the revenue and the lenders' share, t
 
 A full run on the live network, with every transaction linked, is in [docs/evidence/testnet-e2e.md](docs/evidence/testnet-e2e.md).
 
+## Use it from an AI agent
+
+Lien is an MCP server at `https://lien-five.vercel.app/api/mcp`. Any MCP client (Claude, Cursor, an agent framework) can read the market and prepare transactions to lend, buy a job, repay, bid, foreclose or claim. Action tools check the business's state first and return unsigned transactions; the agent signs with its own key and the server never holds one. Plain HTTP readers can use `GET /api/agents` and `/llms.txt`.
+
+```json
+{ "mcpServers": { "lien": { "url": "https://lien-five.vercel.app/api/mcp" } } }
+```
+
 ## How it works
 
 ```mermaid

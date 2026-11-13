@@ -108,6 +108,14 @@ async function live() {
       const bar = document.querySelector('[data-live-bar="sentinel"]');
       if (bar) bar.style.setProperty("--k", String(Number(loan.repaid) / Number(loan.terms.total_due)));
     }
+    const north = all[ids.indexOf(`sentinel-north.${REGISTRY}`)];
+    const raise = north?.status === "fulfilled" ? north.value.current_loan : null;
+    if (raise) {
+      set("north-funded", tusd(raise.funded));
+      set("north-holders", String(raise.holders));
+      const bar = document.querySelector('[data-live-bar="north"]');
+      if (bar) bar.style.setProperty("--k", String(Number(raise.funded) / Number(raise.terms.principal)));
+    }
   } catch { /* the HTML figures stand */ }
 }
 

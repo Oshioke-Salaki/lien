@@ -16,7 +16,7 @@ type TxContextValue = {
    * Pass a function when the request needs a network read first: a failure there
    * then shows as a notice like any other, instead of a click that does nothing.
    */
-  run: (request: TxRequest | Prepared, options?: { requiredOn?: string; done?: string }) => Promise<TxResult | null>;
+  run: (request: TxRequest | Prepared, options?: { requiredOn?: string; done?: string; pending?: string }) => Promise<TxResult | null>;
   busy: boolean;
 };
 
@@ -39,7 +39,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
   const run = useCallback<TxContextValue["run"]>(async (request, options = {}) => {
     const id = ++counter.current;
     setBusy(true);
-    setNotices((all) => [...all.slice(-2), { id, tone: "pending", title: request.summary, text: "Waiting for the network. This usually takes a few seconds." }]);
+    setNotices((all) => [...all.slice(-2), { id, tone: "pending", title: request.summary, text: options.pending ?? "Waiting for the network. This usually takes a few seconds." }]);
     const finish = (notice: Omit<Notice, "id">) => {
       setNotices((all) => all.map((n) => (n.id === id ? { id, ...notice } : n)));
       if (notice.tone === "done") setTimeout(() => dismiss(id), 9_000);
@@ -147,7 +147,7 @@ export function ConnectButtons({ compact = false }: { compact?: boolean }) {
   };
 
   return (
-    <div className={compact ? "flex flex-col gap-2 [&>.btn]:w-full [&>.btn]:whitespace-normal" : "flex flex-wrap gap-2"}>
+    <div className={compact ? "flex flex-col gap-2 [&>.btn]:w-full [&>.btn]:whitespace-nowrap [&>.btn]:px-3 [&>.btn]:text-[14px]" : "flex flex-wrap gap-2"}>
       <button type="button" className="btn btn-primary" disabled={state !== "idle"} onClick={() => attempt("wallet", connect)}>
         {state === "wallet" ? "Opening…" : "Connect a wallet"}
       </button>

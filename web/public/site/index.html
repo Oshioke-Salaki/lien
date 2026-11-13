@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Lien: loans to AI businesses, repaid from every sale">
 <meta property="og:description" content="AI businesses on NEAR borrow against their own sales. Stop paying, and the business changes owners.">
-<meta property="og:image" content="/site/share.jpg">
+<meta property="og:image" content="https://lien-five.vercel.app/site/share.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/site/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#0c0a08">
@@ -140,24 +140,26 @@
   .claims li p { margin: 0; }
   .claims .link { justify-self: start; }
   #proof .panel { --p-h: 640px; }
-  .cmp { margin-top: var(--s-7); display: grid; }
-  .cmp__row { display: grid; grid-template-columns: minmax(0, 2.2fr) repeat(4, minmax(0, 1fr)); gap: var(--gutter); align-items: center; padding: var(--s-4) var(--s-5); border-bottom: 1px solid var(--line); }
-  .cmp__head { color: var(--muted); font-size: var(--t-small); border-bottom: 0; padding-bottom: var(--s-3); }
-  .cmp__row > span:first-child { font-size: var(--t-lead); }
-  .cmp__head > span:first-child { font-size: var(--t-small); }
-  .cmp .is-lien { color: var(--accent); font-weight: 500; }
-  .cmp__head .is-lien { color: var(--accent); font-size: var(--t-lead); }
+  .cmp { width: 100%; margin-top: var(--s-7); border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .cmp th, .cmp td { text-align: left; padding: var(--s-4) var(--s-4) var(--s-4) 0; border-bottom: 1px solid var(--line); font-weight: 400; }
+  .cmp thead th { color: var(--muted); font-size: var(--t-small); padding-bottom: var(--s-3); }
+  .cmp tbody th { font-size: var(--t-lead); width: 40%; }
   .cmp .no { color: var(--muted); }
-  @media (max-width: 1023px) { .cmp__row { grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr)); gap: var(--s-3); padding: var(--s-4) 0; } .cmp__row > span:first-child { font-size: var(--t-body); } }
+  .cmp .is-lien { color: var(--accent); font-weight: 500; }
+  .cmp thead .is-lien { font-size: var(--t-lead); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  @media (max-width: 1023px) { .cmp tbody th { font-size: var(--t-body); width: 34%; } }
   @media (max-width: 639px) {
-    .cmp__head { display: none; }
-    .cmp__row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2) var(--s-3); }
-    .cmp__row > span:first-child { grid-column: 1 / -1; font-weight: 500; }
-    .cmp__row > span[role="cell"]::before { display: block; color: var(--muted); font-size: 13px; font-weight: 400; }
-    .cmp__row > span[role="cell"]:nth-child(2)::before { content: "Order"; }
-    .cmp__row > span[role="cell"]:nth-child(3)::before { content: "NFT"; }
-    .cmp__row > span[role="cell"]:nth-child(4)::before { content: "Split"; }
-    .cmp__row > span[role="cell"]:nth-child(5)::before { content: "Lien"; color: var(--accent); }
+    .cmp, .cmp tbody, .cmp tr { display: block; }
+    .cmp thead { display: none; }
+    .cmp tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2) var(--s-3); padding: var(--s-4) 0; border-bottom: 1px solid var(--line); }
+    .cmp th, .cmp td { border: 0; padding: 0; font-size: 15px; }
+    .cmp tbody th { grid-column: 1 / -1; font-weight: 500; width: auto; }
+    .cmp td::before { display: block; color: var(--muted); font-size: 13px; font-weight: 400; }
+    .cmp td:nth-of-type(1)::before { content: "Order"; }
+    .cmp td:nth-of-type(2)::before { content: "NFT"; }
+    .cmp td:nth-of-type(3)::before { content: "Split"; }
+    .cmp td:nth-of-type(4)::before { content: "Lien"; color: var(--accent); }
   }
   .sim__after { margin-top: var(--s-5); }
   .q-side { display: grid; gap: var(--s-7); align-content: start; }
@@ -205,6 +207,7 @@
               <p class="t-label">Operators</p>
               <a href="/create">Start a business<span>A keyless account in one step</span></a>
               <a href="/guide">Developer guide<span>Contracts, calls and the agent</span></a>
+              <a href="/guide#mcp">MCP server<span>Any AI agent can lend and buy</span></a>
             </div>
             <a class="menu-card span-3 start-10" href="#proof">
               <span class="t-card">Check every claim</span>
@@ -276,7 +279,7 @@
         <h2 id="market-h" class="span-5">One market for every loan</h2>
         <p class="span-6 start-7">Each row is a business with its own contract account. Lend to one that is raising, buy its work, or bid on one in foreclosure. <a class="link" href="/market">See the full market</a></p>
       </div>
-      <div class="ui app fill" role="img" aria-label="The Lien market: four businesses with their loan states, and Sentinel North open, raising 50 tUSD with 20 funded" data-ui-pause-host>
+      <div class="ui app fill" role="img" aria-label="The Lien market: four businesses with their loan states, and Sentinel North open, raising 50 tUSD" data-ui-pause-host>
         <div class="app__pane app__pane--list">
           <div class="mk">
             <div class="mk__bar"><span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Lien <i>/</i> <b>Market</b></span></div>
@@ -293,9 +296,9 @@
           <div class="biz">
             <div class="biz__top"><span class="biz__name">Sentinel North</span><span class="ui-chip biz__state">Raising</span></div>
             <p class="biz__lead">A second Sentinel, raising its first loan. Funds move only once it is full.</p>
-            <div class="biz__row"><span>Raised so far</span><span><b>1</b> lender</span></div>
-            <div class="biz__fig"><b>20.00</b><span>of 50.00 tUSD</span></div>
-            <div class="biz__bar"><i style="--k:0.4"></i></div>
+            <div class="biz__row"><span>Raised so far</span><span><b data-live="north-holders">2</b> lenders</span></div>
+            <div class="biz__fig"><b data-live="north-funded">25.00</b><span>of 50.00 tUSD</span></div>
+            <div class="biz__bar"><i data-live-bar="north" style="--k:0.5"></i></div>
             <div class="biz__row"><span>Lenders get</span><b>30% of every sale</b></div>
             <div class="biz__row"><span>Owed in total</span><b>55.00 tUSD</b></div>
             <div class="biz__row"><span>Minimum payment</span><b>Set in the terms</b></div>
@@ -420,17 +423,20 @@
     <div class="wrap">
       <div class="grid">
         <h2 id="compare-h" class="span-6">How Lien compares with other agent loans</h2>
-        <p class="span-5 start-8">Three other ways to lend to an AI agent are being built on NEAR. Each solves part of the problem. The difference is what a lender holds when the agent stops paying.</p>
+        <p class="span-6 start-7">Three other ways to lend to an AI agent are being built on NEAR. Each solves part of the problem. The difference is what a lender holds when the agent stops paying.</p>
       </div>
-      <div class="cmp" role="table" aria-label="Lien compared with order advances, NFT pledges and merchant revenue splits">
-        <div class="cmp__row cmp__head" role="row"><span role="columnheader"></span><span role="columnheader">Order advance</span><span role="columnheader">NFT pledge</span><span role="columnheader">Revenue split</span><span role="columnheader" class="is-lien">Lien</span></div>
-        <div class="cmp__row" role="row"><span role="rowheader">Loan can be larger than one order</span><span role="cell" class="no">No</span><span role="cell" class="yes">Yes</span><span role="cell" class="yes">Yes</span><span role="cell" class="yes is-lien">Yes</span></div>
-        <div class="cmp__row" role="row"><span role="rowheader">Repaid from every sale, automatically</span><span role="cell" class="yes">One order</span><span role="cell" class="no">No</span><span role="cell" class="yes">Yes</span><span role="cell" class="yes is-lien">Yes</span></div>
-        <div class="cmp__row" role="row"><span role="rowheader">Borrower holds no keys</span><span role="cell" class="no">No</span><span role="cell" class="yes">Vault only</span><span role="cell" class="yes">Yes</span><span role="cell" class="yes is-lien">Yes</span></div>
-        <div class="cmp__row" role="row"><span role="rowheader">Code pinned and proved in an enclave</span><span role="cell" class="no">No</span><span role="cell" class="no">Inference only</span><span role="cell" class="no">No</span><span role="cell" class="yes is-lien">Yes</span></div>
-        <div class="cmp__row" role="row"><span role="rowheader">Anyone can foreclose, no admin</span><span role="cell" class="no">No</span><span role="cell" class="no">Lender only</span><span role="cell" class="no">No</span><span role="cell" class="yes is-lien">Yes</span></div>
-        <div class="cmp__row" role="row"><span role="rowheader">Keeps paying lenders after default</span><span role="cell" class="no">No</span><span role="cell" class="no">No</span><span role="cell" class="no">No</span><span role="cell" class="yes is-lien">Yes</span></div>
-      </div>
+      <table class="cmp">
+        <caption class="sr-only">Lien compared with order advances, NFT pledges and merchant revenue splits</caption>
+        <thead><tr><th scope="col"><span class="sr-only">What a lender gets</span></th><th scope="col">Order advance</th><th scope="col">NFT pledge</th><th scope="col">Revenue split</th><th scope="col" class="is-lien">Lien</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Loan can be larger than one order</th><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes is-lien">Yes</td></tr>
+          <tr><th scope="row">Repaid from every sale, automatically</th><td class="yes">One order</td><td class="no">No</td><td class="yes">Yes</td><td class="yes is-lien">Yes</td></tr>
+          <tr><th scope="row">Borrower holds no keys</th><td class="no">No</td><td class="yes">Vault only</td><td class="yes">Yes</td><td class="yes is-lien">Yes</td></tr>
+          <tr><th scope="row">Code pinned and proved in an enclave</th><td class="no">No</td><td class="yes">Inference only</td><td class="no">No</td><td class="yes is-lien">Yes</td></tr>
+          <tr><th scope="row">Anyone can foreclose, no admin</th><td class="no">No</td><td class="yes">Lender only</td><td class="no">No</td><td class="yes is-lien">Yes</td></tr>
+          <tr><th scope="row">Keeps paying lenders after default</th><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="yes is-lien">Yes</td></tr>
+        </tbody>
+      </table>
     </div>
   </section>
 

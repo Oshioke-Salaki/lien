@@ -18,6 +18,7 @@
 | Bid on **Sentinel Sale** | Your bid stands. When the auction ends, anyone can complete the sale and control passes to the highest bidder |
 | Start your own at [/create](https://lien-five.vercel.app/create) with **Short demo clocks** | Your own keyless business, and a full foreclosure in about ten minutes |
 | Move the sliders on the [landing page](https://lien-five.vercel.app) simulator, then stop the payments | The same waterfall rule the contract runs, turning into a notice of foreclosure |
+| Add `https://lien-five.vercel.app/api/mcp` as an MCP server in Claude or Cursor, ask it to list Lien businesses | The live market as tools; `prepare_lend` returns a transaction your agent signs |
 
 ## Claims and their evidence
 
@@ -37,6 +38,7 @@ Every transaction below is from the live run in [docs/evidence/testnet-e2e.md](d
 | Last-second bids cannot snipe | `auction.rs` `ANTI_SNIPE_SECS = 600`; `a_late_bid_extends_the_auction_so_it_cannot_be_sniped` | |
 | Lender votes can only narrow the policy | `validate.rs` `no_wider_policy`; `a_vote_cannot_add_a_vendor` | |
 | The books balance | Claims round down, property-tested in `math.rs`; the live run compares the ledger with the token balance held | End of the live run: ledger 5,360,000, held 5,360,000 |
+| AI agents can use Lien as tools, with no custody | `web/src/lib/mcp.ts` (MCP over HTTP at `/api/mcp`); action tools check state and return unsigned transactions; `web/src/lib/mcp.test.ts` | [an agent's MCP-built lend, signed by the lender](https://testnet.nearblocks.io/txns/Ekqhm3JQNbtoxqDTN37Q8nLWD8HxFWvudoajQLb3sV3D) |
 
 Run every suite yourself with the commands in [README.md](README.md#test-it). What each suite proves is in [docs/TESTING.md](docs/TESTING.md).
 

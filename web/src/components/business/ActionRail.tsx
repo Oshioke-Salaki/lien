@@ -171,7 +171,9 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
   const { busy } = useTx();
   const balance = useMyBalance();
   const [input, setInput] = useState("");
-  const [job, setJob] = useState<{ id: number; result: Job | null } | null>(null);
+  const { account } = useWallet();
+  const [job, setJob] = useState<{ id: number; result: Job | null; mine?: { payer: string; input: string } } | null>(null);
+  const [slow, setSlow] = useState(false);
   const price = BigInt(b.service.price);
   const short = balance.data !== undefined && balance.data < price;
   const tankEmpty = BigInt(b.tank) < BigInt(b.service.compute_deposit);
@@ -182,10 +184,14 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
     const timer = setInterval(async () => {
       const latest = await getJob(b.id, job.id).catch(() => null);
       if (!alive || !latest) return;
-      setJob({ id: job.id, result: latest });
+      // Someone else bought the job with this number first: wait for our transaction to name ours.
+      if (job.mine && (latest.payer !== job.mine.payer || latest.input !== job.mine.input)) return;
+      if (latest.status === job.result?.status) return;
+      setJob({ id: job.id, result: latest, mine: job.mine });
       if (latest.status !== "Pending") void refresh();
     }, 2_500);
-    return () => { alive = false; clearInterval(timer); };
+    const slowTimer = setTimeout(() => { if (alive) setSlow(true); }, 20_000);
+    return () => { alive = false; clearInterval(timer); clearTimeout(slowTimer); setSlow(false); };
   }, [job, b.id, refresh]);
 
   return (
@@ -197,9 +203,13 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
         <form className="space-y-3" onSubmit={async (e) => {
           e.preventDefault();
           if (!input.trim()) return;
-          const result = await pay(price, { action: "job", input: input.trim() }, "Buy a check", "Paid. The enclave is working on it");
+          // The transaction only settles once the enclave answers, which can take minutes on
+          // testnet. The job's number is known now, so its progress shows from the first second.
+          setJob({ id: b.next_job_id, result: null, mine: { payer: account ?? "", input: input.trim() } });
+          const result = await pay(price, { action: "job", input: input.trim() }, "Buy a check", "Check delivered", "Paid. The check runs in a secure enclave, which can take a minute or two on testnet. You can keep using the page.");
           const started = result?.events.find((event) => event.event === "job_started");
-          if (result?.ok && started) setJob({ id: started.data.job_id as number, result: null });
+          if (result?.ok && started) setJob((current) => current?.id === started.data.job_id ? current : { id: started.data.job_id as number, result: null });
+          else if (!result?.ok) setJob(null);
           await Promise.all([refresh(), balance.refresh()]);
         }}>
           <TextField label="Account to check" testId="job-input" value={input} onChange={setInput} placeholder={isTestnet ? "outlayer.testnet" : "usdc.near"} />
@@ -211,7 +221,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
       {job ? (
         <div className="inset appear mt-4" data-testid="job-result" aria-live="polite">
           {!job.result || job.result.status === "Pending" ? (
-            <p className="flex items-center gap-2 text-[15px]"><span className="spinner spinner-ink" aria-hidden /> Running in the enclave, usually about 15 seconds.</p>
+            <p className="flex items-center gap-2 text-[15px]"><span className="spinner spinner-ink" aria-hidden /> {slow ? "Still running. The enclave on testnet is busy and can take a few minutes; if the run fails, you get your money back." : "Running in the secure enclave. This usually takes 15 to 60 seconds."}</p>
           ) : job.result.status === "Done" ? <ReportCard raw={job.result.report} /> : (
             <p className="text-[15px]">This check could not be completed, so you were refunded in full. Usually the input had no NEAR account in it.</p>
           )}

@@ -20,6 +20,8 @@ export function JobsPanel({ business: b }: { business: Business }) {
       {!live.loaded ? <div className="space-y-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div> : jobs.length === 0 ? (
         <p className="rounded-[12px] bg-[var(--surface-2)] p-5 text-[15px] text-[var(--ink-2)]">No work sold yet. The first customer can buy a check from the actions on this page.</p>
       ) : (
+        <>
+        <Concentration jobs={jobs} uniquePayers={b.stats.unique_payers} />
         <div className="-mx-[18px] sm:-mx-[22px] overflow-x-auto">
           <table className="table min-w-[620px]">
             <thead>
@@ -35,6 +37,7 @@ export function JobsPanel({ business: b }: { business: Business }) {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </Panel>
   );
@@ -59,5 +62,24 @@ function JobRow({ job, result, open, onToggle }: { job: Job; result: string; ope
         </td></tr>
       ) : null}
     </>
+  );
+}
+
+/**
+ * How much of the recent work one customer bought. A business can buy its own work to look
+ * busy; this says so plainly instead of leaving lenders to spot it in the table.
+ */
+function Concentration({ jobs, uniquePayers }: { jobs: Job[]; uniquePayers: number }) {
+  const counts = new Map<string, number>();
+  for (const job of jobs) counts.set(job.payer, (counts.get(job.payer) ?? 0) + 1);
+  const [top, n] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? ["", 0];
+  if (!n) return null;
+  const share = Math.round((n / jobs.length) * 100);
+  const concentrated = share >= 50 && jobs.length >= 3;
+  return (
+    <p data-testid="concentration" className={`mb-4 rounded-[12px] p-4 text-[15px] ${concentrated ? "bg-[var(--warn-bg,#2a2114)]" : "bg-[var(--surface-2)]"}`}>
+      {uniquePayers} {uniquePayers === 1 ? "customer has" : "different customers have"} bought from it. The biggest, <span title={top}>{shortAccount(top, 22)}</span>, bought {share}% of the last {jobs.length} {jobs.length === 1 ? "sale" : "sales"}.
+      {concentrated ? " Treat its sales as a claim, not proof of demand: one buyer could be the operator." : ""}
+    </p>
   );
 }

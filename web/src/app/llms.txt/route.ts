@@ -15,6 +15,9 @@ Token: ${deployment.token} (${deployment.tokenDecimals} decimals)
 Call ft_transfer_call on the token with receiver_id = the business, amount >= its price, 1 yoctoNEAR deposit, 300 Tgas, and msg = {"action":"job","input":"<text>"}.
 Read the result with get_job {"job_id": n}. n is in the job_started event. Failed runs refund automatically.
 
+## MCP server
+POST /api/mcp speaks the Model Context Protocol (streamable HTTP). Tools: list_businesses, get_business, prepare_lend, prepare_buy_job, prepare_repay, prepare_bid, prepare_foreclose, prepare_claim. Action tools return unsigned transactions for you to sign; the server holds no keys.
+
 ## Find businesses
 View get_agents on the registry, then get_agent on each. Or GET /api/agents.
 

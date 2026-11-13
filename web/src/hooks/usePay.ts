@@ -11,10 +11,10 @@ export function usePay(agent: string) {
   const { account } = useWallet();
   const { run } = useTx();
   return useCallback(
-    async (amount: bigint, msg: TransferMsg, summary: string, done: string) => {
+    async (amount: bigint, msg: TransferMsg, summary: string, done: string, pending?: string) => {
       if (!account) return null;
       const prepare = async () => payAgent(agent, amount, msg, summary, { register: !(await isRegistered(account)), account });
-      return run({ summary, prepare }, { requiredOn: agent, done });
+      return run({ summary, prepare }, { requiredOn: agent, done, pending });
     },
     [account, agent, run],
   );

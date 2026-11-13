@@ -7,7 +7,7 @@ Everything here was run. Where something has not been verified, it says so.
 | Contract unit and property tests | 146 | Every rule, refusal and money path, plus conservation under random inputs | `cargo test -p lien-agent` |
 | Sandbox lifecycles | 17 | Real cross-contract calls on a local NEAR node with a stand-in for OutLayer | `cargo test --release -p lien-integration-tests` |
 | Agent tests | 11 | Risk rules and the output format the contract parses | `cd agents/sentinel && cargo test` |
-| App logic | 35 | Money math against the Rust cases, formatting, reading outcomes | `cd web && npm test` |
+| App logic | 41 | Money math against the Rust cases, formatting, reading outcomes, the MCP server | `cd web && npm test` |
 | Browser, read-only | 18 | Real app on real testnet: pages, live proofs, no sideways scrolling, a live Intents quote | `npx playwright test readonly` |
 | Browser, full loan | 1 | Guest → business → loan → job → refund → claim → foreclosure → still serving → redemption | `npx playwright test lifecycle` |
 | Browser, sale | 1 | Two separate users: default, foreclosure by a stranger, bid, sale, control changes hands, lender collects | `npx playwright test sale` |

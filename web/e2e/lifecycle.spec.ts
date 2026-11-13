@@ -16,7 +16,8 @@ async function startGuest(page: Page) {
 }
 
 test("one loan, from creation to foreclosure and redemption, through the app", async ({ page }) => {
-  test.setTimeout(420_000);
+  // Three enclave runs on testnet OutLayer, which can take minutes each when it is busy.
+  test.setTimeout(900_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await startGuest(page);
 
@@ -52,12 +53,12 @@ test("one loan, from creation to foreclosure and redemption, through the app", a
   // Buy real work from the enclave.
   await page.getByTestId("job-input").fill("is outlayer.testnet safe?");
   await page.getByTestId("job-submit").click();
-  await expect(page.getByTestId("job-result").getByTestId("report")).toContainText("outlayer.testnet", { timeout: 120_000 });
+  await expect(page.getByTestId("job-result").getByTestId("report")).toContainText("outlayer.testnet", { timeout: 240_000 });
 
   // A bad input refunds, and says so.
   await page.getByTestId("job-input").fill("there is no account in this sentence");
   await page.getByTestId("job-submit").click();
-  await expect(page.getByTestId("job-result")).toContainText("refunded in full", { timeout: 120_000 });
+  await expect(page.getByTestId("job-result")).toContainText("refunded in full", { timeout: 240_000 });
 
   // Lenders can collect what the sale paid.
   await expect(page.getByTestId("claimable")).toContainText(/0\.(075|125)/, { timeout: 30_000 });
@@ -74,7 +75,7 @@ test("one loan, from creation to foreclosure and redemption, through the app", a
   await expect(page.getByTestId("withdraw-share")).toBeDisabled();
   await page.getByTestId("job-input").fill("check usd.lien-13569.testnet");
   await page.getByTestId("job-submit").click();
-  await expect(page.getByTestId("job-result").getByTestId("report")).toContainText("usd.lien-13569.testnet", { timeout: 120_000 });
+  await expect(page.getByTestId("job-result").getByTestId("report")).toContainText("usd.lien-13569.testnet", { timeout: 240_000 });
 
   // Redemption: paying the rest hands it back without a sale.
   await page.getByRole("button", { name: /Pay it all/ }).click();
