@@ -11,7 +11,8 @@
     "e2e": "tsx src/e2e.ts",
     "seed": "tsx src/seed.ts",
     "heartbeat": "tsx src/heartbeat.ts",
-    "restock": "tsx src/restock.ts"
+    "restock": "tsx src/restock.ts",
+    "upgrade": "tsx src/upgrade.ts"
   },
   "dependencies": {
     "@noble/ciphers": "^2.4.0",

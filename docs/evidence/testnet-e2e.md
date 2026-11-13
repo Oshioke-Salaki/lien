@@ -82,3 +82,12 @@ On 13 November 2026 the Lien MCP server (`/api/mcp`) was asked for `prepare_lend
 - **5 tUSD lent to Sentinel North through an MCP-built transaction** ([tx](https://testnet.nearblocks.io/txns/Ekqhm3JQNbtoxqDTN37Q8nLWD8HxFWvudoajQLb3sV3D))
   - ok: the business emitted `funded` with the lender and the amount
   - ok: the server never held a key; it refused `prepare_lend` on a loan that was not raising, a bid under the minimum and a foreclosure before grace ran out
+
+## A sealed business changes its code only with its lenders' approval
+
+On 13 November 2026 Sentinel's checks were failing when its single RPC provider throttled requests from inside the enclave. A new build that reads the chain through several providers was published to FastFS (`636ee8be94fd970a87a963883135cdd64e76197bcf54e5d987a73d3eba29df15`), and Sentinel moved to it through its own governance, during an active loan:
+
+- **The owner proposed the new build, nothing else changed** ([tx](https://testnet.nearblocks.io/txns/9X2VEWuuNSmNfkwDyQRSKDyy48VthqZ2uQNNtVt7crmv))
+- **Alice, holding 60% of the loan, approved it, and it took effect at once** ([tx](https://testnet.nearblocks.io/txns/5iG4UPPizMQvJuEkeT8yE4ChTC15KnvkagJzLMYSEyAg))
+  - ok: the next four checks were delivered from the new pinned build, each attested and paying lenders first
+  - ok: the owner alone could not have changed it (`operator_cannot_change_the_code_during_a_loan` and `a_change_applies_only_when_more_than_half_of_principal_agrees` in the contract tests)
