@@ -7,9 +7,9 @@ import { HistoryPanel } from "@/components/business/HistoryPanel";
 import { IntentsPanel } from "@/components/business/IntentsPanel";
 import { JobsPanel } from "@/components/business/JobsPanel";
 import { ProofPanel } from "@/components/business/ProofPanel";
-import { AccountLink, ErrorState, Skeleton, StandingLabel } from "@/components/ui";
+import { AccountLink, ErrorState, Skeleton, StandingLabel, Term } from "@/components/ui";
 import { useChainNow, useLive } from "@/hooks/useLive";
-import { shortHash } from "@/lib/format";
+import { GLOSSARY } from "@/lib/glossary";
 import { getBusiness, listBusinessIds } from "@/lib/near/rpc";
 import { standing } from "@/lib/status";
 
@@ -72,11 +72,9 @@ export function BusinessScreen({ id }: { id: string }) {
         </div>
         {b.description ? <p className="max-w-[64ch] text-[17px] leading-snug text-[var(--ink-2)]">{b.description}</p> : null}
         <p className="flex flex-wrap gap-x-2 gap-y-1 text-[14px] muted">
-          <AccountLink id={b.id} max={44} />
+          <span>An AI business at <AccountLink id={b.id} max={44} /></span>
           <span aria-hidden>·</span>
-          <span>operated by <AccountLink id={b.operator} /></span>
-          <span aria-hidden>·</span>
-          <span>runs build <code>{shortHash(b.service.wasm.hash)}</code></span>
+          <span><Term tip={GLOSSARY.owner}>Owned by</Term> <AccountLink id={b.operator} /></span>
         </p>
       </div>
 
@@ -105,8 +103,8 @@ function ForeclosureNotice() {
   return (
     <div className="flex items-center justify-between gap-4 overflow-hidden rounded-[16px] bg-[rgb(255_122_110_/_0.1)] px-5 py-4 shadow-[inset_0_0_0_1px_rgb(255_122_110_/_0.35)]" data-testid="foreclosure-notice" role="status">
       <div>
-        <p className="text-[17px] font-medium">Notice of foreclosure</p>
-        <p className="mt-1 text-[15px] text-[var(--ink-2)]">Same address, same service, new beneficiaries. Every sale now pays lenders the operator&rsquo;s share too, until the auction ends.</p>
+        <p className="text-[17px] font-medium">Notice of foreclosure: taken over for its lenders</p>
+        <p className="mt-1 text-[15px] text-[var(--ink-2)]">It missed its payments, so it now works for its lenders. Same address and same service, but every sale pays lenders the owner&rsquo;s share too, until someone buys the business at auction.</p>
       </div>
       <span className="stamp-in hidden shrink-0 rounded-[6px] border-2 border-[var(--danger)] px-3 py-1 text-[14px] font-semibold text-[var(--danger)] sm:block">Foreclosed</span>
     </div>

@@ -67,15 +67,15 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
   };
 
   return (
-    <Panel title="Pay this business from any chain">
+    <Panel title="Pay this business from another blockchain">
       <div className="space-y-3" data-testid="intents">
-        <p className="text-[15px] leading-snug text-[var(--ink-2)]">Income sent to its inbox goes through the same waterfall as everything else. NEAR Intents handles the route.</p>
-        <p className="text-[14px] break-all"><span className="muted">Inbox: </span><code>{b.collector}</code></p>
+        <p className="text-[15px] leading-snug text-[var(--ink-2)]">A customer on another network, like Arbitrum or Base, can pay it in USDC. The money arrives at its own payment address and is split between lenders and the business like any other sale. NEAR Intents handles the conversion.</p>
+        <p className="text-[14px] break-all"><span className="muted">Payment address: </span><code>{b.collector}</code></p>
 
         {pending > 0n ? (
           <div className="callout">
-            <p className="mb-2">{money(pending)} is waiting in the inbox.</p>
-            <button type="button" className="btn btn-primary btn-sm" data-testid="forward" disabled={busy || !account} onClick={async () => { await run(forward(b.collector), { done: "Forwarded into the waterfall" }); await Promise.all([inbox.refresh(), refresh()]); }}>Run it through the waterfall</button>
+            <p className="mb-2">{money(pending)} has arrived at its payment address and is waiting to be split.</p>
+            <button type="button" className="btn btn-primary btn-sm" data-testid="forward" disabled={busy || !account} onClick={async () => { await run(forward(b.collector), { done: "Split between lenders and the business" }); await Promise.all([inbox.refresh(), refresh()]); }}>Split it now</button>
           </div>
         ) : null}
 
@@ -105,7 +105,7 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
             ) : null}
           </div>
         ) : null}
-        {isTestnet ? <p className="text-[14px] muted">On testnet you can also send test tokens straight to the inbox.</p> : null}
+        {isTestnet ? <p className="text-[14px] muted">On testnet you can also send test dollars straight to its payment address.</p> : null}
       </div>
     </Panel>
   );

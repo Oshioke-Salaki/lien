@@ -4,9 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { NearConnector } from "@hot-labs/near-connect";
 import { isTestnet, NETWORK, deployment } from "../config";
 import { faucet, type TxRequest } from "../near/actions";
-import { readOutcome, type RawOutcome, type TxResult } from "../near/outcome";
+import { isFeeShortfall, readOutcome, type RawOutcome, type TxResult } from "../near/outcome";
 import { isRegistered } from "../near/rpc";
-import { createGuest, forgetGuest, loadGuest, sendAsGuest, type Guest } from "./guest";
+import { createGuest, forgetGuest, loadGuest, sendAsGuest, topUpGuest, type Guest } from "./guest";
 
 const WALLET_RESTORE_MS = 2_500;
 
@@ -23,7 +23,7 @@ type WalletState = {
    * Signs and sends. `requiredOn` names the contract that must not have failed:
    * a token transfer reports success even if its receiver refused the money.
    */
-  send: (request: TxRequest, requiredOn?: string) => Promise<TxResult>;
+  send: (request: TxRequest, requiredOn?: string, onStatus?: (text: string) => void) => Promise<TxResult>;
 };
 
 const WalletContext = createContext<WalletState | null>(null);
@@ -86,9 +86,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     };
   }, [getConnector]);
 
-  const send = useCallback<WalletState["send"]>(async (request, requiredOn) => {
-    if (guest.current) {
-      return readOutcome(await sendAsGuest(guest.current, request), requiredOn);
+  const send = useCallback<WalletState["send"]>(async (request, requiredOn, onStatus) => {
+    const current = guest.current;
+    if (current) {
+      // A free account that has spent its NEAR on fees gets a little more from the
+      // sponsor, and the action is tried once more, instead of ending on an error.
+      const attempt = async () => readOutcome(await sendAsGuest(current, request), requiredOn);
+      let result: TxResult | null = null;
+      let thrown: unknown = null;
+      try { result = await attempt(); } catch (error) { thrown = error; }
+      const shortfall = thrown ? isFeeShortfall(thrown instanceof Error ? thrown.message : String(thrown)) : !result!.ok && isFeeShortfall(result!.error);
+      if (!shortfall) {
+        if (thrown) throw thrown;
+        return result!;
+      }
+      onStatus?.("Adding a little NEAR to your test account for network fees, then trying again…");
+      const added = await topUpGuest(current.accountId, "fees");
+      if (added === "0" && thrown) throw thrown;
+      return attempt();
     }
     const instance = await getConnector();
     const wallet = await instance.wallet();

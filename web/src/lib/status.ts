@@ -25,9 +25,9 @@ export const STANDING_LABEL: Record<Standing, string> = {
   "no-loan": "No loan",
   funding: "Raising",
   current: "Paying on time",
-  behind: "Behind, in grace",
-  foreclosable: "Can be foreclosed",
-  foreclosed: "Foreclosed",
+  behind: "Behind on payments",
+  foreclosable: "Can be taken over",
+  foreclosed: "Taken over, for sale",
   auction: "For sale, bids in",
 };
 

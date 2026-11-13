@@ -92,7 +92,8 @@ test.describe("a business", () => {
     const panel = page.getByRole("heading", { name: /sale goes/ }).locator("xpath=ancestor::section");
     await expect(panel).toContainText("Lenders");
     const figures = await panel.locator("dd").allInnerTexts();
-    const sum = figures.reduce((total, text) => total + Number.parseFloat(text), 0);
+    // Amounts read as dollars ("$0.075"); the sign is not part of the number.
+    const sum = figures.reduce((total, text) => total + Number.parseFloat(text.replace(/[^0-9.]/g, "")), 0);
     expect(sum).toBeCloseTo(0.25, 6);
   });
 

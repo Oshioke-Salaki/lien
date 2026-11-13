@@ -16,6 +16,9 @@ const GUEST_NEAR = "0.45";
 /** Added when a guest starts a business, which costs 0.5 NEAR on top of gas. */
 const BUSINESS_NEAR = "0.6";
 const BUSINESS_MINIMUM = 800_000_000_000_000_000_000_000n;
+/** A guest below this has spent its NEAR on fees; it gets FEES_NEAR more. */
+const FEES_MINIMUM = 300_000_000_000_000_000_000_000n;
+const FEES_NEAR = "0.3";
 const LIMIT_PER_HOUR = 6;
 
 const recent = new Map<string, number[]>();
@@ -48,23 +51,40 @@ async function createWithFaucet(publicKey: string): Promise<string | null> {
   return response?.ok ? accountId : null;
 }
 
-/** Tops up a guest of this sponsor who is about to start a business. */
-async function topUp(sponsorId: string, sponsorKey: string, accountId: string): Promise<boolean> {
-  if (!accountId.endsWith(`.${sponsorId}`) || !/^g[a-z0-9]+\./.test(accountId)) return false;
+/** Fee top-ups per guest account per day, so one guest cannot drain the sponsor. */
+const FEE_TOPUPS_PER_DAY = 4;
+const feeTopUps = new Map<string, number[]>();
+
+function feeTopUpAllowed(accountId: string): boolean {
+  const cutoff = Date.now() - 86_400_000;
+  const times = (feeTopUps.get(accountId) ?? []).filter((t) => t > cutoff);
+  if (times.length >= FEE_TOPUPS_PER_DAY) return false;
+  feeTopUps.set(accountId, [...times, Date.now()]);
+  return true;
+}
+
+/**
+ * Tops up a guest of this sponsor: enough to start a business, or, for "fees", a little
+ * NEAR when the guest has spent what it started with on network fees. Returns the NEAR
+ * sent ("0" when the guest already had enough), or null when the request is refused.
+ */
+async function topUp(sponsorId: string, sponsorKey: string, accountId: string, reason: "business" | "fees"): Promise<string | null> {
+  if (!accountId.endsWith(`.${sponsorId}`) || !/^g[a-z0-9]+\./.test(accountId)) return null;
   const provider = new JsonRpcProvider({ url: RPC_URLS.testnet[0]! });
   const { amount } = await provider.viewAccount({ accountId });
-  if (BigInt(amount) < BUSINESS_MINIMUM) {
-    const sponsor = new Account(sponsorId, provider, sponsorKey as KeyPairString);
-    await sponsor.transfer({ receiverId: accountId, amount: nearToYocto(BUSINESS_NEAR) });
-  }
-  return true;
+  const [floor, gift] = reason === "fees" ? ([FEES_MINIMUM, FEES_NEAR] as const) : ([BUSINESS_MINIMUM, BUSINESS_NEAR] as const);
+  if (BigInt(amount) >= floor) return "0";
+  if (reason === "fees" && !feeTopUpAllowed(accountId)) return null;
+  const sponsor = new Account(sponsorId, provider, sponsorKey as KeyPairString);
+  await sponsor.transfer({ receiverId: accountId, amount: nearToYocto(gift) });
+  return gift;
 }
 
 export async function POST(request: Request) {
   if (process.env.NEXT_PUBLIC_NETWORK === "mainnet") {
     return NextResponse.json({ error: "Guest accounts only exist on testnet." }, { status: 404 });
   }
-  const body = (await request.json().catch(() => null)) as { publicKey?: string; topUp?: string } | null;
+  const body = (await request.json().catch(() => null)) as { publicKey?: string; topUp?: string; reason?: string } | null;
   if (!body?.topUp && (!body?.publicKey || !KEY.test(body.publicKey))) {
     return NextResponse.json({ error: "Invalid account request." }, { status: 400 });
   }
@@ -76,8 +96,11 @@ export async function POST(request: Request) {
   const { GUEST_SPONSOR_ACCOUNT: sponsorId, GUEST_SPONSOR_KEY: sponsorKey } = process.env;
   if (body.topUp) {
     if (!sponsorId || !sponsorKey) return NextResponse.json({ error: "Connect a wallet with some testnet NEAR to start a business." }, { status: 404 });
-    const done = await topUp(sponsorId, sponsorKey, body.topUp).catch(() => false);
-    return done ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Your test account could not be topped up. Connect a wallet instead." }, { status: 502 });
+    const reason = body.reason === "fees" ? "fees" : "business";
+    const sent = await topUp(sponsorId, sponsorKey, body.topUp, reason).catch(() => null);
+    return sent !== null
+      ? NextResponse.json({ ok: true, near: sent })
+      : NextResponse.json({ error: "Your test account could not get more NEAR right now. Try again later, or connect a wallet." }, { status: 502 });
   }
   if (!body.publicKey) return NextResponse.json({ error: "Invalid account request." }, { status: 400 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { friendlyError, readOutcome } from "./outcome";
+import { friendlyError, isFeeShortfall, readOutcome } from "./outcome";
 
 const panic = (msg: string) => ({ Failure: { ActionError: { kind: { FunctionCallError: { ExecutionError: `Smart contract panicked: ${msg}` } } } } });
 const ok = { SuccessValue: "" };
@@ -64,8 +64,13 @@ describe("readOutcome", () => {
 });
 
 describe("friendlyError", () => {
-  it("explains token registration", () => {
-    expect(friendlyError("The account a.near is not registered")).toMatch(/no token balance/);
+  it("explains registration and network fees in plain words, and spots a fee shortfall", () => {
+    expect(friendlyError("The account a.near is not registered")).toMatch(/no dollar balance/);
+    const fee = friendlyError('{"InvalidTxError":{"NotEnoughBalance":{"balance":"1"}}}');
+    expect(fee).toMatch(/needs a little NEAR/);
+    expect(isFeeShortfall(fee)).toBe(true);
+    expect(isFeeShortfall("LackBalanceForState")).toBe(true);
+    expect(isFeeShortfall("The auction has no bids.")).toBe(false);
   });
   it("capitalises and ends contract messages", () => {
     expect(friendlyError("the auction has no bids")).toBe("The auction has no bids.");

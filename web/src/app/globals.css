@@ -78,7 +78,8 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 }
 .btn:hover:not(:disabled) { transform: translateY(-1px); }
 .btn:active:not(:disabled) { transform: translateY(0) scale(0.97); }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Disabled never looks like the live gold button: grey, flat, with the reason written beside it. */
+.btn:disabled { cursor: not-allowed; background: var(--surface-2) !important; color: #7d766d !important; box-shadow: inset 0 0 0 1px var(--line) !important; }
 .btn-primary { background: var(--accent); color: var(--accent-ink); }
 .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
 .btn-secondary { background: var(--surface-3); color: var(--ink); }
@@ -90,6 +91,16 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .btn-danger { background: var(--danger-fill); color: #fff; }
 .btn-danger:hover:not(:disabled) { background: #e85048; }
 .btn-sm { min-height: 36px; padding: 0 14px; font-size: 14px; }
+.btn-warn { background: var(--surface-3); color: var(--ink); box-shadow: inset 0 0 0 1px rgb(201 164 90 / 0.6); }
+.btn-warn:hover:not(:disabled) { background: #36302a; }
+
+/* A word that has to stay, with its meaning one tap or hover away. */
+.term { position: relative; display: inline; }
+.term > button { font: inherit; color: inherit; cursor: help; text-decoration: underline dotted; text-decoration-color: rgb(255 255 255 / 0.45); text-underline-offset: 3px; }
+.term > button:hover, .term > button[aria-expanded="true"] { text-decoration-color: var(--accent); }
+.term-tip { position: absolute; z-index: 30; left: 0; top: calc(100% + 6px); width: max-content; max-width: min(300px, 80vw); padding: 10px 12px; border-radius: 10px; background: var(--surface-3); color: var(--ink); font-size: 14px; font-weight: 400; line-height: 1.45; text-align: left; letter-spacing: 0; box-shadow: 0 8px 28px rgb(0 0 0 / 0.45); white-space: normal; }
+.example-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--surface-2); font-size: 14px; color: var(--ink-2); transition: background-color 140ms, color 140ms; }
+.example-chip:hover { background: var(--surface-3); color: var(--ink); }
 
 .link { color: var(--ink); text-decoration: underline; text-decoration-color: rgb(255 255 255 / 0.35); text-underline-offset: 3px; text-decoration-thickness: 1px; transition: text-decoration-color 160ms; }
 .link:hover { text-decoration-color: var(--accent); }
@@ -135,7 +146,9 @@ textarea.input { padding: 12px 14px; min-height: 84px; line-height: 1.5; }
 .table tbody tr[data-row="link"] { transition: background-color 140ms; cursor: pointer; }
 .table tbody tr[data-row="link"]:hover { background: var(--surface-2); }
 
-.dl { display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; font-size: 15px; }
+/* The label column never squeezes below about half the width, so labels read on one line. */
+.dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, max-content); gap: 10px 16px; font-size: 15px; }
+.dl dt { min-width: min(13ch, 100%); }
 .dl dt { color: var(--muted); }
 .dl dd { text-align: right; font-variant-numeric: tabular-nums lining-nums; min-width: 0; overflow-wrap: anywhere; }
 

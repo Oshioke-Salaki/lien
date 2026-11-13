@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useTx } from "@/components/Tx";
-import { duration, money, parseAmount, symbol } from "@/lib/format";
+import { duration, money, parseAmount, unitName } from "@/lib/format";
 import { projectPayoff } from "@/lib/math";
 import { createOffer } from "@/lib/near/actions";
 import type { Business, LoanTerms } from "@/lib/near/types";
@@ -27,7 +27,7 @@ export function validateTerms(t: LoanTerms): string | null {
   if (principal <= 0n) return "Enter how much to borrow.";
   if (due < principal) return "Interest cannot be negative.";
   if (t.lender_bps <= 0) return "Lenders must receive a share of revenue.";
-  if (t.lender_bps + t.operator_bps > 10_000) return "Lender and operator shares cannot exceed 100%.";
+  if (t.lender_bps + t.operator_bps > 10_000) return "Lenders' share and yours cannot add up to more than 100%.";
   if (t.auction_reserve_bps > 10_000) return "The reserve cannot exceed 100%.";
   for (const [value, name] of [[t.funding_secs, "Raising period"], [t.term_secs, "Term"], [t.window_secs, "Payment period"], [t.auction_secs, "Auction"]] as const) {
     if (value <= 0) return `${name} must be longer than zero.`;
@@ -117,7 +117,7 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
           <>
             <p>Lenders put in {money(terms.principal)} and get back {money(terms.total_due)}.</p>
             <p>{money(projection.perWindow)} reaches lenders each period{projection.payoffSecs !== null ? `, clearing the debt in ${duration(projection.payoffSecs)}` : ""}.</p>
-            {!projection.meetsMinimum ? <p className="text-[var(--danger)]">That is below your minimum payment. You would fall behind and could be foreclosed.</p> : null}
+            {!projection.meetsMinimum ? <p className="text-[var(--danger)]">That is below your minimum payment. You would fall behind, and anyone could take the business over.</p> : null}
             {projection.meetsMinimum && !projection.paysBeforeMaturity ? <p className="text-[var(--danger)]">It would not clear before the term ends, and the term end is a hard deadline.</p> : null}
             <p className="muted">The price of a job is {money(b.service.price)}, and the code, price and vendors freeze as soon as you submit.</p>
           </>
@@ -126,7 +126,7 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
 
       {problem ? <p className="hint" data-error="true">{problem}</p> : null}
       <button type="submit" className="btn btn-primary w-full" disabled={busy || !!problem} data-testid="offer-submit">Open this offer to lenders</button>
-      <p className="hint">{`All amounts in ${symbol}.`}</p>
+      <p className="hint">{`All amounts in ${unitName}.`}</p>
     </form>
   );
 }
