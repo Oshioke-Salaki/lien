@@ -62,6 +62,16 @@ export type AccountState = { amount: string; code_hash: string; global_contract_
 export const viewAccount = (accountId: string) =>
   rpc<AccountState>({ request_type: "view_account", finality: "optimistic", account_id: accountId });
 
+/** The public keys that can sign for an account. */
+export async function accessKeys(accountId: string): Promise<string[]> {
+  const result = await rpc<{ keys: Array<{ public_key: string }> }>({
+    request_type: "view_access_key_list",
+    finality: "optimistic",
+    account_id: accountId,
+  });
+  return result.keys.map((k) => k.public_key);
+}
+
 export async function accessKeyCount(accountId: string): Promise<number> {
   const result = await rpc<{ keys: unknown[] }>({
     request_type: "view_access_key_list",

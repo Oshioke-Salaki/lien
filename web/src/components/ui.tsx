@@ -99,6 +99,21 @@ export function Term({ children, tip }: { children: ReactNode; tip: string }) {
   );
 }
 
+/**
+ * A small "i" beside a number that says what it means in one sentence: on tap, hover or
+ * keyboard focus. `label` names the number for screen readers ("About: still owed").
+ */
+export function Info({ tip, label }: { tip: string; label: string }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <span className="info" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button type="button" className="info-dot" aria-label={`About: ${label}`} aria-expanded={open} aria-describedby={id} onClick={() => setOpen((v) => !v)} onBlur={() => setOpen(false)} onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}>i</button>
+      <span id={id} role="tooltip" className="term-tip" hidden={!open}>{tip}</span>
+    </span>
+  );
+}
+
 /** A page's title row: what this is, one line on it, and its main action. */
 export function PageHead({ title, lead, action }: { title: ReactNode; lead?: ReactNode; action?: ReactNode }) {
   return (

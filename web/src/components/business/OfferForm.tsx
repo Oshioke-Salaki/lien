@@ -9,6 +9,9 @@ import type { Business, LoanTerms } from "@/lib/near/types";
 import { AmountField, DurationField, TextField } from "./fields";
 
 const DAY = 86_400;
+const UNIT = 10n ** 6n;
+/** The largest loan a business may ask for on a test network. */
+const MAX_PRINCIPAL = 100_000n * UNIT;
 const PRESETS = {
   standard: { funding: 7 * DAY, term: 90 * DAY, window: 7 * DAY, grace: 3 * DAY, auction: 7 * DAY },
   // Short clocks, for seeing the whole lifecycle in one sitting.
@@ -25,6 +28,8 @@ export function validateTerms(t: LoanTerms): string | null {
   const principal = BigInt(t.principal);
   const due = BigInt(t.total_due);
   if (principal <= 0n) return "Enter how much to borrow.";
+  if (principal > MAX_PRINCIPAL) return "Borrow at most $100,000 on the test network.";
+  if (BigInt(t.min_payment_per_window) <= 0n) return "Set a minimum payment above zero, so lenders know what counts as on time.";
   if (due < principal) return "Interest cannot be negative.";
   if (t.lender_bps <= 0) return "Lenders must receive a share of revenue.";
   if (t.lender_bps + t.operator_bps > 10_000) return "Lenders' share and yours cannot add up to more than 100%.";
@@ -35,6 +40,12 @@ export function validateTerms(t: LoanTerms): string | null {
   }
   if (t.window_secs > t.term_secs) return "The payment period cannot be longer than the term.";
   if (BigInt(t.min_payment_per_window) > due) return "The minimum payment cannot exceed the total due.";
+  // Paying only the minimum must clear the debt by the end of the term, or the loan fails by design.
+  const windows = BigInt(Math.floor(t.term_secs / t.window_secs));
+  if (windows > 0n && BigInt(t.min_payment_per_window) * windows < due) {
+    const needed = (due + windows - 1n) / windows;
+    return `At this minimum the debt wouldn't be repaid by the end of the term. Raise the minimum payment to at least ${money(needed)}, or lengthen the term.`;
+  }
   return null;
 }
 
@@ -72,7 +83,7 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
     };
   }, [principal, interest, lender, operator, reserve, minPayment, times]);
 
-  const problem = terms ? validateTerms(terms) : "Check the numbers above.";
+  const termsProblem = terms ? validateTerms(terms) : "Check the numbers above: amounts in dollars, shares in % from 0 to 100.";
   const revenuePerWindow = parseAmount(revenue);
   const projection = terms && revenuePerWindow !== null ? projectPayoff({
     totalDue: BigInt(terms.total_due),
@@ -82,6 +93,10 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
     minPaymentPerWindow: BigInt(terms.min_payment_per_window),
     termSecs: terms.term_secs,
   }) : null;
+  // The offer must work at the revenue the owner expects, or it is set up to fail.
+  const problem = termsProblem
+    ?? (projection && !projection.meetsMinimum ? "At the revenue you expect, lenders would get less than your minimum payment. Lower the minimum, raise lenders' share, or check the revenue." : null)
+    ?? (projection && projection.meetsMinimum && !projection.paysBeforeMaturity ? "At the revenue you expect, the debt wouldn't clear before the term ends. Lengthen the term or raise lenders' share." : null);
 
   const submit = async () => {
     if (!terms || problem) return;
@@ -95,17 +110,17 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTimes(PRESETS.standard)}>90 day loan</button>
         <button type="button" className="btn btn-secondary btn-sm" data-testid="preset-demo" onClick={() => setTimes(PRESETS.demo)}>Short demo clocks</button>
       </div>
-      <AmountField label="Borrow" value={principal} onChange={setPrincipal} testId="offer-principal" />
+      <AmountField label="Borrow" value={principal} onChange={setPrincipal} testId="offer-principal" hint="Up to $100,000 on the test network." />
       <div className="grid grid-cols-2 gap-3">
         <TextField label="Interest, %" value={interest} onChange={setInterest} />
         <AmountField label="Minimum payment" value={minPayment} onChange={setMinPayment} testId="offer-min" />
         <TextField label="Lenders' share of sales, %" value={lender} onChange={setLender} />
         <TextField label="Your share of sales, %" value={operator} onChange={setOperator} />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <DurationField label="Payment period" testId="offer-window" secs={times.window} onChange={(window) => setTimes({ ...times, window })} />
         <DurationField label="Term" secs={times.term} onChange={(term) => setTimes({ ...times, term })} />
-        <DurationField label="Grace" testId="offer-grace" secs={times.grace} onChange={(grace) => setTimes({ ...times, grace })} />
+        <DurationField label="Extra time after a missed payment" testId="offer-grace" secs={times.grace} onChange={(grace) => setTimes({ ...times, grace })} />
         <DurationField label="Raising period" secs={times.funding} onChange={(funding) => setTimes({ ...times, funding })} />
         <DurationField label="Auction" secs={times.auction} onChange={(auction) => setTimes({ ...times, auction })} />
         <TextField label="Lowest first bid, % of debt" value={reserve} onChange={setReserve} />
@@ -116,7 +131,7 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
         {terms && projection ? (
           <>
             <p>Lenders put in {money(terms.principal)} and get back {money(terms.total_due)}.</p>
-            <p>{money(projection.perWindow)} reaches lenders each period{projection.payoffSecs !== null ? `, clearing the debt in ${duration(projection.payoffSecs)}` : ""}.</p>
+            <p>{money(projection.perWindow)} reaches lenders each period{projection.payoffSecs !== null ? (projection.payoffSecs > 10 * 365 * DAY ? ", which would take more than ten years to clear the debt" : `, clearing the debt in ${duration(projection.payoffSecs)}`) : ""}.</p>
             {!projection.meetsMinimum ? <p className="text-[var(--danger)]">That is below your minimum payment. You would fall behind, and anyone could take the business over.</p> : null}
             {projection.meetsMinimum && !projection.paysBeforeMaturity ? <p className="text-[var(--danger)]">It would not clear before the term ends, and the term end is a hard deadline.</p> : null}
             <p className="muted">The price of a job is {money(b.service.price)}, and the code, price and vendors freeze as soon as you submit.</p>

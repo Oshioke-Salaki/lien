@@ -80,6 +80,12 @@ export function parseAmount(text: string): bigint | null {
 
 export const percent = (bps: number) => `${(bps / 100).toFixed(bps % 100 === 0 ? 0 : 2)}%`;
 
+/** A percentage for display: whole numbers, except below 1% where two decimals keep it honest. */
+export function pct(value: number): string {
+  if (value > 0 && value < 1) return `${value.toFixed(2)}%`;
+  return `${Math.round(value)}%`;
+}
+
 export function share(part: bigint | string, whole: bigint | string): number {
   const p = BigInt(part);
   const w = BigInt(whole);
@@ -106,13 +112,19 @@ export function fromNow(at: number, now: number): string {
   return delta > 0 ? `in ${duration(delta)}` : `${duration(-delta)} ago`;
 }
 
+/**
+ * A moment as "2 Feb, 19:14 UTC". Always UTC, so the server's page and the browser's agree
+ * (a local time zone would differ between them and break hydration), and every visitor
+ * reads the same time.
+ */
 export function dateTime(unixSeconds: number): string {
-  return new Date(unixSeconds * 1000).toLocaleString("en-GB", {
+  return `${new Date(unixSeconds * 1000).toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
-  });
+    timeZone: "UTC",
+  })} UTC`;
 }
 
 export const shortHash = (hash: string, size = 8) =>
@@ -120,7 +132,17 @@ export const shortHash = (hash: string, size = 8) =>
 
 /** Long implicit accounts and long sub-accounts, kept readable. */
 export function shortAccount(id: string, max = 28): string {
-  return id.length <= max ? id : `${id.slice(0, max - 10)}…${id.slice(-9)}`;
+  if (id.length <= max) return id;
+  const parts = id.split(".");
+  // Keep the first name and the network ("g134k3ya….testnet"): whole parts, never a cut word.
+  if (parts.length > 1) {
+    const first = parts[0]!;
+    const last = parts[parts.length - 1]!;
+    const short = `${first}….${last}`;
+    if (short.length <= max) return short;
+    return `${first.slice(0, Math.max(4, max - last.length - 2))}….${last}`;
+  }
+  return `${id.slice(0, max - 10)}…${id.slice(-9)}`;
 }
 
 export const nearAmount = (yocto: string | bigint, decimals = 2) => {

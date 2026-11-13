@@ -6,6 +6,15 @@ export const ACCOUNT_ID = /^(?=.{2,64}$)(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_
 export const isAccountId = (text: string) => ACCOUNT_ID.test(text.trim());
 
 /**
+ * An account someone can send money to by name: a named account ending in .testnet or .near,
+ * or a 64-character implicit one. ("bob" alone is a valid id but nobody owns it.)
+ */
+export const isPayableAccount = (text: string) => {
+  const id = text.trim();
+  return ACCOUNT_ID.test(id) && (/\.(testnet|near)$/.test(id) || /^[0-9a-f]{64}$/.test(id));
+};
+
+/**
  * Whether some text names an account a check can look at: a named account ending in .testnet
  * or .near (inside a sentence is fine), or a 64-character implicit account.
  */

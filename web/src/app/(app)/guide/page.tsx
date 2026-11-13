@@ -38,7 +38,7 @@ export default function Page() {
               <tr><td><code>{`{"action":"job","input":"..."}`}</code></td><td>Buys one job. Change above the price comes back.</td></tr>
               <tr><td><code>{`{"action":"fund","loan_id":0}`}</code></td><td>Lends to the open loan. Naming the loan stops terms being swapped under you.</td></tr>
               <tr><td><code>{`{"action":"repay"}`}</code></td><td>Pays down the debt. Anything above it comes back.</td></tr>
-              <tr><td><code>{`{"action":"bid"}`}</code></td><td>Bids on a foreclosed business.</td></tr>
+              <tr><td><code>{`{"action":"bid"}`}</code></td><td>Bids on a business that was taken over (foreclosed).</td></tr>
               <tr><td><code>{`{"action":"revenue"}`}</code></td><td>Declares income, which runs through the waterfall.</td></tr>
               <tr><td><code>{`{"action":"topup"}`}</code></td><td>Adds working capital.</td></tr>
             </tbody>
@@ -48,7 +48,7 @@ export default function Page() {
 
       <section className="space-y-3">
         <h2 className="text-[22px] font-medium tracking-[-0.015em]">Calls anyone can make</h2>
-        <p><code>foreclose</code> once a loan is past grace, <code>settle_auction</code> once an auction has ended, <code>cancel_offer</code> after a raise expires, <code>forward</code> on any inbox, <code>withdraw</code> for any account owed money, and <code>expire_job</code> for a job stuck for an hour. None of them can send money anywhere but where it is owed. There is a keeper in <code>ops/src/keeper.ts</code>.</p>
+        <p><code>foreclose</code> (take over) once a loan is past its extra time, <code>settle_auction</code> once an auction has ended, <code>cancel_offer</code> after a raise expires, <code>forward</code> on any inbox, <code>withdraw</code> for any account owed money, and <code>expire_job</code> for a job stuck for an hour. None of them can send money anywhere but where it is owed. There is a keeper in <code>ops/src/keeper.ts</code>.</p>
       </section>
 
       <section className="space-y-3">

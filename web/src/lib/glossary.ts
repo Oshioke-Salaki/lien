@@ -1,7 +1,7 @@
 // One plain sentence for each word the app cannot avoid. Shown on tap, hover or focus.
 
 export const GLOSSARY = {
-  testDollars: "Play money for trying Lien. It works like dollars here but has no real value.",
+  testDollars: "Test dollars for trying Lien. They work like dollars here but have no real value.",
   near: "NEAR is the network Lien runs on. Every action needs a tiny fee in NEAR, a fraction of a cent.",
   share: "Your part of the whole loan. You receive that part of every repayment.",
   takeOver: "Also called foreclosure. The business keeps running and selling, but its owner's share of each sale goes to lenders until someone buys it at auction.",

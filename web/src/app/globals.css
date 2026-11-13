@@ -98,6 +98,15 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .term { position: relative; display: inline; }
 .term > button { font: inherit; color: inherit; cursor: help; text-decoration: underline dotted; text-decoration-color: rgb(255 255 255 / 0.45); text-underline-offset: 3px; }
 .term > button:hover, .term > button[aria-expanded="true"] { text-decoration-color: var(--accent); }
+.live-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--ok); box-shadow: 0 0 0 0 rgb(127 211 160 / 0.5); animation: live-pulse 2.4s ease-out infinite; }
+@keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgb(127 211 160 / 0.45); } 70%, 100% { box-shadow: 0 0 0 8px rgb(127 211 160 / 0); } }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+.info { position: relative; display: inline-flex; vertical-align: middle; margin-left: 6px; }
+.info-dot { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; background: var(--surface-3); color: var(--ink-2); font: 600 11px/1 var(--font-sans, inherit); font-style: italic; cursor: help; transition: background-color 150ms, color 150ms; }
+/* A bigger invisible target than the 18px dot, for thumbs. */
+.info-dot::after { content: ""; position: absolute; inset: -12px; }
+.info-dot:hover, .info-dot[aria-expanded="true"] { background: var(--accent); color: #0c0a08; }
+.info .term-tip { left: auto; right: -8px; }
 .term-tip { position: absolute; z-index: 30; left: 0; top: calc(100% + 6px); width: max-content; max-width: min(300px, 80vw); padding: 10px 12px; border-radius: 10px; background: var(--surface-3); color: var(--ink); font-size: 14px; font-weight: 400; line-height: 1.45; text-align: left; letter-spacing: 0; box-shadow: 0 8px 28px rgb(0 0 0 / 0.45); white-space: normal; }
 .example-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--surface-2); font-size: 14px; color: var(--ink-2); transition: background-color 140ms, color 140ms; }
 .example-chip:hover { background: var(--surface-3); color: var(--ink); }

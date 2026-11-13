@@ -98,13 +98,15 @@ test.describe("a business", () => {
   });
 
   test("an unknown account gets a clear message, not a crash", async ({ page }) => {
-    await page.goto("/b/nope-not-here.testnet");
-    await expect(page.getByRole("alert").filter({ hasText: "There is no Lien business" })).toBeVisible();
+    // The server answers with a real 404 page; if the chain is slow, the page says so in place.
+    const response = await page.goto("/b/nope-not-here.testnet");
+    await expect(page.getByText(/no Lien business/).first()).toBeVisible();
+    expect([200, 404]).toContain(response?.status());
   });
 
   test("an account outside the registry is called out", async ({ page }) => {
     await page.goto(`/b/${REGISTRY}`);
-    await expect(page.getByRole("alert").filter({ hasText: /no Lien business|could not be reached/ })).toBeVisible();
+    await expect(page.getByText(/no Lien business|could not be reached/).first()).toBeVisible();
   });
 
   test("never scrolls sideways", async ({ page }) => {

@@ -85,7 +85,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
   return (
     <TxContext.Provider value={{ run, busy, notify }}>
       {children}
-      <div aria-live="polite" className="pointer-events-none fixed right-4 bottom-4 left-4 z-50 flex flex-col items-end gap-2 sm:left-auto sm:w-[400px]">
+      <div aria-live="polite" className="pointer-events-none fixed top-[64px] right-3 left-3 z-50 flex flex-col items-end gap-2 sm:top-4 sm:right-4 sm:left-auto sm:w-[380px] lg:top-5">
         {notices.map((notice) => (
           <div key={notice.id} role={notice.tone === "error" ? "alert" : "status"} data-tone={notice.tone} className="notice pointer-events-auto w-full">
             <NoticeIcon tone={notice.tone} />
@@ -179,13 +179,13 @@ export function ConnectButtons({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className={compact ? "flex flex-col gap-2 [&>.btn]:w-full [&>.btn]:whitespace-nowrap [&>.btn]:px-3 [&>.btn]:text-[14px]" : "flex flex-wrap gap-2"}>
-      <button type="button" className="btn btn-primary" disabled={state !== "idle"} onClick={() => attempt("wallet", connect)}>
-        {state === "wallet" ? "Opening…" : "Connect a wallet"}
-      </button>
       <GuestButton busy={state === "guest"} disabled={state !== "idle"} onClick={() => attempt("guest", async () => {
         await startGuest();
         notify("Your free test account is ready", "It has $500 of test dollars to try everything. It lives only in this browser.");
       })} />
+      <button type="button" className={`btn ${process.env.NEXT_PUBLIC_NETWORK === "mainnet" ? "btn-primary" : "btn-secondary"}`} disabled={state !== "idle"} onClick={() => attempt("wallet", connect)}>
+        {state === "wallet" ? "Opening…" : "Connect a wallet"}
+      </button>
       {error ? <p role="alert" className="w-full text-[14px] text-[var(--danger)]">{error}</p> : null}
     </div>
   );
@@ -194,7 +194,7 @@ export function ConnectButtons({ compact = false }: { compact?: boolean }) {
 function GuestButton({ busy, disabled, onClick }: { busy: boolean; disabled: boolean; onClick: () => void }) {
   if (process.env.NEXT_PUBLIC_NETWORK === "mainnet") return null;
   return (
-    <button type="button" className="btn btn-secondary" disabled={disabled} onClick={onClick}>
+    <button type="button" className="btn btn-primary" disabled={disabled} onClick={onClick}>
       {busy ? "Creating your account…" : "Use a free test account"}
     </button>
   );

@@ -41,7 +41,24 @@ const FRIENDLY: Array<[RegExp, string]> = [
   [/The account doesn't have enough balance/, "You do not have enough money for this."],
   [/LackBalanceForState|NotEnoughBalance|Not enough balance/i, FEE_SHORTFALL],
   [/AccountAlreadyExists/, "That name is taken. Try another."],
+  [/AccountDoesNotExist|account .* does not exist/i, "That account doesn't exist on the test network. Check the name."],
+  [/Failed to deserialize|invalid value|invalid type|expected .* at line/i, "That isn't a valid account name or amount. Check what you typed."],
+  [/InvalidNonce|Expired|TIMEOUT|timed out/i, "The network was busy and dropped this. Nothing was sent; try again."],
+  // The contract's own words, in the app's words.
+  [/only the operator can do this/i, "Only the business's owner can do this."],
+  [/holds no note on that loan/i, "This account holds no share of that loan."],
+  [/operator share is locked/i, "The owner's share is locked while the loan is behind."],
+  [/note voted on an open proposal/i, "This share voted on an open proposal and can't move until it closes."],
+  [/note already voted/i, "This share has already voted on the proposal."],
+  [/auction has ended; settle it first/i, "The auction has ended. Complete the sale first."],
+  [/borrower is current or still inside the grace period/i, "It can't be taken over yet: it's up to date, or still in its extra time."],
+  [/loan is not in foreclosure/i, "This business hasn't been taken over."],
+  [/^too early$/i, "It's too early for that."],
 ];
+
+/** Raw JSON or a Rust error name never reaches a person: this is what they see instead. */
+const RAW = /[{}[\]]|[A-Z][a-z]+(Error|Kind)\b|::|panicked/;
+const UNKNOWN = "The network refused this. Nothing was taken; check what you entered and try again.";
 
 /** True when an action failed only because the account had too little NEAR for network fees. */
 export const isFeeShortfall = (message: string | undefined) =>
@@ -50,6 +67,7 @@ export const isFeeShortfall = (message: string | undefined) =>
 export function friendlyError(message: string): string {
   const match = FRIENDLY.find(([pattern]) => pattern.test(message));
   if (match) return match[1];
+  if (RAW.test(message) || message.length > 160) return UNKNOWN;
   return message.charAt(0).toUpperCase() + message.slice(1).replace(/\.?$/, ".");
 }
 

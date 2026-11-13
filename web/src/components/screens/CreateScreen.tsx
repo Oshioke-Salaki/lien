@@ -6,7 +6,7 @@ import { AmountField, checkAmount, TextField } from "@/components/business/field
 import { ConnectGate, useTx } from "@/components/Tx";
 import { PageHead, Panel } from "@/components/ui";
 import { CREATE_DEPOSIT_NEAR, deployment, REPO_URL } from "@/lib/config";
-import { isAccountId, labelProblem } from "@/lib/accounts";
+import { isPayableAccount, labelProblem } from "@/lib/accounts";
 import { money, shortHash, toYocto } from "@/lib/format";
 import { createBusiness } from "@/lib/near/actions";
 import { accountExists } from "@/lib/near/rpc";
@@ -17,6 +17,8 @@ import { useWallet } from "@/lib/wallet/WalletProvider";
 const UNIT = 10n ** BigInt(deployment.tokenDecimals);
 /** A sale above this is almost certainly a typo on a test network. */
 const MAX_PRICE = 1_000n * UNIT;
+/** The most a business may spend in a day on a test network. */
+const MAX_PER_DAY = 1_000n * UNIT;
 
 export function CreateScreen() {
   const router = useRouter();
@@ -51,17 +53,33 @@ export function CreateScreen() {
     return () => { alive = false; clearTimeout(timer); };
   }, [label, labelError]);
 
-  const vendorList = useMemo(() => vendors.split(/[\s,]+/).map((v) => v.trim().toLowerCase()).filter(Boolean), [vendors]);
-  const badVendors = vendorList.filter((v) => !isAccountId(v));
+  const vendorList = useMemo(() => vendors.split(/,/).map((v) => v.trim().toLowerCase()).filter(Boolean), [vendors]);
+  const badVendors = vendorList.filter((v) => !isPayableAccount(v));
+  // Each vendor must exist, checked once typing pauses. Keyed by the list, so a stale answer never shows.
+  const [vendorCheck, setVendorCheck] = useState<{ key: string; missing: string[] } | null>(null);
+  const vendorKey = vendorList.join(",");
+  useEffect(() => {
+    if (!vendorList.length || badVendors.length) return;
+    let alive = true;
+    const timer = setTimeout(async () => {
+      const results = await Promise.all(vendorList.map(async (v) => ({ v, ok: await accountExists(v).catch(() => true) })));
+      if (alive) setVendorCheck({ key: vendorKey, missing: results.filter((r) => !r.ok).map((r) => r.v) });
+    }, 400);
+    return () => { alive = false; clearTimeout(timer); };
+    // vendorKey stands for the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vendorKey]);
+  const missingVendors = vendorCheck?.key === vendorKey ? vendorCheck.missing : [];
   const vendorError = badVendors.length
-    ? `${badVendors.length === 1 ? `"${badVendors[0]}" is not` : `${badVendors.length} of these are not`} a NEAR account name, like vendor.testnet.`
+    ? `${badVendors.length === 1 ? `"${badVendors[0]}" is not` : `${badVendors.length} of these are not`} a NEAR account name. Account names look like vendor.testnet; separate several with commas.`
+    : missingVendors.length ? `There is no account called ${missingVendors[0]} on this network.`
     : account && vendorList.includes(account) ? "You cannot be your own vendor: lenders would never accept it, and the contract refuses it." : null;
   const trimmedName = name.trim();
   const nameError = !trimmedName ? "Give it a name customers will see." : trimmedName.length < 2 ? "Use at least 2 characters." : trimmedName.length > 40 ? "Use at most 40 characters." : !/^[\p{L}\p{N} .,'&()-]+$/u.test(trimmedName) ? "Use letters, numbers, spaces and simple punctuation." : null;
   const priceCheck = price.trim() === "" ? { value: null, error: "Set a price for one sale." } : checkAmount(price, { max: MAX_PRICE });
   const priceValue = priceCheck.error ? null : priceCheck.value;
   const perTxCheck = perTx.trim() === "" ? { value: 0n, error: null } : checkAmount(perTx, {});
-  const perDayCheck = perDay.trim() === "" ? { value: 0n, error: null } : checkAmount(perDay, {});
+  const perDayCheck = perDay.trim() === "" ? { value: 0n, error: null } : checkAmount(perDay, { max: MAX_PER_DAY });
   const perTxValue = perTxCheck.error ? null : perTxCheck.value ?? 0n;
   const perDayValue = perDayCheck.error ? null : perDayCheck.value ?? 0n;
   const descriptionError = description.length > 500 ? "Keep it under 500 characters." : null;
@@ -141,7 +159,7 @@ export function CreateScreen() {
             <TextField label="What it does" value={description} onChange={setDescription} multiline error={descriptionError} />
           </>)}
           {step("What it may spend on", "It can only pay these accounts, up to these limits, whatever its program asks for. This is what keeps a loan safe.", <>
-            <TextField label="Vendors it may pay" value={vendors} onChange={setVendors} error={vendorError} hint="Accounts, separated by commas." />
+            <TextField label="Vendors it may pay" value={vendors} onChange={setVendors} error={vendorError} hint={vendorList.length ? "Accounts it may pay, separated by commas." : "With no vendors it can't pay anyone for its work. Add at least one, like the service it buys compute from."} />
             <div className="grid gap-4 sm:grid-cols-2">
               <AmountField label="Most per payment" value={perTx} onChange={setPerTx} error={perTxCheck.error ?? limitError} />
               <AmountField label="Most per day" value={perDay} onChange={setPerDay} error={perDayCheck.error} />
@@ -162,7 +180,7 @@ export function CreateScreen() {
               <div className="flex flex-wrap items-center gap-4">
                 <button type="submit" className="btn btn-primary w-full sm:w-auto" data-testid="create-submit" disabled={!ready || busy || preparing}>{preparing ? "Preparing your account…" : kind === "guest" ? "Create it, free on your test account" : `Create it for ${CREATE_DEPOSIT_NEAR} NEAR`}</button>
                 <p className="text-[14px]" data-error={!!blocker} style={{ color: blocker ? "var(--warn)" : "var(--ink-2)" }}>
-                  {blocker ?? (kind === "guest" ? `Ready. The one-time ${CREATE_DEPOSIT_NEAR} NEAR network deposit is covered for you.` : "Ready. Your wallet will ask you to confirm.")}
+                  {blocker ?? (kind === "guest" ? `Ready. The one-time ${CREATE_DEPOSIT_NEAR} NEAR network deposit is covered for you; it takes about 20 seconds.` : "Ready. Your wallet will ask you to confirm.")}
                 </p>
               </div>
               {prepareError ? <p role="alert" className="hint" data-error="true">{prepareError}</p> : null}
@@ -172,7 +190,7 @@ export function CreateScreen() {
         <aside className="space-y-4 xl:sticky xl:top-10">
           <Panel title="What you are creating">
             <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
-              {name.trim() || "Your business"} sells one job for {priceValue ? money(priceValue) : "its price"}, at {label && !labelError ? <code>{label}.{deployment.registry}</code> : "its own account"}. It can pay {vendorList.length ? vendorList.length === 1 ? "one vendor" : `${vendorList.length} vendors` : "nobody"}, at most {perDayValue !== null ? money(perDayValue) : "-"} a day.
+              {name.trim() || "Your business"} sells one job for {priceValue ? money(priceValue) : "its price"}, at {label && !labelError ? <code>{label}.{deployment.registry}</code> : "its own account"}. It can pay {vendorList.length ? vendorList.length === 1 ? "one vendor" : `${vendorList.length} vendors` : "nobody"}, {perDayValue !== null ? `at most ${money(perDayValue)} a day` : "up to the daily limit you set"}.
             </p>
             <dl className="dl">
               <dt>Keys on the account</dt><dd>None, ever</dd>

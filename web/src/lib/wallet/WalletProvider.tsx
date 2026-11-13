@@ -6,7 +6,7 @@ import { isTestnet, NETWORK, deployment } from "../config";
 import { faucet, type TxRequest } from "../near/actions";
 import { isFeeShortfall, readOutcome, type RawOutcome, type TxResult } from "../near/outcome";
 import { isRegistered } from "../near/rpc";
-import { createGuest, forgetGuest, loadGuest, sendAsGuest, topUpGuest, type Guest } from "./guest";
+import { backupText, createGuest, forgetGuest, loadGuest, restoreGuest, sendAsGuest, topUpGuest, type Guest } from "./guest";
 
 const WALLET_RESTORE_MS = 2_500;
 
@@ -19,6 +19,10 @@ type WalletState = {
   connect: () => Promise<void>;
   startGuest: () => Promise<void>;
   disconnect: () => Promise<void>;
+  /** The backup line for a free test account, or null for a wallet. */
+  backup: () => string | null;
+  /** Restores a free test account from its backup line, after checking it on the network. */
+  restore: (text: string) => Promise<void>;
   /**
    * Signs and sends. `requiredOn` names the contract that must not have failed:
    * a token transfer reports success even if its receiver refused the money.
@@ -139,6 +143,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const registered = await isRegistered(created.accountId);
       await sendAsGuest(created, faucet(created.accountId, 500n * 10n ** BigInt(deployment.tokenDecimals), { register: !registered }));
       setAccount(created.accountId);
+      setKind("guest");
+    },
+    backup: () => (guest.current ? backupText(guest.current) : null),
+    restore: async (text: string) => {
+      const restored = await restoreGuest(text);
+      guest.current = restored;
+      setAccount(restored.accountId);
       setKind("guest");
     },
     disconnect: async () => {
