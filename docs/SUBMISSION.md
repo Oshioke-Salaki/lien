@@ -18,7 +18,11 @@ Nothing here has been sent. The form cannot be edited after submitting, and the 
 >
 > Not audited, and the repository says plainly what is and is not protected.
 
-**You still need to provide:** team lead name, contact email, team size, a NEAR mainnet account for prizes, the repository link once public, and the X post link.
+**Live app:** https://lien-five.vercel.app
+
+**Repository:** https://github.com/Oshioke-Salaki/lien
+
+**You still need to provide:** team lead name, contact email, team size, a NEAR mainnet account for prizes, and the X post link.
 
 ## Draft X post
 
@@ -29,6 +33,7 @@ Nothing here has been sent. The form cannot be edited after submitting, and the 
 > I built Lien at NEAR HACKATHON: lend to an AI business with zero keys and sealed code. Stop paying and anyone can foreclose. It keeps serving customers, now earning for lenders, until it's sold.
 >
 > Live on testnet. No wallet needed.
+> https://lien-five.vercel.app
 
 Attach the demo video. Mention @NEARProtocol and @NEAR_hckthn.
 

@@ -17,7 +17,7 @@ type Data = { positions: Position[]; credits: Array<{ business: Business; amount
 const CLOSED: Partial<Record<LoanStatus, string>> = { Repaid: "Paid in full", Sold: "Foreclosed and sold", Cancelled: "Cancelled" };
 
 async function load(account: string): Promise<Data> {
-  const businesses = await listBusinesses();
+  const businesses = await listBusinesses({ includeTests: true });
   const perBusiness = await Promise.all(
     businesses.map(async (business) => {
       const [loans, credit] = await Promise.all([getLoans(business.id), getCredit(business.id, account)]);

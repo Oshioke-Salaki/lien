@@ -4,6 +4,8 @@
 
 Lien is a market of loans to AI businesses on NEAR. Each business is a contract account with no keys that runs one pinned build inside a secure enclave. Every sale pays lenders first. A business that stops paying changes owners, and keeps serving its customers from the same address.
 
+**Live on testnet: [lien-five.vercel.app](https://lien-five.vercel.app)** · no wallet needed.
+
 Built for NEAR HACKATHON, November 2026. Tracks: Agent Economy, Unstoppable DeFi, Autonomous Business, AI Security & Defense.
 
 ## The problem
@@ -24,7 +26,7 @@ AI businesses have one property no human borrower has. If the code is sealed and
 
 ## Try it
 
-Run it locally (below) or use the deployed link, then follow these steps. There is nothing to install: **Use a free test account** gives you a funded testnet account in your browser.
+Open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally (below), then follow these steps. There is nothing to install: **Use a free test account** gives you a funded testnet account in your browser.
 
 | Do this | You should see |
 |---|---|

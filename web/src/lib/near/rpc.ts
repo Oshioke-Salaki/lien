@@ -83,11 +83,12 @@ export const getBusiness = async (id: string): Promise<Business> => ({
   id,
 });
 
-/** Automated test runs live in the registry too, but are not a market listing. */
-const isTestRun = (id: string) => id.startsWith("e2e-");
+/** Automated test runs (script and browser) live in the registry too, but are not a market listing. */
+export const isTestRun = (id: string) => id.startsWith("e2e-") || id.startsWith("ui-");
 
-export async function listBusinesses(): Promise<Business[]> {
-  const ids = (await listBusinessIds()).filter((id) => !isTestRun(id));
+/** Market listing. Pass `includeTests` where a holder must still see every position they own. */
+export async function listBusinesses({ includeTests = false } = {}): Promise<Business[]> {
+  const ids = (await listBusinessIds()).filter((id) => includeTests || !isTestRun(id));
   const settled = await Promise.allSettled(ids.map(getBusiness));
   return settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
 }

@@ -16,7 +16,8 @@ async function guest(browser: Browser): Promise<Page> {
 }
 
 test("a stranger buys a foreclosed business and takes control", async ({ browser }) => {
-  test.setTimeout(420_000);
+  // Two guests, a two-minute default and a five-minute auction: real chain time, with room to spare.
+  test.setTimeout(600_000);
   const borrower = await guest(browser);
   const buyer = await guest(browser);
 

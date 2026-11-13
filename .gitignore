@@ -21,3 +21,8 @@ web/AGENTS.md
 web/CLAUDE.md
 web/next-env.d.ts
 web/.next/
+
+# vercel
+.vercel
+.env*
+!.env.example

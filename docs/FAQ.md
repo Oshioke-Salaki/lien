@@ -19,7 +19,7 @@ Sentinel calls the network and could call a model. Proving that in ZK today is i
 Tokens give you exposure to an agent's story. A note gives you a fixed claim on its revenue, enforced by code, with foreclosure if it stops paying.
 
 **How is it different from other agent credit projects?**
-The closest we found, Advance on Base, enforces repayment by sweeping an on-chain fee stream, and Priors uses a refundable deposit. Neither takes over the business itself. We have not seen a keyless business with a pinned build where a default transfers a running service. If you know of one, please tell us.
+The closest we found, Advance on Base, enforces repayment by sweeping an on-chain fee stream, and Priors uses a refundable deposit. Neither takes over the business itself. Per-order advances, which lend against one customer payment already sitting in escrow, are safe but small: the loan can never be larger than the order, and the agent owes nothing once that order settles. Lien lends against the whole business, so it can fund growth, not just one job, and a default hands lenders a business that keeps earning. We have not seen a keyless business with a pinned build where a default transfers a running service. If you know of one, please tell us.
 
 **Why not use OutLayer's custody vaults?**
 Their exit window is at least a day and unlocking is one-way, so foreclosure would take days. See [ARCHITECTURE.md](ARCHITECTURE.md).
