@@ -50,8 +50,8 @@ async function ensureTokens() {
 
 async function createSample(kind: "late" | "sale", existing: string[]) {
   // A name no sample uses yet, so the market never shows two of the same.
-  const used = new Set(existing.map((id) => id.split(".")[0].split("-")[0]));
-  const name = NAMES.find((n) => !used.has(n.toLowerCase())) ?? NAMES[Math.floor(Date.now() / 1000) % NAMES.length];
+  const used = new Set(existing.map((id) => id.split(".")[0]!.split("-")[0]!));
+  const name = NAMES.find((n) => !used.has(n.toLowerCase())) ?? NAMES[Math.floor(Date.now() / 1000) % NAMES.length]!;
   const label = `${name.toLowerCase().replace(/[^a-z0-9]/g, "")}-${kind}-${Math.floor(Date.now() / 1000) % 100000}`;
   const id = `${label}.${d.registry}`;
   const description = kind === "late"
