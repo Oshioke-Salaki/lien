@@ -8,6 +8,18 @@ Lien is a market of loans to AI businesses on NEAR. Each business is a contract 
 
 **Judging? Start with [JUDGES.md](JUDGES.md):** the two-minute tour, every claim with its test and its testnet transaction, and the honest limits.
 
+## Try to rob it
+
+Each attack below is refused by the contract. Each has a test that proves it; a testnet link is given only where a real transaction exists. Run the checks yourself with `npm run verify` (below).
+
+| Attack | Result | Proven by | On testnet |
+|---|---|---|---|
+| The operator tries to withdraw the business's money during a loan | **Refused**: "not allowed while a loan is open". The account has zero keys, so nobody can sign for it either | `the_operator_cannot_reach_the_money_during_a_loan` ([tests/integration/tests/lifecycle.rs](tests/integration/tests/lifecycle.rs)) | The live run recorded `withdraw_opex refused` ([evidence](docs/evidence/testnet-e2e.md#the-operator-tries-to-take-the-money)) but kept no hash for it, so the refusal is proven by the test. Zero keys: [creation tx](https://testnet.nearblocks.io/txns/7zfvSeZ3idNUK1gxAtyP4hCLNLA4H1yAkNhT6SfdgUMc) |
+| Compromised code tries to pay someone outside the spend policy | **Refused**: the payment is skipped and counted in `spends_blocked`; only approved vendors, within per-payment and daily limits, can be paid | `compromised_code_cannot_pay_anyone_outside_the_policy` (sandbox), `compromised_code_cannot_pay_the_operator` ([contracts/agent/src/tests.rs](contracts/agent/src/tests.rs)) | No blocked payment has happened on testnet: proven by the tests |
+| Someone swaps the code mid-loan without lender approval | **Refused**: "not allowed while a loan is open". During a loan a new build applies only when lenders holding more than half the loan approve it | `operator_cannot_change_the_code_during_a_loan`, `a_change_applies_only_when_more_than_half_of_principal_agrees` ([contracts/agent/src/tests.rs](contracts/agent/src/tests.rs)) | The refusal is proven by the tests. The approved path did happen: [owner proposes](https://testnet.nearblocks.io/txns/9X2VEWuuNSmNfkwDyQRSKDyy48VthqZ2uQNNtVt7crmv), [majority lender approves](https://testnet.nearblocks.io/txns/5iG4UPPizMQvJuEkeT8yE4ChTC15KnvkagJzLMYSEyAg) |
+
+The same three are on the app's [/proof](https://lien-five.vercel.app/proof) page.
+
 Built for the NEAR Hackathon, November 2026. Tracks: Agent Economy, Unstoppable DeFi, Autonomous Business, AI Security & Defense.
 
 ## The problem
@@ -28,10 +40,17 @@ AI businesses have one property no human borrower has. If the code is sealed and
 
 ## Try it
 
-Open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally (below), then follow these steps. There is nothing to install: **Use a free test account** gives you a funded testnet account in your browser.
+First, check the claims without trusting the app. From the repository root, with Node 22+ and nothing to install, no wallet and no money:
+
+```bash
+npm run verify     # or: node scripts/verify.mjs
+```
+
+Then open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally (below), and follow the rest. There is nothing to install: **Use a free test account** gives you a funded testnet account in your browser.
 
 | Do this | You should see |
 |---|---|
+| Run `npm run verify` at the repository root | Six ✅ lines, read from testnet: Sentinel and its inbox hold zero access keys, it runs the published contract (code hash from `deployments/testnet.json`), its pinned build re-hashes byte for byte from FastFS, the tokens it holds cover its ledger (equal when we ran it), its latest Intel TDX quote names the pinned build, and the live run's evidence file records the operator's withdrawal refused |
 | Open `/market` | Real businesses read from testnet, the ones needing attention first |
 | Click **Use a free test account** | An account with 500.00 tUSD in the sidebar, in about 10 seconds |
 | Open **Sentinel**, read **Check it yourself** | Five checks turn to Verified, run by your browser: zero keys, published contract, the build's bytes re-hashed, books match balance, and an Intel TDX quote naming the pinned build |
@@ -45,6 +64,19 @@ Open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally (bel
 The landing page also has a simulator: set the revenue and the lenders' share, then stop the payments. It runs the contract's waterfall rule.
 
 A full run on the live network, with every transaction linked, is in [docs/evidence/testnet-e2e.md](docs/evidence/testnet-e2e.md).
+
+## How Lien compares
+
+These are good projects, and Incorpr is further along: it is live on mainnet, and Lien is on testnet only.
+
+| Project | What it does |
+|---|---|
+| Incorpr | Live on mainnet. A keyless AI company can borrow against itself from one lender; while it is pledged, the holder's signing is frozen |
+| Loca | Advances against paid orders held in escrow |
+| Float | A tranched lending pool for agents |
+| **Lien** | A market where up to 50 lenders fund each loan; lenders are paid first from every sale; anyone can foreclose once the schedule allows, with no keeper or admin; a foreclosed business keeps earning for its lenders and is then put up for auction |
+
+More detail, with each difference's test, is in [JUDGES.md](JUDGES.md#how-lien-differs-from-the-closest-entries-we-found).
 
 ## Use it from an AI agent
 
@@ -95,7 +127,8 @@ A job is one round trip. The customer's payment is held, `request_execution` run
 
 - **Real on testnet:** every contract, loan, job, foreclosure and sale. Jobs run on OutLayer's live workers and produce real Intel TDX quotes.
 - **A test stablecoin:** testnet uses tUSD. Mainnet is configured for native USDC.
-- **Intents on testnet:** NEAR Intents is mainnet-only, so the app shows a real mainnet quote with sending switched off. The inbox and forwarding that receive the money are tested live.
+- **NEAR Intents is a quote only.** Intents has no testnet, so the app asks the mainnet 1Click API for a live route and price as a dry run, with sending switched off: no Intents payment has reached a Lien inbox. The inbox and its forwarding into the waterfall are tested live with a plain transfer, which is what an Intents payout looks like.
+- **Chain Signatures is not used.** A business only needs to receive money from other chains, which Intents covers. Letting a keyless business sign transactions on other chains would widen what its code can do with money, past what the spend policy guards today. It would suit businesses that must hold assets elsewhere, and is not built.
 - **Not live yet:** a mainnet deployment, and a NEAR AI verdict on a real key.
 - **Not audited.** See [docs/SECURITY.md](docs/SECURITY.md), which lists what is and is not protected.
 
@@ -107,6 +140,7 @@ Needs Node 22+.
 cd web
 npm install
 npm run dev      # http://localhost:3000, reading the live testnet deployment
+npm run verify   # the same read-only claim checks as at the root
 ```
 
 Free test accounts need a sponsor in `web/.env.local` (see `web/.env.example`). Without one the app falls back to the public faucet, which allows one account per IP about every 11 hours.

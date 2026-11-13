@@ -12,6 +12,7 @@ Everything here was run. Where something has not been verified, it says so.
 | Browser, full loan | 1 | Guest → business → loan → job → refund → claim → foreclosure → still serving → redemption | `npx playwright test lifecycle` |
 | Browser, sale | 1 | Two separate users: default, foreclosure by a stranger, bid, sale, control changes hands, lender collects | `npx playwright test sale` |
 | Live network run | 1 | The full lifecycle with real OutLayer. See [evidence](evidence/testnet-e2e.md) | `npm run e2e` in `ops` |
+| Live claim checks | 6 | Read-only, against testnet as it is now: zero keys on Sentinel and its inbox, the published contract, the pinned build re-hashed, tokens held cover the ledger, the latest TDX quote names the pinned build, and the operator refusal recorded in the evidence file. No wallet, no transactions | `npm run verify` at the root |
 
 The money properties checked for random inputs: a split conserves every unit, notes never claim more than the pool, claiming in steps pays the same as claiming once, paying more never brings a breach forward, every unpaid loan breaches by maturity, and every valid bid increases.
 
