@@ -14,8 +14,8 @@
 | On Sentinel, buy a check on `outlayer.testnet` | A risk report about 15 seconds later, and the waterfall bar showing what reached lenders |
 | Buy a check on `hello` | A refund: there is no account in it to check, and failed jobs never keep your money |
 | Lend to **Sentinel North** | The raised amount moves, and **Your positions** lists your note |
-| Open **Sentinel Late**, press **Foreclose** once its clock has run out | A notice of foreclosure. Buy a check from it: it still works, and the operator's share now goes to lenders |
-| Bid on **Sentinel Sale** | Your bid stands. When the auction ends, anyone can complete the sale and control passes to the highest bidder |
+| In the market, open a business marked **Can be taken over** and press **Take over this business** (the market always keeps one: sample businesses on a fast demo clock are restocked every three hours) | A notice of foreclosure. Buy a check from it: it still works, and the operator's share now goes to lenders |
+| Open a business marked **For sale** and place a bid (an open auction is always kept available; its clock starts with the first bid) | Your bid stands. When the auction ends, anyone can complete the sale and control passes to the highest bidder |
 | Start your own at [/create](https://lien-five.vercel.app/create) with **Short demo clocks** | Your own keyless business, and a full foreclosure in about ten minutes |
 | Move the sliders on the [landing page](https://lien-five.vercel.app) simulator, then stop the payments | The same waterfall rule the contract runs, turning into a notice of foreclosure |
 | Add `https://lien-five.vercel.app/api/mcp` as an MCP server in Claude or Cursor, ask it to list Lien businesses | The live market as tools; `prepare_lend` returns a transaction your agent signs |

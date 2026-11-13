@@ -3,9 +3,10 @@
 # the report lands on chain, and the sale pays Sentinel's lenders first through the
 # waterfall. Each run's summary links the transaction.
 #
-# It only buys work: it never forecloses or settles, so the demo businesses stay as the
-# judges' guide describes. The buyer's key is the HEARTBEAT_KEY secret and controls a
-# testnet account holding test money only.
+# The heartbeat only buys work. The restock step then makes sure a late business and an
+# open auction always exist, creating labelled sample businesses when visitors used them
+# up. The key is the HEARTBEAT_KEY secret and controls a testnet account holding test
+# money only.
 
 name: Market heartbeat
 
@@ -24,7 +25,7 @@ permissions:
 jobs:
   heartbeat:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: ops
@@ -38,6 +39,14 @@ jobs:
       - run: npm ci
       - name: Buy one check from Sentinel
         run: npm run heartbeat
+        env:
+          LIEN_NETWORK: testnet
+          NEAR_ACCOUNT_ID: lien-f4-3863.testnet
+          NEAR_PRIVATE_KEY: ${{ secrets.HEARTBEAT_KEY }}
+      # Keep a business to take over and an open auction for every visitor, not just the first.
+      - name: Restock the demo market
+        if: always()
+        run: npm run restock
         env:
           LIEN_NETWORK: testnet
           NEAR_ACCOUNT_ID: lien-f4-3863.testnet

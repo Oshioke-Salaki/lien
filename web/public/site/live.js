@@ -51,6 +51,8 @@ function simulator() {
     set('[data-sim="price"]', dollars(price));
     set('[data-testid="recovered"]', dollars(repaid + toLenders));
     set('[data-sim="surplus"]', dollars(price - toLenders));
+    const recovered = repaid + toLenders;
+    set('[data-sim="shortfall"]', dollars(recovered < TOTAL_DUE ? TOTAL_DUE - recovered : 0n));
 
     notice.dataset.state = noticed ? "foreclosed" : "active";
     set('[data-sim="title"]', noticed ? "Notice of foreclosure" : cleared ? "Lien released" : "Record of lien");

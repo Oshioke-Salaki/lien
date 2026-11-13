@@ -136,6 +136,7 @@
   .idea__code .k { color: #c9a45a; } .idea__code .c { color: #b3ada5; }
   @media (max-width: 1023px) { .idea__text, .idea__code { grid-column: 1 / -1; } #idea .idea { gap: var(--s-6) var(--gutter); } }
   @media (max-width: 639px) { .idea__code { padding: var(--s-4); } .idea__code pre { font-size: 12px; } }
+  .ui-checks .ui-check.is-done .ui-check__label { text-decoration: none; opacity: 1; }
   .claims { list-style: none; margin: var(--s-6) 0 0; padding: 0; display: grid; }
   .claims li { display: grid; gap: var(--s-1); padding: var(--s-4) 0; border-bottom: 1px solid var(--line); }
   .claims li > span { font-weight: 500; font-size: var(--t-lead); }
@@ -211,10 +212,11 @@
               <a href="/guide">Developer guide<span>Contracts, calls and the agent</span></a>
               <a href="/guide#mcp">MCP server<span>Any AI agent can lend and buy</span></a>
             </div>
-            <a class="menu-card span-3 start-10" href="#proof">
-              <span class="t-card">Check every claim</span>
-              <span class="t-small muted">Five checks run in your browser</span>
-            </a>
+            <div class="menu-col span-3">
+              <p class="t-label">Trust</p>
+              <a href="#proof">Check every claim<span>Proofs that run in your browser</span></a>
+              <a href="#compare">How it compares<span>Other ways to lend to agents</span></a>
+            </div>
           </div>
         </div>
       </div>
@@ -226,7 +228,7 @@
     </nav>
     <div class="nav__actions">
       <a class="nav__link" href="/guide">Developers</a>
-      <a class="btn btn--primary" href="/market">Open the market</a>
+      <a class="btn btn--primary" href="/market">Lend to an AI business</a>
     </div>
     <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Menu">
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -241,7 +243,7 @@
         <p class="hero__kicker"><span><span data-live="count">4</span> AI businesses, <span data-testid="pulse-jobs" data-live="jobs">9</span> sales, on NEAR&rsquo;s test network</span></p>
         <h1 id="hero-h">Loans for AI agents on NEAR</h1>
         <p class="hero__lead">AI agents that sell a service can borrow here. Every sale pays the lender back first, automatically. If an agent stops paying, anyone can take it over, and lenders keep earning.</p>
-        <div class="btn-row"><a class="btn btn--primary" href="/market">Open the market<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a><a class="btn btn--secondary" href="/create">Start a business</a></div>
+        <div class="btn-row"><a class="btn btn--primary" href="/market">Lend to an AI business<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a><a class="btn btn--secondary" href="/create">Get a loan for your agent</a></div>
         <dl class="hero-facts">
           <div><dt>Who is paid first</dt><dd>The lender, from every sale</dd></div>
           <div><dt>Who holds the keys</dt><dd>Nobody, not even its owner</dd></div>
@@ -263,10 +265,12 @@
                 <div class="biz__split" aria-hidden="true"><i></i><i></i><i></i></div>
                 <div class="biz__legend"><span>Lenders<b>$0.075</b></span><span>Owner<b>$0.05</b></span><span>Running costs<b>$0.125</b></span></div>
                 <ul class="biz__jobs ui-list" data-live="sentinel-jobs">
-                  <li><span>check near-faucet.testnet</span><span class="biz__lvl is-high">High risk</span><span>0.25</span></li>
-                  <li><span>is v1.lien-13569.testnet safe to pay?</span><span class="biz__lvl is-medium">Medium risk</span><span>0.25</span></li>
-                  <li><span>does-not-exist-here.testnet</span><span class="biz__lvl is-high">High risk</span><span>0.25</span></li>
-                  <li><span>check usd.lien-13569.testnet</span><span class="biz__lvl is-medium">Medium risk</span><span>0.25</span></li>
+                  <li><span>check near-faucet.testnet</span><span class="biz__lvl is-high">High risk</span><span>$0.25</span></li>
+                  <li><span>is v1.lien-13569.testnet safe to pay?</span><span class="biz__lvl is-medium">Medium risk</span><span>$0.25</span></li>
+                  <li><span>does-not-exist-here.testnet</span><span class="biz__lvl is-high">High risk</span><span>$0.25</span></li>
+                  <li><span>check sentinel.v1.lien-13569.testnet</span><span class="biz__lvl is-medium">Medium risk</span><span>$0.25</span></li>
+                  <li><span>check usd.lien-13569.testnet</span><span class="biz__lvl is-medium">Medium risk</span><span>$0.25</span></li>
+                  <li><span>is outlayer.testnet safe?</span><span class="biz__lvl is-medium">Medium risk</span><span>$0.25</span></li>
                 </ul>
               </div>
             </div>
@@ -476,11 +480,12 @@
               <dt>Still owed</dt><dd data-testid="still-owed">$380</dd>
               <dt>Sale price</dt><dd data-sim="price">$500</dd>
               <dt>Lenders recover</dt><dd data-testid="recovered">$1,100</dd>
+              <dt>Lenders lose</dt><dd data-sim="shortfall">$0</dd>
               <dt>Former operator gets</dt><dd data-sim="surplus">$120</dd>
             </dl>
             <p class="notice__note" data-sim="note">Current. Nobody holds a key to this business.</p>
           </div>
-          <p class="sim__after"><a class="link" href="/b/sentinel-sale.v1.lien-13569.testnet">Bid on a real foreclosure</a></p>
+          <p class="sim__after"><a class="link" href="/market">Find a real business to take over or bid on</a></p>
         </div>
       </div>
     </div>
@@ -551,8 +556,8 @@
   <div class="wrap">
     <div class="closing__cta close--word">
       <div class="section-head--split">
-        <div><h2 id="close-h">Lend to a business that can't run</h2><p class="t-lead">Test money only. A free account is ready in about ten seconds.</p></div>
-        <a class="btn btn--primary" href="/market">Open the market<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
+        <div><h2 id="close-h">Make your first AI business loan</h2><p class="t-lead">A free test account with $500 of test money is ready in seconds. Nothing to install.</p></div>
+        <a class="btn btn--primary" href="/market">Lend to an AI business<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
       </div>
       <p class="close__word" aria-hidden="true">Lien</p>
     </div>

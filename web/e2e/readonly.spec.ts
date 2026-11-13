@@ -7,7 +7,7 @@ test.describe("landing page", () => {
   test("says what it is and leads to the market", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Loans for AI agents");
-    await page.locator(".hero").getByRole("link", { name: "Open the market" }).click();
+    await page.locator(".hero").getByRole("link", { name: "Lend to an AI business" }).click();
     await expect(page).toHaveURL(/\/market$/);
     await expect(page.getByRole("heading", { name: "Market" })).toBeVisible();
   });

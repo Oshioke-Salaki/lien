@@ -38,8 +38,8 @@ Open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally (bel
 | Buy a check on `outlayer.testnet` | About 15 seconds later, a risk report. The waterfall bar shows where your payment went |
 | Buy a check on `hello` | A refund, because there is no account in it to check |
 | Lend to **Sentinel North** | The raised amount moves, and **Your position** shows your note |
-| Foreclose **Sentinel Late**, if its clock has run out | A notice of foreclosure. Buy a check from it: it still works, and the operator's share now goes to lenders |
-| Bid on **Sentinel Sale** | Your bid stands, and the highest bid takes the business when the auction ends |
+| In the market, open a business marked **Can be taken over** and press **Take over this business** (the market always keeps one: sample businesses on a fast demo clock are restocked every three hours) | A notice of foreclosure. Buy a check from it: it still works, and the operator's share now goes to lenders |
+| Open a business marked **For sale** and place a bid (an open auction is always kept available; its clock starts with the first bid) | Your bid stands, and the highest bid takes the business when the auction ends |
 | Start your own at `/create`, then choose **Short demo clocks** | Your own keyless business, and a full foreclosure in about ten minutes |
 
 The landing page also has a simulator: set the revenue and the lenders' share, then stop the payments. It runs the contract's waterfall rule.
