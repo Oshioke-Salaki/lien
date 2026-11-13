@@ -101,7 +101,7 @@ export function CreateScreen() {
 
   return (
     <div className="space-y-8">
-      <PageHead title="Start a business" lead="You get a keyless account that runs your build, sells its work and can borrow against what it earns. You keep control until you take a loan." />
+      <PageHead title="Start a business" lead="Set up an AI business that sells a service and can borrow against its sales. Nobody holds its keys, not even you, which is why lenders can trust it. It takes about a minute." />
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="create-form">
           {step("Its name", "The account name is permanent. The business name is what customers see.", <>
@@ -110,20 +110,20 @@ export function CreateScreen() {
               hint={label && !labelError && taken === false ? `${label}.${deployment.registry} is free. Income arrives at ${label}-in.${deployment.registry}.` : label && !labelError ? "Checking the name…" : `Becomes <name>.${deployment.registry}`} />
             <TextField label="Business name" testId="create-name" value={name} onChange={setName} />
           </>)}
-          {step("What it sells", "One job, one price. Customers pay the contract, which holds the money until the work is done.", <>
-            <AmountField label="Price of one job" testId="create-price" value={price} onChange={setPrice} error={priceValue === null && price ? "Enter an amount." : null} />
+          {step("What it sells", "One service at one price. Customers pay the business, which holds the money until the work is done, and refunds it if the work fails.", <>
+            <AmountField label="Price of one sale" testId="create-price" value={price} onChange={setPrice} error={priceValue === null && price ? "Enter an amount." : null} />
             <TextField label="What it does" value={description} onChange={setDescription} multiline />
           </>)}
-          {step("What it may spend", "Its code can only pay these accounts, up to these limits, whatever it asks for.", <>
+          {step("What it may spend on", "It can only pay these accounts, up to these limits, whatever its program asks for. This is what keeps a loan safe.", <>
             <TextField label="Vendors it may pay" value={vendors} onChange={setVendors} error={vendorError} hint="Accounts, separated by commas." />
             <div className="grid gap-4 sm:grid-cols-2">
               <AmountField label="Most per payment" value={perTx} onChange={setPerTx} error={limitError} />
               <AmountField label="Most per day" value={perDay} onChange={setPerDay} />
             </div>
           </>)}
-          {step("Its build", "It starts with Sentinel, our open example agent. Paste your own to run something else.", <>
+          {step("Its program", "It starts with Sentinel, our open example agent that sells safety checks. Paste your own to run something else.", <>
             <details>
-              <summary className="cursor-pointer rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[15px] font-medium transition-colors hover:bg-[var(--surface-3)]">Use your own build</summary>
+              <summary className="cursor-pointer rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[15px] font-medium transition-colors hover:bg-[var(--surface-3)]">Use your own program</summary>
               <div className="mt-4 space-y-4">
                 <p className="hint">Publish it to FastFS and paste its URL and SHA-256. Sentinel&rsquo;s source is in the repository.</p>
                 <TextField label="Build URL" value={url} onChange={setUrl} error={urlError} />
@@ -132,7 +132,7 @@ export function CreateScreen() {
             </details>
           </>)}
           <div className="rounded-[16px] bg-[var(--surface)] p-5 sm:p-6">
-            <ConnectGate reason="Connect to create it. The account that creates a business operates it.">
+            <ConnectGate reason="Connect to create it. The account that creates a business owns it.">
               <div className="flex flex-wrap items-center gap-4">
                 <button type="submit" className="btn btn-primary w-full sm:w-auto" data-testid="create-submit" disabled={!ready || busy || preparing}>{preparing ? "Preparing your account…" : `Create it for ${CREATE_DEPOSIT_NEAR} NEAR`}</button>
                 <p className="text-[14px] muted">{ready ? "Your wallet asks you to confirm." : "Fill in a free name to continue."}</p>

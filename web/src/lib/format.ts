@@ -1,4 +1,4 @@
-import { deployment } from "./config";
+import { deployment, isTestnet } from "./config";
 
 const DECIMALS = BigInt(deployment.tokenDecimals);
 const UNIT = 10n ** DECIMALS;
@@ -20,7 +20,16 @@ export function smartAmount(value: bigint | string): string {
 }
 
 export const symbol = deployment.tokenSymbol;
-export const money = (value: bigint | string) => `${smartAmount(value)} ${symbol}`;
+/** What the unit is called in words: the token is a dollar stablecoin (test dollars on testnet). */
+export const unitName = isTestnet ? "test dollars" : "USDC";
+/**
+ * Amounts read as dollars, which anyone understands at a glance. Exact to the last unit,
+ * with at least two decimals, so the parts of a split always add up on screen.
+ */
+export const money = (value: bigint | string) => {
+  const text = smartAmount(value);
+  return text.startsWith("-") ? `-$${text.slice(1)}` : `$${text}`;
+};
 
 /** Parses "12.5" into base units. Returns null for anything that is not an amount. */
 export function parseAmount(text: string): bigint | null {

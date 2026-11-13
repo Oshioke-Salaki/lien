@@ -49,17 +49,19 @@ export async function createGuest(): Promise<Guest> {
   return guest;
 }
 
-/** Asks the sponsor for enough NEAR to start a business. */
-export async function topUpGuest(accountId: string) {
+/**
+ * Asks the sponsor for NEAR: enough to start a business, or a little for network fees
+ * once a guest has spent what it started with. Returns the NEAR added ("0" if none was needed).
+ */
+export async function topUpGuest(accountId: string, reason: "business" | "fees" = "business"): Promise<string> {
   const response = await fetch("/api/guest", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ topUp: accountId }),
+    body: JSON.stringify({ topUp: accountId, reason }),
   });
-  if (!response.ok) {
-    const { error } = (await response.json().catch(() => ({}))) as { error?: string };
-    throw new Error(error || "Your test account could not be topped up.");
-  }
+  const body = (await response.json().catch(() => ({}))) as { error?: string; near?: string };
+  if (!response.ok) throw new Error(body.error || "Your test account could not be topped up.");
+  return body.near ?? "0";
 }
 
 async function waitForAccount(accountId: string) {

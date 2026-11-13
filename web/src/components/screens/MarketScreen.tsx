@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useSyncExternalStore } from "react";
 import { Bar, EmptyState, ErrorState, PageHead, Skeleton, StandingLabel, STANDING_TONE } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
-import { percent, share, shortAccount, smartAmount, symbol } from "@/lib/format";
+import { money, percent, share, shortAccount } from "@/lib/format";
 import { listBusinesses } from "@/lib/near/rpc";
 import type { Business } from "@/lib/near/types";
 import { isAlert, standing, type Standing } from "@/lib/status";
@@ -16,7 +16,7 @@ const ORDER: Record<Standing, number> = { foreclosable: 0, auction: 1, foreclose
 function nextStep(s: Standing) {
   switch (s) {
     case "funding": return "Lend";
-    case "foreclosable": return "Foreclose";
+    case "foreclosable": return "Take over";
     case "foreclosed":
     case "auction": return "Bid";
     case "no-loan": return "Buy a check";
@@ -65,9 +65,9 @@ export function MarketScreen() {
         <>
           <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {[
-              { label: "Lent to businesses now", value: live.loaded ? `${smartAmount(lent)} ${symbol}` : null },
-              { label: "Repaid on open loans", value: live.loaded ? `${smartAmount(repaid)} ${symbol}` : null },
-              { label: "Work sold by these businesses", value: live.loaded ? sold.toLocaleString("en-US") : null },
+              { label: "Lent to businesses now", value: live.loaded ? money(lent) : null },
+              { label: "Paid back to lenders so far", value: live.loaded ? money(repaid) : null },
+              { label: "Safety checks these businesses sold", value: live.loaded ? sold.toLocaleString("en-US") : null },
             ].map((stat) => (
               <div key={stat.label} className="rounded-[16px] bg-[var(--surface)] p-5">
                 <dt className="text-[14px] muted">{stat.label}</dt>
@@ -83,7 +83,7 @@ export function MarketScreen() {
             {!live.loaded ? (
               [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[92px] w-full lg:h-[76px]" />)
             ) : rows.length === 0 ? (
-              <EmptyState title="Nothing is listed yet" body="A business is a keyless account that sells work and can borrow against it. Start one and it appears here." action={{ href: "/create", label: "Start a business" }} />
+              <EmptyState title="Nothing is listed yet" body="A business here is an AI agent that sells a service and can borrow against its sales. Start one and it appears here." action={{ href: "/create", label: "Start a business" }} />
             ) : (
               <ul className="space-y-2">
                 {rows.map((b) => <MarketRow key={b.id} business={b} onOpen={() => router.push(`/b/${b.id}`)} />)}
@@ -93,7 +93,7 @@ export function MarketScreen() {
 
           {live.loaded ? <TryIt rows={rows} /> : null}
           <p className="max-w-[72ch] text-[14px] muted">
-            Every figure is read live from the contracts. Each business is its own keyless account, so nothing here depends on Lien being honest.
+            Every figure is read live from the network. No person holds the keys to any business here, so none of this depends on trusting Lien.
           </p>
         </>
       )}
@@ -109,9 +109,9 @@ function TryIt({ rows }: { rows: Business[] }) {
   const sale = pick("foreclosed", "auction");
   const serving = pick("current") ?? rows[0];
   const steps = [
-    raising && { href: `/b/${raising.id}`, action: `Lend to ${raising.name}`, result: "You receive a note and a share of every sale." },
-    serving && { href: `/b/${serving.id}`, action: `Buy a check from ${serving.name}`, result: "Sealed code runs in about 15 seconds, and the report lands on chain." },
-    late && { href: `/b/${late.id}`, action: `Foreclose ${late.name}`, result: "Past grace, anyone can take it. It keeps serving customers." },
+    raising && { href: `/b/${raising.id}`, action: `Lend to ${raising.name}`, result: "You get a share of the loan, repaid from every sale it makes." },
+    serving && { href: `/b/${serving.id}`, action: `Buy a safety check from ${serving.name}`, result: "A report on any account, usually in under a minute. If it fails, you get your money back." },
+    late && { href: `/b/${late.id}`, action: `Take over ${late.name}`, result: "It missed its payments, so anyone can take it over for its lenders. It keeps serving customers." },
     sale && { href: `/b/${sale.id}`, action: `Bid on ${sale.name}`, result: "The highest bid takes a running business." },
   ].filter((s): s is { href: string; action: string; result: string } => Boolean(s));
   if (!steps.length) return null;
@@ -158,7 +158,7 @@ function MarketRow({ business: b, onOpen }: { business: Business; onOpen: () => 
         {loan ? (
           <>
             <div className="mb-2 flex justify-between gap-3 text-[14px]">
-              <span className="num">{raising ? `${smartAmount(loan.funded)} of ${smartAmount(loan.terms.principal)} raised` : `${smartAmount(loan.repaid)} of ${smartAmount(loan.terms.total_due)} repaid`}</span>
+              <span className="num">{raising ? `${money(loan.funded)} of ${money(loan.terms.principal)} raised` : `${money(loan.repaid)} of ${money(loan.terms.total_due)} paid back`}</span>
               <span className="num muted">{progress}%</span>
             </div>
             <Bar value={progress} tone={raising ? "var(--accent)" : STANDING_TONE[s]} label={raising ? `${progress}% raised` : `${progress}% repaid`} />
@@ -197,7 +197,7 @@ const dismissIntro = () => {
 const STEPS = [
   { title: "An AI agent borrows", body: "It runs as a NEAR account that nobody holds the keys to, so no one can walk off with the loan." },
   { title: "Every sale repays lenders first", body: "A fixed share of each sale goes to the lenders before the owner sees anything." },
-  { title: "Stop paying, lose the business", body: "Anyone can foreclose a late agent. It keeps working for lenders until it is sold." },
+  { title: "Stop paying, lose the business", body: "Anyone can take over a late agent. It keeps working for its lenders until it is sold." },
 ];
 
 /** Lien in three plain steps, for anyone who arrives here first. Hidden once dismissed. */

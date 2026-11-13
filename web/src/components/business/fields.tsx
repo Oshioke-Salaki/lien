@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { useLive } from "@/hooks/useLive";
-import { money, parseAmount, symbol } from "@/lib/format";
+import { money, parseAmount } from "@/lib/format";
 import { isRegistered, tokenBalance } from "@/lib/near/rpc";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 
@@ -24,15 +24,17 @@ export function checkAmount(text: string, { min, max, balance }: { min?: bigint;
   return { value, error: null };
 }
 
-export function AmountField({ label, value, onChange, error, hint, testId, unit = symbol }: { label: string; value: string; onChange: (v: string) => void; error?: string | null; hint?: string; testId?: string; unit?: string }) {
+/** An amount in dollars by default ("$" before the number, as on any banking app), or in another unit. */
+export function AmountField({ label, value, onChange, error, hint, testId, unit }: { label: string; value: string; onChange: (v: string) => void; error?: string | null; hint?: string; testId?: string; unit?: string }) {
   const id = useId();
   const described = error || hint ? `${id}-hint` : undefined;
   return (
     <label className="field" htmlFor={id}>
       <span>{label}</span>
       <div className="relative">
-        <input id={id} data-testid={testId} className="input pr-16" inputMode="decimal" autoComplete="off" value={value} aria-invalid={!!error} aria-describedby={described} onChange={(e) => onChange(e.target.value)} />
-        <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[14px] muted">{unit}</span>
+        {unit ? null : <span aria-hidden className="pointer-events-none absolute top-1/2 left-[14px] -translate-y-1/2 text-[16px] text-[var(--ink-2)]">$</span>}
+        <input id={id} data-testid={testId} className={`input ${unit ? "pr-16" : "pl-7"}`} inputMode="decimal" autoComplete="off" placeholder="0.00" value={value} aria-invalid={!!error} aria-describedby={described} onChange={(e) => onChange(e.target.value)} />
+        {unit ? <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[14px] muted">{unit}</span> : null}
       </div>
       {error || hint ? <p id={described} className="hint" data-error={!!error}>{error ?? hint}</p> : null}
     </label>

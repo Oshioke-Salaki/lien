@@ -23,7 +23,7 @@ export default function Page() {
   json-args '{"receiver_id":"${example}","amount":"250000",
     "msg":"{\\"action\\":\\"job\\",\\"input\\":\\"is usdc.near safe?\\"}"}' \\
   prepaid-gas '300 Tgas' attached-deposit '1 yoctoNEAR' ...`}</Code>
-        <p>Then read the result by the id in the <code>job_started</code> event. It usually settles in about 15 seconds.</p>
+        <p>Then read the result by the id in the <code>job_started</code> event. It usually settles in under a minute; on testnet it can take a few.</p>
         <Code>{`near contract call-function as-read-only ${example} get_job \\
   json-args '{"job_id":0}' network-config ${deployment.network} now`}</Code>
       </section>

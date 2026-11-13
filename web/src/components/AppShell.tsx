@@ -8,9 +8,13 @@ import { Mark } from "@/components/Mark";
 import { deployment, isTestnet, NETWORK } from "@/lib/config";
 import { money, shortAccount } from "@/lib/format";
 import { faucet } from "@/lib/near/actions";
-import { isRegistered, tokenBalance } from "@/lib/near/rpc";
+import { isRegistered, tokenBalance, viewAccount } from "@/lib/near/rpc";
 import { useLive } from "@/hooks/useLive";
+import { topUpGuest } from "@/lib/wallet/guest";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+
+/** Below this a free account gets a little NEAR for fees with its test dollars. */
+const FEES_LOW = 300_000_000_000_000_000_000_000n;
 
 const NAV = [
   { href: "/market", label: "Market", icon: "M3 13h4v6H3zM10 8h4v11h-4zM17 4h4v15h-4z" },
@@ -38,8 +42,8 @@ function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
     return (
       <div className="space-y-3 rounded-[14px] bg-[var(--surface)] p-4">
         <div>
-          <p className="text-[15px] font-medium">Take part</p>
-          <p className="mt-1 text-[14px] leading-snug text-[var(--ink-2)]">Lend, buy and bid with a wallet, or try it with a free test account.</p>
+          <p className="text-[15px] font-medium">Try it free</p>
+          <p className="mt-1 text-[14px] leading-snug text-[var(--ink-2)]">Get a free test account with $500 of play money, or connect a NEAR wallet.</p>
         </div>
         <ConnectButtons compact />
       </div>
@@ -47,33 +51,54 @@ function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
   }
 
   const topUp = async () => {
+    // A free account that has spent its NEAR on fees gets a little more along with the dollars.
+    let near = "0";
+    if (kind === "guest") {
+      const { amount } = await viewAccount(account).catch(() => ({ amount: "0" }));
+      if (BigInt(amount) < FEES_LOW) near = await topUpGuest(account, "fees").catch(() => "0");
+    }
     const prepare = async () => faucet(account, 100n * 10n ** BigInt(deployment.tokenDecimals), { register: !(await isRegistered(account)) });
-    await run({ summary: "Get test funds", prepare }, { done: "100 test tokens added" });
+    await run({ summary: "Get test funds", prepare }, { done: near !== "0" ? `Added $100 of test dollars and ${near} NEAR for fees` : "Added $100 of test dollars" });
     await balance.refresh();
   };
 
+  const signOut = () => {
+    if (kind === "guest" && !window.confirm("Sign out of this test account? It lives only in this browser, so signing out loses it and anything in it.")) return;
+    void disconnect();
+  };
+
   return (
-    <div className="space-y-3 rounded-[14px] bg-[var(--surface)] p-4 text-[14px]">
+    <div className="space-y-3 rounded-[14px] bg-[var(--surface)] p-4 text-[14px]" data-testid="account-box">
       <div className="flex items-center gap-3">
-        <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--accent-tint)] text-[14px] font-medium text-[var(--accent)]">{account.slice(0, 1).toUpperCase()}</span>
+        <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--accent-tint)] text-[14px] font-medium text-[var(--accent)]">{kind === "guest" ? "T" : account.slice(0, 1).toUpperCase()}</span>
         <div className="min-w-0">
-          <p className="truncate font-medium" title={account}>{shortAccount(account)}</p>
-          <p className="muted">{kind === "guest" ? "Free test account in this browser" : "Connected wallet"}</p>
+          <p className="font-medium">{kind === "guest" ? "Free test account" : "Your wallet"}</p>
+          <p className="truncate muted" title={account}>{shortAccount(account, 24)}</p>
         </div>
       </div>
       <div>
-        <p className="text-[13px] muted">Balance</p>
-        <p className="num text-[22px] leading-tight font-medium tracking-[-0.01em]">{balance.data === undefined ? <span className="skeleton inline-block h-6 w-28 align-middle" /> : money(balance.data)}</p>
+        <p className="text-[13px] muted">{isTestnet ? "Balance, in test dollars" : "Balance"}</p>
+        <p className="num text-[22px] leading-tight font-medium tracking-[-0.01em]" data-testid="balance">{balance.data === undefined ? <span className="skeleton inline-block h-6 w-28 align-middle" /> : money(balance.data)}</p>
       </div>
       <div className="flex flex-wrap gap-2">
         {isTestnet ? (
           <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={topUp}>Get test funds</button>
         ) : null}
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => void disconnect()}>
-          {kind === "guest" ? "Forget" : "Sign out"}
-        </button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={signOut}>Sign out</button>
       </div>
     </div>
+  );
+}
+
+/** On a phone the balance stays in sight next to the menu, not only inside it. */
+function TopBarBalance() {
+  const { account } = useWallet();
+  const balance = useLive(account ? () => tokenBalance(account) : null, `balance:${account}`, 8_000);
+  if (!account) return null;
+  return (
+    <span className="num rounded-full bg-[var(--surface)] px-3 py-[6px] text-[14px] font-medium" aria-label={`Balance: ${balance.data === undefined ? "loading" : money(balance.data)}`}>
+      {balance.data === undefined ? "…" : money(balance.data)}
+    </span>
   );
 }
 
@@ -122,9 +147,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Phone and tablet: one bar with the name and the menu. */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[var(--line)] bg-[var(--bg)] px-4 lg:hidden">
         <Link href="/" className="flex items-center gap-2 text-[17px] font-medium"><Mark size={22} /> Lien</Link>
-        <button type="button" className="btn btn-ghost btn-sm min-h-[44px]" aria-expanded={open} aria-controls="app-menu" onClick={() => setOpen(!open)}>
-          {open ? "Close" : "Menu"}
-        </button>
+        <div className="flex items-center gap-2">
+          <TopBarBalance />
+          <button type="button" className="btn btn-ghost btn-sm min-h-[44px]" aria-expanded={open} aria-controls="app-menu" onClick={() => setOpen(!open)}>
+            {open ? "Close" : "Menu"}
+          </button>
+        </div>
       </header>
       {open ? (
         <div id="app-menu" className="appear fixed inset-x-0 top-14 bottom-0 z-40 flex flex-col justify-between gap-8 overflow-auto bg-[var(--bg)] p-4 pb-8 lg:hidden">

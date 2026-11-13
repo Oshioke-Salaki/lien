@@ -2,13 +2,16 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { txUrl } from "@/lib/config";
+import { REFRESH_EVENT } from "@/lib/events";
 import type { TxRequest } from "@/lib/near/actions";
-import { friendlyError, type TxResult } from "@/lib/near/outcome";
+import { friendlyError, isFeeShortfall, type TxResult } from "@/lib/near/outcome";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 
 export type Prepared = { summary: string; prepare: () => Promise<TxRequest> };
 
-type Notice = { id: number; tone: "pending" | "done" | "error"; title: string; text: string; hash?: string };
+type Notice = { id: number; tone: "pending" | "done" | "error"; title: string; text: string; hash?: string; faucet?: boolean };
+
+const NEAR_FAUCET = "https://near-faucet.io/";
 
 type TxContextValue = {
   /**
@@ -18,6 +21,8 @@ type TxContextValue = {
    */
   run: (request: TxRequest | Prepared, options?: { requiredOn?: string; done?: string; pending?: string }) => Promise<TxResult | null>;
   busy: boolean;
+  /** A confirmation that is not a transaction, such as a new test account being ready. */
+  notify: (title: string, text: string) => void;
 };
 
 const TxContext = createContext<TxContextValue | null>(null);
@@ -29,7 +34,7 @@ function describeThrown(error: unknown): string {
 }
 
 export function TxProvider({ children }: { children: ReactNode }) {
-  const { send } = useWallet();
+  const { send, kind } = useWallet();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [busy, setBusy] = useState(false);
   const counter = useRef(0);
@@ -44,22 +49,33 @@ export function TxProvider({ children }: { children: ReactNode }) {
       setNotices((all) => all.map((n) => (n.id === id ? { id, ...notice } : n)));
       if (notice.tone === "done") setTimeout(() => dismiss(id), 9_000);
     };
+    const update = (text: string) => setNotices((all) => all.map((n) => (n.id === id ? { ...n, text } : n)));
+    const faucet = (text: string) => (isFeeShortfall(text) && kind !== "guest" ? { faucet: true } : {});
     try {
       const ready = "prepare" in request ? await request.prepare() : request;
-      const result = await send(ready, options.requiredOn);
-      if (result.ok) finish({ tone: "done", title: options.done ?? `${request.summary}: done`, text: "Confirmed on chain.", hash: result.hash });
-      else finish({ tone: "error", title: `${request.summary} did not go through`, text: result.error ?? "The transaction failed. Nothing was taken that was not given back.", hash: result.hash });
+      const result = await send(ready, options.requiredOn, update);
+      if (result.ok) finish({ tone: "done", title: options.done ?? `${request.summary}: done`, text: "Confirmed on the network.", hash: result.hash });
+      else finish({ tone: "error", title: `${request.summary} did not go through`, text: result.error ?? "The transaction failed. Nothing was taken that was not given back.", hash: result.hash, ...faucet(result.error ?? "") });
+      // Every screen re-reads the chain now, instead of on its next poll.
+      if (result.ok) window.dispatchEvent(new Event(REFRESH_EVENT));
       return result;
     } catch (error) {
-      finish({ tone: "error", title: `${request.summary} did not go through`, text: describeThrown(error) });
+      const text = describeThrown(error);
+      finish({ tone: "error", title: `${request.summary} did not go through`, text, ...faucet(text) });
       return null;
     } finally {
       setBusy(false);
     }
-  }, [send, dismiss]);
+  }, [send, dismiss, kind]);
+
+  const notify = useCallback((title: string, text: string) => {
+    const id = ++counter.current;
+    setNotices((all) => [...all.slice(-2), { id, tone: "done", title, text }]);
+    setTimeout(() => dismiss(id), 9_000);
+  }, [dismiss]);
 
   return (
-    <TxContext.Provider value={{ run, busy }}>
+    <TxContext.Provider value={{ run, busy, notify }}>
       {children}
       <div aria-live="polite" className="pointer-events-none fixed right-4 bottom-4 left-4 z-50 flex flex-col items-end gap-2 sm:left-auto sm:w-[400px]">
         {notices.map((notice) => (
@@ -69,10 +85,16 @@ export function TxProvider({ children }: { children: ReactNode }) {
               <p className="font-medium">{notice.title}</p>
               <p className="mt-[2px] text-[14px] text-[var(--ink-2)]">
                 {notice.text}
+                {notice.faucet ? (
+                  <>
+                    {" "}
+                    <a className="link" href={NEAR_FAUCET} target="_blank" rel="noreferrer">Get free testnet NEAR</a>
+                  </>
+                ) : null}
                 {notice.hash ? (
                   <>
                     {" "}
-                    <a className="link" href={txUrl(notice.hash)} target="_blank" rel="noreferrer">View transaction</a>
+                    <a className="link" href={txUrl(notice.hash)} target="_blank" rel="noreferrer">View on the network</a>
                   </>
                 ) : null}
               </p>
@@ -124,6 +146,7 @@ export function ConnectGate({ children, reason, quiet = false }: { children: Rea
 
 export function ConnectButtons({ compact = false }: { compact?: boolean }) {
   const { connect, startGuest } = useWallet();
+  const { notify } = useTx();
   const [state, setState] = useState<"idle" | "guest" | "wallet">("idle");
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -151,7 +174,10 @@ export function ConnectButtons({ compact = false }: { compact?: boolean }) {
       <button type="button" className="btn btn-primary" disabled={state !== "idle"} onClick={() => attempt("wallet", connect)}>
         {state === "wallet" ? "Opening…" : "Connect a wallet"}
       </button>
-      <GuestButton busy={state === "guest"} disabled={state !== "idle"} onClick={() => attempt("guest", startGuest)} />
+      <GuestButton busy={state === "guest"} disabled={state !== "idle"} onClick={() => attempt("guest", async () => {
+        await startGuest();
+        notify("Your free test account is ready", "It has $500 of test dollars to try everything. It lives only in this browser.");
+      })} />
       {error ? <p role="alert" className="w-full text-[14px] text-[var(--danger)]">{error}</p> : null}
     </div>
   );

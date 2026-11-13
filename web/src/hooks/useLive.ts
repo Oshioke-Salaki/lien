@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { REFRESH_EVENT } from "@/lib/events";
 
 export type Live<T> = {
   data: T | undefined;
@@ -39,11 +40,18 @@ export function useLive<T>(fetcher: (() => Promise<T>) | null, key: string, inte
 
   useEffect(() => {
     void refresh();
-    if (!intervalMs) return;
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, intervalMs);
-    return () => clearInterval(timer);
+    // After any confirmed transaction, everything on the page re-reads at once.
+    const now = () => void refresh();
+    window.addEventListener(REFRESH_EVENT, now);
+    const timer = intervalMs
+      ? setInterval(() => {
+          if (document.visibilityState === "visible") void refresh();
+        }, intervalMs)
+      : undefined;
+    return () => {
+      window.removeEventListener(REFRESH_EVENT, now);
+      if (timer) clearInterval(timer);
+    };
   }, [refresh, intervalMs]);
 
   const current = state.key === key ? state : { data: undefined, error: undefined, loaded: false };

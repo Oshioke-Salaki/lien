@@ -32,14 +32,20 @@ const failureText = (status: unknown): string | null => {
   return named ?? "The transaction failed";
 };
 
+/** Said when the account cannot pay the network fee; the faucet link lives with the notice. */
+export const FEE_SHORTFALL = "Your account needs a little NEAR to pay the network fee for this. NEAR is the network's own currency; a fee costs a fraction of a cent.";
+
 /** Contract messages rewritten for someone who has never seen the code. */
 const FRIENDLY: Array<[RegExp, string]> = [
-  [/is not registered/, "That account has no token balance yet. Add test funds first."],
-  [/The account doesn't have enough balance/, "You do not have enough funds for this."],
-  [/LackBalanceForState/, "This account does not have enough NEAR to cover its storage."],
+  [/is not registered/, "That account has no dollar balance yet. Add test funds first."],
+  [/The account doesn't have enough balance/, "You do not have enough money for this."],
+  [/LackBalanceForState|NotEnoughBalance|Not enough balance/i, FEE_SHORTFALL],
   [/AccountAlreadyExists/, "That name is taken. Try another."],
-  [/NotEnoughBalance|Not enough balance/i, "This account does not have enough NEAR for this transaction. NEAR holds back gas up front and returns what is unused."],
 ];
+
+/** True when an action failed only because the account had too little NEAR for network fees. */
+export const isFeeShortfall = (message: string | undefined) =>
+  !!message && (/LackBalanceForState|NotEnoughBalance|Not enough balance/i.test(message) || message === FEE_SHORTFALL);
 
 export function friendlyError(message: string): string {
   const match = FRIENDLY.find(([pattern]) => pattern.test(message));

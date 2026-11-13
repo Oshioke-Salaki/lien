@@ -11,8 +11,8 @@ const id = `${label}.${REGISTRY}`;
 async function startGuest(page: Page) {
   await page.goto("/market");
   await page.getByRole("button", { name: "Use a free test account" }).first().click();
-  await expect(page.getByText("Free test account in this browser").first()).toBeVisible({ timeout: 90_000 });
-  await expect(page.getByText("500.00 tUSD").first()).toBeVisible();
+  await expect(page.getByText("Free test account", { exact: true }).first()).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByTestId("balance").first()).toHaveText("$500.00");
 }
 
 test("one loan, from creation to foreclosure and redemption, through the app", async ({ page }) => {
@@ -47,8 +47,8 @@ test("one loan, from creation to foreclosure and redemption, through the app", a
   await expect(page.getByTestId("headline")).toContainText("Paying on time");
   await expect(page.getByTestId("position")).toContainText("20.00");
 
-  // The operator cannot take the money: the controls are simply not there.
-  await expect(page.getByText("Withdraw working capital")).toHaveCount(0);
+  // The owner cannot take the money: the controls are simply not there.
+  await expect(page.getByText("Withdraw running-cost money")).toHaveCount(0);
 
   // Buy real work from the enclave.
   await page.getByTestId("job-input").fill("is outlayer.testnet safe?");

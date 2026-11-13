@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { accountUrl } from "@/lib/config";
 import { shortAccount } from "@/lib/format";
 import { STANDING_LABEL, type Standing } from "@/lib/status";
@@ -79,6 +79,23 @@ export function Bar({ value, tone = "var(--accent)", label }: { value: number; t
     <div role="img" aria-label={label} className="track">
       <i style={{ width: `${clamped}%`, background: tone }} />
     </div>
+  );
+}
+
+/**
+ * A word that has to stay, with its meaning one tap, hover or keyboard focus away.
+ * The definition is also the button's description, so screen readers hear it too.
+ */
+export function Term({ children, tip }: { children: ReactNode; tip: string }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <span className="term" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button type="button" aria-expanded={open} aria-describedby={id} onClick={() => setOpen((v) => !v)} onBlur={() => setOpen(false)} onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}>
+        {children}
+      </button>
+      <span id={id} role="tooltip" className="term-tip" hidden={!open}>{tip}</span>
+    </span>
   );
 }
 
