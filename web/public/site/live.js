@@ -73,7 +73,7 @@ function simulator() {
 
 // ---- live figures ----
 const REGISTRY = "v1.lien-13569.testnet";
-const RPCS = ["https://rpc.testnet.fastnear.com", "https://test.rpc.fastnear.com", "https://rpc.testnet.near.org"];
+const RPCS = ["https://rpc.testnet.fastnear.com", "https://testnet-rpc.intea.rs", "https://near-testnet.drpc.org", "https://api.zan.top/near-testnet", "https://test.rpc.fastnear.com"];
 
 async function view(account, method, args = {}) {
   const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "query", params: { request_type: "call_function", finality: "optimistic", account_id: account, method_name: method, args_base64: btoa(JSON.stringify(args)) } });

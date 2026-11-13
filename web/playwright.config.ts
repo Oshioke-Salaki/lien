@@ -5,7 +5,8 @@ const PORT = process.env.PORT ?? "3100";
 export default defineConfig({
   testDir: "./e2e",
   timeout: 240_000,
-  expect: { timeout: 45_000 },
+  // Real transactions on public testnet nodes: confirmation can take tens of seconds on a bad day.
+  expect: { timeout: 90_000 },
   // Tests that sign real transactions share testnet accounts, so they run in order.
   workers: 1,
   retries: 0,

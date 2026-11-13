@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Account, JsonRpcProvider, actions, teraToGas, type KeyPairString } from "near-api-js";
+import { Account, FailoverRpcProvider, JsonRpcProvider, actions, teraToGas, type KeyPairString } from "near-api-js";
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -25,7 +25,13 @@ export type Deployment = {
 
 export const RPC: Record<Network, string> = {
   testnet: "https://rpc.testnet.fastnear.com",
-  mainnet: "https://rpc.mainnet.fastnear.com",
+  mainnet: "https://free.rpc.fastnear.com",
+};
+
+/** Independent providers from NEAR's list, tried in turn when one throttles or fails. */
+export const RPC_FALLBACKS: Record<Network, string[]> = {
+  testnet: ["https://rpc.testnet.fastnear.com", "https://testnet-rpc.intea.rs", "https://near-testnet.drpc.org", "https://api.zan.top/near-testnet"],
+  mainnet: ["https://free.rpc.fastnear.com", "https://rpc.intea.rs", "https://near.drpc.org", "https://api.zan.top/near-mainnet"],
 };
 
 export const OUTLAYER: Record<Network, string> = { testnet: "outlayer.testnet", mainnet: "outlayer.near" };
@@ -46,7 +52,7 @@ export function network(): Network {
 }
 
 export function provider(net: Network = network()) {
-  return new JsonRpcProvider({ url: RPC[net] });
+  return new FailoverRpcProvider(RPC_FALLBACKS[net].map((url) => new JsonRpcProvider({ url })));
 }
 
 export function account(accountId: string, net: Network = network()): Account {

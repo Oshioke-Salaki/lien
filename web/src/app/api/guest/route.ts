@@ -1,6 +1,21 @@
 import { NextResponse } from "next/server";
-import { Account, JsonRpcProvider, nearToYocto, type KeyPairString } from "near-api-js";
+import { Account, JsonRpcProvider, actions, nearToYocto, PublicKey, type KeyPairString } from "near-api-js";
 import { RPC_URLS } from "@/lib/config";
+import { acrossNodes, prepareSigned, sendSigned } from "@/lib/near/send";
+
+// A stalled public node must not hang the request: sends go through every node at once.
+export const maxDuration = 60;
+const SEND_WITHIN_MS = 40_000;
+
+/** Signs as the sponsor and sends through every node; throws if the transaction failed. */
+async function sponsorSend(sponsorKey: string, sponsorId: string, receiverId: string, list: ReturnType<typeof actions.transfer>[]) {
+  const signed = await acrossNodes(RPC_URLS.testnet, (url) =>
+    new Account(sponsorId, new JsonRpcProvider({ url }), sponsorKey as KeyPairString).createSignedTransaction({ receiverId, actions: list }),
+  );
+  const outcome = await sendSigned(RPC_URLS.testnet, await prepareSigned(signed, sponsorId), SEND_WITHIN_MS);
+  const status = (outcome as unknown as { status?: { Failure?: unknown } }).status;
+  if (status?.Failure) throw new Error(JSON.stringify(status.Failure));
+}
 
 // Creates a free testnet account for someone trying the product without a wallet.
 //
@@ -34,10 +49,8 @@ function allowed(ip: string): boolean {
 const suffix = () => crypto.getRandomValues(new Uint32Array(1))[0]!.toString(36);
 
 async function createWithSponsor(sponsorId: string, sponsorKey: string, publicKey: string): Promise<string> {
-  const provider = new JsonRpcProvider({ url: RPC_URLS.testnet[0]! });
-  const sponsor = new Account(sponsorId, provider, sponsorKey as KeyPairString);
   const accountId = `g${suffix()}.${sponsorId}`;
-  await sponsor.createSubAccount({ accountOrPrefix: accountId, publicKey, nearToTransfer: nearToYocto(GUEST_NEAR) });
+  await sponsorSend(sponsorKey, sponsorId, accountId, [actions.createAccount(), actions.transfer(nearToYocto(GUEST_NEAR)), actions.addFullAccessKey(PublicKey.fromString(publicKey))]);
   return accountId;
 }
 
@@ -70,13 +83,11 @@ function feeTopUpAllowed(accountId: string): boolean {
  */
 async function topUp(sponsorId: string, sponsorKey: string, accountId: string, reason: "business" | "fees"): Promise<string | null> {
   if (!accountId.endsWith(`.${sponsorId}`) || !/^g[a-z0-9]+\./.test(accountId)) return null;
-  const provider = new JsonRpcProvider({ url: RPC_URLS.testnet[0]! });
-  const { amount } = await provider.viewAccount({ accountId });
+  const { amount } = await acrossNodes(RPC_URLS.testnet, (url) => new JsonRpcProvider({ url }).viewAccount({ accountId }));
   const [floor, gift] = reason === "fees" ? ([FEES_MINIMUM, FEES_NEAR] as const) : ([BUSINESS_MINIMUM, BUSINESS_NEAR] as const);
   if (BigInt(amount) >= floor) return "0";
   if (reason === "fees" && !feeTopUpAllowed(accountId)) return null;
-  const sponsor = new Account(sponsorId, provider, sponsorKey as KeyPairString);
-  await sponsor.transfer({ receiverId: accountId, amount: nearToYocto(gift) });
+  await sponsorSend(sponsorKey, sponsorId, accountId, [actions.transfer(nearToYocto(gift))]);
   return gift;
 }
 

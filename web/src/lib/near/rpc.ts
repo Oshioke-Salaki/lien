@@ -7,9 +7,15 @@ const RPC_TIMEOUT_MS = 8_000;
 
 export class RpcError extends Error {}
 
+/** Node trouble rather than an answer about the chain: the next node is asked. */
+const NODE_TROUBLE = new Set(["TIMEOUT_ERROR", "INTERNAL_ERROR", "NO_SYNCED_BLOCKS", "NOT_SYNCED_YET"]);
+
 async function rpc<T>(params: unknown): Promise<T> {
   let last: unknown;
-  for (const url of RPC_URLS[NETWORK]) {
+  // Start at a random node so reads spread across providers instead of exhausting one's free tier.
+  const urls = RPC_URLS[NETWORK];
+  const start = Math.floor(Math.random() * urls.length);
+  for (const url of [...urls.slice(start), ...urls.slice(0, start)]) {
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -20,7 +26,12 @@ async function rpc<T>(params: unknown): Promise<T> {
       });
       if (!response.ok) throw new RpcError(`RPC answered ${response.status}`);
       const body = (await response.json()) as { result?: T & { error?: string }; error?: { cause?: { name?: string }; message?: string } };
-      if (body.error) throw new RpcError(body.error.cause?.name ?? body.error.message ?? "RPC error");
+      if (body.error) {
+        const cause = body.error.cause?.name;
+        // A rate limit (-429), a retired endpoint or a node error says nothing about the chain.
+        if (!cause || NODE_TROUBLE.has(cause)) throw new RpcError(`RPC answered with node trouble: ${body.error.message ?? cause ?? "unknown"}`);
+        throw new RpcError(cause);
+      }
       if (body.result?.error) throw new RpcError(body.result.error);
       return body.result as T;
     } catch (error) {

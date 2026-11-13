@@ -25,8 +25,10 @@ export const deployment: Deployment = active;
 export const isTestnet = NETWORK === "testnet";
 
 export const RPC_URLS: Record<Network, string[]> = {
-  testnet: ["https://rpc.testnet.fastnear.com", "https://test.rpc.fastnear.com", "https://rpc.testnet.near.org"],
-  mainnet: ["https://rpc.mainnet.fastnear.com", "https://free.rpc.fastnear.com", "https://rpc.mainnet.near.org"],
+  // Four independent providers from NEAR's provider list, so one free tier throttling us
+  // never stalls the app. (rpc.testnet.near.org and rpc.mainnet.near.org are retired.)
+  testnet: ["https://rpc.testnet.fastnear.com", "https://testnet-rpc.intea.rs", "https://near-testnet.drpc.org", "https://api.zan.top/near-testnet", "https://test.rpc.fastnear.com"],
+  mainnet: ["https://free.rpc.fastnear.com", "https://rpc.intea.rs", "https://near.drpc.org", "https://api.zan.top/near-mainnet"],
 };
 
 export const OUTLAYER_API = isTestnet ? "https://testnet-api.outlayer.ai" : "https://api.outlayer.ai";
