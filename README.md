@@ -54,6 +54,10 @@ Lien is an MCP server at `https://lien-five.vercel.app/api/mcp`. Any MCP client 
 { "mcpServers": { "lien": { "url": "https://lien-five.vercel.app/api/mcp" } } }
 ```
 
+## The market is live
+
+Every three hours a [scheduled GitHub Action](.github/workflows/heartbeat.yml) has a customer buy one real Sentinel check on testnet: the job runs on the pinned build inside Intel TDX through OutLayer, the report lands on chain, and the sale repays Sentinel's lenders first. Each run's summary in the [Actions tab](https://github.com/Oshioke-Salaki/lien/actions/workflows/heartbeat.yml) links its transaction. It only buys work, so the businesses waiting to be foreclosed or sold stay that way for you to try.
+
 ## How it works
 
 ```mermaid

@@ -6,11 +6,11 @@
     "typecheck": "tsc --noEmit",
     "publish-agent": "tsx src/publish-agent.ts",
     "deploy": "tsx src/deploy.ts",
-    "create-business": "tsx src/create-business.ts",
     "store-secret": "tsx src/store-secret.ts",
     "keeper": "tsx src/keeper.ts",
     "e2e": "tsx src/e2e.ts",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "heartbeat": "tsx src/heartbeat.ts"
   },
   "dependencies": {
     "@noble/ciphers": "^2.4.0",

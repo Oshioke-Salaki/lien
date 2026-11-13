@@ -1,0 +1,44 @@
+# The market's heartbeat. Every three hours a customer account buys one real Sentinel
+# check on NEAR testnet: the job runs on the pinned build in Intel TDX through OutLayer,
+# the report lands on chain, and the sale pays Sentinel's lenders first through the
+# waterfall. Each run's summary links the transaction.
+#
+# It only buys work: it never forecloses or settles, so the demo businesses stay as the
+# judges' guide describes. The buyer's key is the HEARTBEAT_KEY secret and controls a
+# testnet account holding test money only.
+
+name: Market heartbeat
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: heartbeat
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ops
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ops/package-lock.json
+      - run: npm ci
+      - name: Buy one check from Sentinel
+        run: npm run heartbeat
+        env:
+          LIEN_NETWORK: testnet
+          NEAR_ACCOUNT_ID: lien-f4-3863.testnet
+          NEAR_PRIVATE_KEY: ${{ secrets.HEARTBEAT_KEY }}

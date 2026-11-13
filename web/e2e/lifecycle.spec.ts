@@ -73,9 +73,16 @@ test("one loan, from creation to foreclosure and redemption, through the app", a
 
   // It keeps serving, and the operator's share is locked.
   await expect(page.getByTestId("withdraw-share")).toBeDisabled();
-  await page.getByTestId("job-input").fill("check usd.lien-13569.testnet");
-  await page.getByTestId("job-submit").click();
-  await expect(page.getByTestId("job-result").getByTestId("report")).toContainText("usd.lien-13569.testnet", { timeout: 240_000 });
+  // Testnet OutLayer occasionally fails a run (the buyer is refunded, which is the point of
+  // escrow); one retry separates that from a business that stopped serving.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.getByTestId("job-input").fill("check usd.lien-13569.testnet");
+    await page.getByTestId("job-submit").click();
+    const result = page.getByTestId("job-result");
+    await expect(result.getByTestId("report").or(result.getByText("refunded in full"))).toBeVisible({ timeout: 240_000 });
+    if (await result.getByTestId("report").count()) break;
+  }
+  await expect(page.getByTestId("job-result").getByTestId("report")).toContainText("usd.lien-13569.testnet");
 
   // Redemption: paying the rest hands it back without a sale.
   await page.getByRole("button", { name: /Pay it all/ }).click();

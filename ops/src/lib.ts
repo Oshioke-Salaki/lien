@@ -50,6 +50,10 @@ export function provider(net: Network = network()) {
 }
 
 export function account(accountId: string, net: Network = network()): Account {
+  // In CI the key comes from a secret, for exactly one named account, and is never written to disk.
+  if (process.env.NEAR_ACCOUNT_ID === accountId && process.env.NEAR_PRIVATE_KEY) {
+    return new Account(accountId, provider(net), process.env.NEAR_PRIVATE_KEY as KeyPairString);
+  }
   const path = join(homedir(), ".near-credentials", net, `${accountId}.json`);
   if (!existsSync(path)) {
     throw new Error(`No key for ${accountId} at ${path}. Run: near account import-account, or create it with the CLI.`);

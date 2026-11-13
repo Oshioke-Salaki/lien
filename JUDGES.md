@@ -39,6 +39,7 @@ Every transaction below is from the live run in [docs/evidence/testnet-e2e.md](d
 | Lender votes can only narrow the policy | `validate.rs` `no_wider_policy`; `a_vote_cannot_add_a_vendor` | |
 | The books balance | Claims round down, property-tested in `math.rs`; the live run compares the ledger with the token balance held | End of the live run: ledger 5,360,000, held 5,360,000 |
 | AI agents can use Lien as tools, with no custody | `web/src/lib/mcp.ts` (MCP over HTTP at `/api/mcp`); action tools check state and return unsigned transactions; `web/src/lib/mcp.test.ts` | [an agent's MCP-built lend, signed by the lender](https://testnet.nearblocks.io/txns/Ekqhm3JQNbtoxqDTN37Q8nLWD8HxFWvudoajQLb3sV3D) |
+| The market trades on its own | `ops/src/heartbeat.ts`, run every three hours by `.github/workflows/heartbeat.yml`; it only buys work | [Actions runs, each with its transaction](https://github.com/Oshioke-Salaki/lien/actions/workflows/heartbeat.yml), and the first one by hand: [check bought](https://testnet.nearblocks.io/txns/7maVd9fJ5QPk1QtFAbi2HFKxsCMbrWDgLWtSoWpyaAzN) |
 
 Run every suite yourself with the commands in [README.md](README.md#test-it). What each suite proves is in [docs/TESTING.md](docs/TESTING.md).
 
