@@ -4,5 +4,5 @@ export const FACTS = {
   contractUnitTests: 146,
   sandboxTests: 17,
   agentTests: 11,
-  webTests: 50,
+  webTests: 58,
 };
