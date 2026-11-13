@@ -12,9 +12,14 @@ export type Live<T> = {
   refresh: () => Promise<void>;
 };
 
-/** Reads from the chain, keeps the last good value and polls while the tab is open. */
-export function useLive<T>(fetcher: (() => Promise<T>) | null, key: string, intervalMs = 6_000): Live<T> {
-  const [state, setState] = useState<{ key: string; data?: T; error?: Error; loaded: boolean }>({ key, loaded: false });
+/**
+ * Reads from the chain, keeps the last good value and polls while the tab is open.
+ * `initial` is what the server already read, so the first paint shows real figures.
+ */
+export function useLive<T>(fetcher: (() => Promise<T>) | null, key: string, intervalMs = 6_000, initial?: T): Live<T> {
+  const [state, setState] = useState<{ key: string; data?: T; error?: Error; loaded: boolean }>(() =>
+    initial !== undefined ? { key, data: initial, loaded: true } : { key, loaded: false },
+  );
   const latest = useRef(fetcher);
   latest.current = fetcher;
   const generation = useRef(0);

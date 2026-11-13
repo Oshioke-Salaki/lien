@@ -22,14 +22,52 @@ export function smartAmount(value: bigint | string): string {
 export const symbol = deployment.tokenSymbol;
 /** What the unit is called in words: the token is a dollar stablecoin (test dollars on testnet). */
 export const unitName = isTestnet ? "test dollars" : "USDC";
+/** One cent in base units. */
+export const CENT = UNIT / 100n;
+
+/** Rounds base units to the nearest cent (half up), keeping the sign. */
+export function toCents(value: bigint | string): bigint {
+  const v = BigInt(value);
+  const abs = v < 0n ? -v : v;
+  const rounded = ((abs + CENT / 2n) / CENT) * CENT;
+  return v < 0n ? -rounded : rounded;
+}
+
+/** Rounds base units up to the next whole cent: for minimums, so the shown value is always accepted. */
+export function centsUp(value: bigint | string): bigint {
+  const v = BigInt(value);
+  return v <= 0n ? v : ((v + CENT - 1n) / CENT) * CENT;
+}
+
+const dollars = (units: bigint, text: string) => (units < 0n ? `-$${text.replace(/^-/, "")}` : `$${text}`);
+
 /**
- * Amounts read as dollars, which anyone understands at a glance. Exact to the last unit,
- * with at least two decimals, so the parts of a split always add up on screen.
+ * Amounts read as dollars to the cent, the way any banking app shows them. A positive amount
+ * under half a cent reads "<$0.01" rather than a misleading "$0.00".
  */
 export const money = (value: bigint | string) => {
+  const v = BigInt(value);
+  if (v > 0n && v < CENT / 2n) return "<$0.01";
+  return dollars(v, amount(toCents(v)));
+};
+
+/** A minimum, rounded up to the cent, so typing the shown number always clears it. */
+export const moneyUp = (value: bigint | string) => dollars(BigInt(value), amount(centsUp(value)));
+
+/**
+ * Exact to the last unit, with at least two decimals: only where parts must visibly add up
+ * to a whole, such as the split of a single $0.25 sale.
+ */
+export const moneyExact = (value: bigint | string) => {
   const text = smartAmount(value);
   return text.startsWith("-") ? `-$${text.slice(1)}` : `$${text}`;
 };
+
+/** A plain number for an input field: no trailing zeros, no thousands separators ("15", "12.5"). */
+export function inputAmount(value: bigint | string): string {
+  const full = amount(value, Number(DECIMALS)).replace(/,/g, "");
+  return full.includes(".") ? full.replace(/0+$/, "").replace(/\.$/, "") : full;
+}
 
 /** Parses "12.5" into base units. Returns null for anything that is not an amount. */
 export function parseAmount(text: string): bigint | null {

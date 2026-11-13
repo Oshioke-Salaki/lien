@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { amount, duration, fromNow, parseAmount, percent, share, shortAccount, smartAmount, toYocto, nearAmount } from "./format";
+import { amount, centsUp, duration, fromNow, inputAmount, money, moneyExact, moneyUp, parseAmount, percent, share, shortAccount, smartAmount, toYocto, nearAmount } from "./format";
 
 describe("amount", () => {
   it("formats base units", () => {
@@ -60,5 +60,30 @@ describe("others", () => {
     expect(toYocto("1")).toBe("1000000000000000000000000");
     expect(toYocto("0.05")).toBe("50000000000000000000000");
     expect(nearAmount("1500000000000000000000000")).toBe("1.50");
+  });
+});
+
+describe("money", () => {
+  it("shows dollars to the cent, rounding half up", () => {
+    expect(money("94475000")).toBe("$94.48");
+    expect(money("15725000")).toBe("$15.73");
+    expect(money("116150000")).toBe("$116.15");
+    expect(money(0n)).toBe("$0.00");
+    expect(money(-1_505_000n)).toBe("-$1.51");
+  });
+  it("never shows a positive amount as $0.00", () => {
+    expect(money("1000")).toBe("<$0.01");
+    expect(money("5000")).toBe("$0.01");
+  });
+  it("rounds minimums up, so the shown value is accepted", () => {
+    expect(moneyUp("19385000")).toBe("$19.39");
+    expect(centsUp("19385000")).toBe(19_390_000n);
+    expect(centsUp("19380000")).toBe(19_380_000n);
+  });
+  it("keeps exact amounts where parts must add up", () => expect(moneyExact("75000")).toBe("$0.075"));
+  it("fills inputs with a clean number", () => {
+    expect(inputAmount("15000000")).toBe("15");
+    expect(inputAmount("12500000")).toBe("12.5");
+    expect(inputAmount("1234567000000")).toBe("1234567");
   });
 });

@@ -15,7 +15,7 @@ export function HistoryPanel({ business: b }: { business: Business }) {
   if (!live.loaded || loans.length === 0) return null;
   return (
     <Panel title="Loan history" aside={`${loans.length} ${loans.length === 1 ? "loan" : "loans"}`}>
-      <div className="-mx-[18px] sm:-mx-[22px]">
+      <div className="overflow-x-auto">
         <table className="table table-fixed">
           <thead><tr><th scope="col" className="w-[56px]">Loan</th><th scope="col">Outcome</th><th scope="col" className="r w-[96px]">Borrowed</th><th scope="col" className="r w-[96px]">Paid back</th><th scope="col" className="r hidden w-[120px] sm:table-cell">Closed</th></tr></thead>
           <tbody>

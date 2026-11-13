@@ -6,7 +6,8 @@ import { Panel, Term } from "@/components/ui";
 import { usePay } from "@/hooks/usePay";
 import { useLive } from "@/hooks/useLive";
 import { isTestnet } from "@/lib/config";
-import { amount, duration, fromNow, money, nearAmount, parseAmount, percent, share, toYocto } from "@/lib/format";
+import { CENT, centsUp, duration, fromNow, inputAmount, money, moneyUp, nearAmount, parseAmount, percent, share, toYocto } from "@/lib/format";
+import { hasAccountName } from "@/lib/accounts";
 import { GLOSSARY } from "@/lib/glossary";
 import * as tx from "@/lib/near/actions";
 import { getCredit, getJob, getLoans, getNote } from "@/lib/near/rpc";
@@ -91,7 +92,7 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
           await Promise.all([refresh(), balance.refresh()]);
         }}>
           <AmountField label="How much to lend" testId="lend-amount" value={text} onChange={setText} error={check.error} hint={`${money(remaining)} left to raise. The smallest loan is ${money(min)}.`} />
-          <button type="button" className="link text-[14px]" onClick={() => setText(amount(balance.data !== undefined && balance.data < remaining ? balance.data : remaining, 6))}>Lend the most I can</button>
+          <button type="button" className="link text-[14px]" onClick={() => { const most = balance.data !== undefined && balance.data < remaining ? balance.data : remaining; setText(inputAmount(most - (most % CENT))); }}>Lend the most I can</button>
           {value && !check.error ? (
             <dl className="dl rounded-[12px] bg-[var(--surface-2)] p-4" data-testid="lend-preview">
               <dt><Term tip={GLOSSARY.share}>Your share</Term> of the full loan</dt><dd>{noteShare}%</dd>
@@ -170,7 +171,7 @@ function AuctionCard({ business: b, now, refresh, featured }: Props) {
             if (result?.ok) setText("");
             await Promise.all([refresh(), balance.refresh()]);
           }}>
-            <AmountField label="Your bid" testId="bid-amount" value={text} onChange={setText} error={check.error} hint={`The lowest bid accepted now is ${money(minNext)}. If someone outbids you, your money comes straight back.`} />
+            <AmountField label="Your bid" testId="bid-amount" value={text} onChange={setText} error={check.error} hint={`The lowest bid accepted now is ${moneyUp(minNext)}. If someone outbids you, your money comes straight back.`} />
             <button type="submit" data-testid="bid-submit" className="btn btn-primary w-full" disabled={busy || !check.value || !!check.error}>{check.value && !check.error ? `${iWin ? "Raise your bid to" : "Bid"} ${money(check.value)}` : iWin ? "Enter a higher bid" : "Enter a bid"}</button>
           </form>
         </ConnectGate>
@@ -198,6 +199,8 @@ function refundText(reason: string | undefined, price: bigint): { text: string; 
   }
 }
 
+const jobKey = (id: string) => `lien:job:${id}`;
+
 function BuyCard({ business: b, refresh, featured }: { business: Business; refresh: () => Promise<void>; featured?: boolean }) {
   const pay = usePay(b.id);
   const { busy } = useTx();
@@ -209,6 +212,25 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
   const price = BigInt(b.service.price);
   const short = balance.data !== undefined && balance.data < price;
   const tankEmpty = BigInt(b.tank) < BigInt(b.service.compute_deposit);
+  // Checked before any money moves: a check needs an account to look at.
+  const named = hasAccountName(input);
+  const inputError = input.trim() && !named ? "Type the account you want checked, like outlayer.testnet." : null;
+
+  // A check survives Back and refresh: the one in flight is kept for this business in this tab.
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(jobKey(b.id));
+      if (saved && !job) setJob(JSON.parse(saved));
+    } catch { /* storage unavailable: the check still runs, it just is not remembered */ }
+    // Only on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [b.id]);
+  useEffect(() => {
+    try {
+      if (job) sessionStorage.setItem(jobKey(b.id), JSON.stringify(job));
+      else sessionStorage.removeItem(jobKey(b.id));
+    } catch { /* see above */ }
+  }, [job, b.id]);
 
   useEffect(() => {
     if (!job || job.result?.status === "Done" || job.result?.status === "Refunded") return;
@@ -231,11 +253,11 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
   }, [job, b.id, refresh]);
 
   const submit = async (text: string) => {
-    if (!text) return;
+    if (!text || !hasAccountName(text)) return;
     // The transaction only settles once the secure computer answers, which can take minutes on
     // testnet. The job's number is known now, so its progress shows from the first second.
     setJob({ id: b.next_job_id, result: null, input: text, mine: { payer: account ?? "", input: text, since: Math.floor(Date.now() / 1000) - 30 } });
-    const result = await pay(price, { action: "job", input: text }, "Buy a safety check", "Check delivered", "Paid. A secure computer is running the check now; this usually takes under a minute. You can keep using the page.");
+    const result = await pay(price, { action: "job", input: text }, "Buy a safety check", "Check finished", "Paid. A secure computer is running the check now; this usually takes under a minute. You can keep using the page.");
     const started = result?.events.find((event) => event.event === "job_started");
     const refunded = result?.events.find((event) => event.event === "job_refunded");
     if (result?.ok && started) {
@@ -255,7 +277,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
       </p>
       <ConnectGate quiet reason="Connect to buy one.">
         <form className="space-y-3" onSubmit={async (e) => { e.preventDefault(); await submit(input.trim()); }}>
-          <TextField label="Account to check" testId="job-input" value={input} onChange={setInput} placeholder={`an account name, e.g. ${EXAMPLES[0]}`} />
+          <TextField label="Account to check" testId="job-input" value={input} onChange={setInput} placeholder={`an account name, e.g. ${EXAMPLES[0]}`} error={inputError} />
           <div className="flex flex-wrap items-center gap-2" aria-label="Examples">
             <span className="text-[14px] muted">Try:</span>
             {EXAMPLES.map((example) => (
@@ -264,7 +286,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
           </div>
           {short ? <p className="hint" data-error="true">You have {money(balance.data!)}, and a check costs {money(price)}. Use Get test funds to add more.</p> : null}
           {tankEmpty ? <p className="hint" data-error="true">This business has run out of fees for checks. Anyone can top it up at the bottom of this column.</p> : null}
-          <button type="submit" data-testid="job-submit" className="btn btn-primary w-full" disabled={busy || !input.trim() || short || tankEmpty}>{input.trim() ? `Pay ${money(price)} and run the check` : "Type an account name first"}</button>
+          <button type="submit" data-testid="job-submit" className="btn btn-primary w-full" disabled={busy || !input.trim() || !named || short || tankEmpty}>{!input.trim() ? "Type an account name first" : !named ? "Type an account name to check" : `Pay ${money(price)} and run the check`}</button>
         </form>
       </ConnectGate>
       {job ? (
@@ -309,7 +331,7 @@ function RepayCard({ business: b, refresh, isOperator }: { business: Business; r
         }}>
           <AmountField label="Amount" testId="repay-amount" value={text} onChange={setText} error={check.error} />
           <div className="flex items-center justify-between gap-2">
-            <button type="button" className="link text-[14px]" onClick={() => setText(amount(outstanding, 6))}>Pay it all: {money(outstanding)}</button>
+            <button type="button" className="link text-[14px]" onClick={() => setText(inputAmount(centsUp(outstanding)))}>Pay it all: {moneyUp(outstanding)}</button>
             <button type="submit" data-testid="repay-submit" className="btn btn-primary" disabled={busy || !check.value || !!check.error}>Pay</button>
           </div>
         </form>

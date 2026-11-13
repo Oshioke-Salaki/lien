@@ -32,6 +32,7 @@ function NavIcon({ d }: { d: string }) {
 function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
   const { account, kind, disconnect, ready } = useWallet();
   const { run, busy } = useTx();
+  const [confirming, setConfirming] = useState(false);
   const balance = useLive(account ? () => tokenBalance(account) : null, `balance:${account}`, 8_000);
 
   if (!ready) return <div className="skeleton h-[132px]" />;
@@ -63,29 +64,43 @@ function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
   };
 
   const signOut = () => {
-    if (kind === "guest" && !window.confirm("Sign out of this test account? It lives only in this browser, so signing out loses it and anything in it.")) return;
+    // A test account lives only in this browser, so signing out of it asks first, on the page itself.
+    if (kind === "guest" && !confirming) return setConfirming(true);
+    setConfirming(false);
     void disconnect();
   };
+  const label = kind === "guest" ? "Free test account" : "Your wallet";
+  const shortId = account.length > 12 ? `${account.slice(0, 8)}…` : account;
 
   return (
     <div className="space-y-3 rounded-[14px] bg-[var(--surface)] p-4 text-[14px]" data-testid="account-box">
       <div className="flex items-center gap-3">
-        <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--accent-tint)] text-[14px] font-medium text-[var(--accent)]">{kind === "guest" ? "T" : account.slice(0, 1).toUpperCase()}</span>
+        <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--accent-tint)] text-[14px] font-medium text-[var(--accent)]">{label.slice(0, 1)}</span>
         <div className="min-w-0">
-          <p className="font-medium">{kind === "guest" ? "Free test account" : "Your wallet"}</p>
-          <p className="truncate muted" title={account}>{shortAccount(account, 24)}</p>
+          <p className="font-medium">{label}</p>
+          <p className="muted" title={account}>{kind === "guest" ? shortId : shortAccount(account, 24)}</p>
         </div>
       </div>
       <div>
         <p className="text-[13px] muted">{isTestnet ? "Balance, in test dollars" : "Balance"}</p>
         <p className="num text-[22px] leading-tight font-medium tracking-[-0.01em]" data-testid="balance">{balance.data === undefined ? <span className="skeleton inline-block h-6 w-28 align-middle" /> : money(balance.data)}</p>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {isTestnet ? (
-          <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={topUp}>Get test funds</button>
-        ) : null}
-        <button type="button" className="btn btn-ghost btn-sm" onClick={signOut}>Sign out</button>
-      </div>
+      {confirming ? (
+        <div className="space-y-2 rounded-[10px] bg-[var(--surface-2)] p-3" role="alert">
+          <p className="text-[14px] leading-snug">This test account lives only in this browser. Signing out loses it and its test money for good.</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn btn-secondary btn-sm" onClick={signOut} data-testid="confirm-sign-out">Sign out</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConfirming(false)}>Keep it</button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {isTestnet ? (
+            <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={topUp}>Get test funds</button>
+          ) : null}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={signOut}>Sign out</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -146,7 +161,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-svh bg-[var(--bg)]">
       {/* Phone and tablet: one bar with the name and the menu. */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[var(--line)] bg-[var(--bg)] px-4 lg:hidden">
-        <Link href="/" className="flex items-center gap-2 text-[17px] font-medium"><Mark size={22} /> Lien</Link>
+        <a href="/" className="flex items-center gap-2 text-[17px] font-medium"><Mark size={22} /> Lien</a>
         <div className="flex items-center gap-2">
           <TopBarBalance />
           <button type="button" className="btn btn-ghost btn-sm min-h-[44px]" aria-expanded={open} aria-controls="app-menu" onClick={() => setOpen(!open)}>
@@ -166,7 +181,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <aside className="fixed inset-y-0 left-0 hidden w-[264px] flex-col justify-between overflow-y-auto border-r border-[var(--line)] p-4 lg:flex">
         <div className="space-y-6">
-          <Link href="/" className="flex items-center gap-2 px-3 pt-2 text-[19px] font-medium tracking-[-0.01em]"><Mark size={22} /> Lien</Link>
+          <a href="/" className="flex items-center gap-2 px-3 pt-2 text-[19px] font-medium tracking-[-0.01em]"><Mark size={22} /> Lien</a>
           <NavLinks />
         </div>
         <div className="space-y-4">
@@ -176,7 +191,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <main className="px-4 pt-6 pb-24 sm:px-6 lg:ml-[264px] lg:px-10 lg:pt-10">
-        <div className="mx-auto max-w-[1180px]">{children}</div>
+        <div className="mx-auto max-w-[1180px] min-w-0">{children}</div>
       </main>
     </div>
   );

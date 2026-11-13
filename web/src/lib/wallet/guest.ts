@@ -81,7 +81,7 @@ async function waitForAccount(accountId: string) {
 }
 
 /** Signs once, then sends through every RPC node at once and follows it to the end (lib/near/send.ts). */
-export async function sendAsGuest(guest: Guest, request: TxRequest): Promise<RawOutcome> {
+export async function sendAsGuest(guest: Guest, request: TxRequest, onHash?: (hash: string) => void): Promise<RawOutcome> {
   const { Account, JsonRpcProvider, actions } = await import("near-api-js");
   const urls = RPC_URLS[NETWORK];
   // Signing reads the key's nonce and a recent block: from whichever node answers first in turn.
@@ -94,5 +94,7 @@ export async function sendAsGuest(guest: Guest, request: TxRequest): Promise<Raw
     }),
   );
   // Jobs settle only when the enclave answers, so the browser allows minutes.
-  return sendSigned(urls, await prepareSigned(signed, guest.accountId), 8 * 60_000);
+  const prepared = await prepareSigned(signed, guest.accountId);
+  onHash?.(prepared.hash);
+  return sendSigned(urls, prepared, 8 * 60_000);
 }

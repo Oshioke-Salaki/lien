@@ -50,20 +50,28 @@ export function TxProvider({ children }: { children: ReactNode }) {
       if (notice.tone === "done") setTimeout(() => dismiss(id), 9_000);
     };
     const update = (text: string) => setNotices((all) => all.map((n) => (n.id === id ? { ...n, text } : n)));
+    // Once signed, the hash is known: the notice links it, so a slow confirmation is never a mystery.
+    const sent = (hash: string) => setNotices((all) => all.map((n) => (n.id === id && n.tone === "pending" ? { ...n, hash, text: options.pending ?? "Sent. Waiting for the network to confirm it." } : n)));
+    const slow = setTimeout(() => setNotices((all) => all.map((n) => (n.id === id && n.tone === "pending" ? { ...n, text: "Still confirming on the test network. It can take a minute when the network is busy; you can follow it with the link." } : n))), 30_000);
     const faucet = (text: string) => (isFeeShortfall(text) && kind !== "guest" ? { faucet: true } : {});
     try {
       const ready = "prepare" in request ? await request.prepare() : request;
-      const result = await send(ready, options.requiredOn, update);
+      const result = await send(ready, options.requiredOn, update, sent);
       if (result.ok) finish({ tone: "done", title: options.done ?? `${request.summary}: done`, text: "Confirmed on the network.", hash: result.hash });
       else finish({ tone: "error", title: `${request.summary} did not go through`, text: result.error ?? "The transaction failed. Nothing was taken that was not given back.", hash: result.hash, ...faucet(result.error ?? "") });
       // Every screen re-reads the chain now, instead of on its next poll.
-      if (result.ok) window.dispatchEvent(new Event(REFRESH_EVENT));
+      if (result.ok) {
+        window.dispatchEvent(new Event(REFRESH_EVENT));
+        // Providers lag each other by a block or two; a second read makes sure the page catches up.
+        setTimeout(() => window.dispatchEvent(new Event(REFRESH_EVENT)), 2_500);
+      }
       return result;
     } catch (error) {
       const text = describeThrown(error);
       finish({ tone: "error", title: `${request.summary} did not go through`, text, ...faucet(text) });
       return null;
     } finally {
+      clearTimeout(slow);
       setBusy(false);
     }
   }, [send, dismiss, kind]);
@@ -94,7 +102,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
                 {notice.hash ? (
                   <>
                     {" "}
-                    <a className="link" href={txUrl(notice.hash)} target="_blank" rel="noreferrer">View on the network</a>
+                    <a className="link" href={txUrl(notice.hash)} target="_blank" rel="noreferrer">View transaction</a>
                   </>
                 ) : null}
               </p>
