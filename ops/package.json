@@ -13,7 +13,8 @@
     "heartbeat": "tsx src/heartbeat.ts",
     "restock": "tsx src/restock.ts",
     "upgrade": "tsx src/upgrade.ts",
-    "sample-repaid": "tsx src/sample-repaid.ts"
+    "sample-repaid": "tsx src/sample-repaid.ts",
+    "xvault": "tsx src/xvault.ts"
   },
   "dependencies": {
     "@noble/ciphers": "^2.4.0",

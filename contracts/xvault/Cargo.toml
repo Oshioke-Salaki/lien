@@ -1,0 +1,18 @@
+[package]
+name = "lien-xvault"
+description = "A keyless vault that signs, through NEAR Chain Signatures, only transfers to one fixed EVM address on Base Sepolia"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
+omni-transaction = { version = "0.5", default-features = false, features = ["evm"] }
+hex = "0.4"
+
+[dev-dependencies]
+near-sdk = { workspace = true, features = ["unit-testing"] }
