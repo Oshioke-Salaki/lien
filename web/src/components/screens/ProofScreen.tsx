@@ -10,6 +10,17 @@ import { getBusiness } from "@/lib/near/rpc";
 
 const SENTINEL = `sentinel.${deployment.registry}`;
 
+/** A test's name read as a sentence: "a_created_business_has_no_keys" → "A created business has no keys". */
+const plainTest = (name: string) => {
+  const words = name.replace(/_/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+type Evidence = { href: string; label: string };
+/** Transactions and attestations on the network, as opposed to links into the source code. */
+const isOnChain = (e: Evidence) => !/github\.com/.test(e.href);
+const onChain = (list: Evidence[]) => list.filter(isOnChain);
+const inSource = (list: Evidence[]) => list.filter((e) => !isOnChain(e));
+
 /**
  * Everything Lien promises, on one page: the checks run live in this browser against a real
  * business, and every promise links to the code that enforces it, the test that proves it and
@@ -48,17 +59,32 @@ export function ProofScreen() {
                     {claim.tests.length ? (
                       <div>
                         <p className="muted">Proved by</p>
-                        <ul className="mt-1 space-y-1">
-                          {claim.tests.map((t) => <li key={t.name} className="break-words"><a className="link" href={t.href} target="_blank" rel="noreferrer"><code>{t.name}</code></a></li>)}
+                        <ul className="mt-1 space-y-2">
+                          {claim.tests.map((t) => (
+                            <li key={t.name} className="break-words">
+                              <a className="link" href={t.href} target="_blank" rel="noreferrer">{plainTest(t.name)}</a>
+                              <span className="block text-[12px] muted"><code>{t.name}</code></span>
+                            </li>
+                          ))}
                         </ul>
                       </div>
                     ) : null}
-                    <div>
-                      <p className="muted">Seen on the test network</p>
-                      <ul className="mt-1 space-y-1">
-                        {claim.evidence.map((e) => <li key={e.href}><a className="link" href={e.href} target="_blank" rel="noreferrer">{e.label}</a></li>)}
-                      </ul>
-                    </div>
+                    {onChain(claim.evidence).length ? (
+                      <div>
+                        <p className="muted">Seen on the test network</p>
+                        <ul className="mt-1 space-y-1">
+                          {onChain(claim.evidence).map((e) => <li key={e.href}><a className="link" href={e.href} target="_blank" rel="noreferrer">{e.label}</a></li>)}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {inSource(claim.evidence).length ? (
+                      <div>
+                        <p className="muted">In the source</p>
+                        <ul className="mt-1 space-y-1">
+                          {inSource(claim.evidence).map((e) => <li key={e.href}><a className="link" href={e.href} target="_blank" rel="noreferrer">{e.label}</a></li>)}
+                        </ul>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </Panel>

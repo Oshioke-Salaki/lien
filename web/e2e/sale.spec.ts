@@ -23,6 +23,7 @@ test("a stranger buys a foreclosed business and takes control", async ({ browser
 
   await borrower.goto("/create");
   await borrower.getByTestId("create-label").fill(label);
+  await borrower.getByTestId("create-name").fill(`Test ${label}`);
   await expect(borrower.getByTestId("create-form")).toContainText("is free");
   await borrower.getByTestId("create-submit").click();
   await expect(borrower).toHaveURL(new RegExp(`/b/${id}`), { timeout: 90_000 });

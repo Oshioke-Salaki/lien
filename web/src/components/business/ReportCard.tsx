@@ -1,4 +1,8 @@
+import { deployment } from "@/lib/config";
 import { FLAG_TEXT, parseReport } from "@/lib/report";
+
+/** Lien's own shared accounts: still upgradeable by the team on the test network. */
+const LIEN_OWN = new Set([deployment.registry, deployment.token]);
 
 /** What a risk level means for the person deciding whether to pay. */
 const MEANING: Record<string, string> = {
@@ -26,6 +30,11 @@ export function ReportCard({ raw }: { raw: string | null }) {
           {report.flags.map((flag) => <li key={flag}>{FLAG_TEXT[flag] ?? flag.replaceAll("_", " ")}</li>)}
         </ul>
       ) : <p className="text-[15px]">Nothing unusual was found.</p>}
+      {LIEN_OWN.has(report.target) ? (
+        <p className="rounded-[10px] bg-[var(--surface-2)] p-3 text-[14px] leading-snug text-[var(--ink-2)]" data-testid="lien-own-note">
+          The Lien registry and the test-dollar token are still upgradeable by the team on the test network, which is why they score {level === "low" ? "as they do" : report.level.toLowerCase()}. Business accounts like this one have no keys at all.
+        </p>
+      ) : null}
       {report.verdict ? <p className="text-[15px] italic">{report.verdict}</p> : null}
     </div>
   );

@@ -19,8 +19,21 @@ export const isPayableAccount = (text: string) => {
  * or .near (inside a sentence is fine), or a 64-character implicit account.
  */
 export function hasAccountName(text: string): boolean {
-  return /(^|[\s"'(])([a-z\d]+[-_])*[a-z\d]+(\.([a-z\d]+[-_])*[a-z\d]+)*\.(testnet|near)(?=$|[\s"').,?!])/i.test(text)
-    || /(^|[^0-9a-f])[0-9a-f]{64}($|[^0-9a-f])/i.test(text);
+  if (text.length > 200) return false;
+  // Every named account (name.testnet, name.near) must be a real-length NEAR account id: 2 to 64 characters.
+  const named = [...text.matchAll(/(?:^|[\s"'(])((?:[a-z\d]+[-_])*[a-z\d]+(?:\.(?:[a-z\d]+[-_])*[a-z\d]+)*\.(?:testnet|near))(?=$|[\s"').,?!])/gi)].map((m) => m[1]!);
+  if (named.some((n) => n.length >= 2 && n.length <= 64)) return true;
+  return /(^|[^0-9a-f])[0-9a-f]{64}($|[^0-9a-f])/i.test(text);
+}
+
+/** Why a check's input can't be run, in plain words, or null when it names an account. */
+export function checkInputProblem(text: string): string | null {
+  const t = text.trim();
+  if (!t) return "Type the account you want checked, like outlayer.testnet.";
+  const long = [...t.matchAll(/[a-z\d._-]+\.(?:testnet|near)\b/gi)].find((m) => m[0].length > 64);
+  if (long && !hasAccountName(t)) return "NEAR account names are at most 64 characters. Check the name and try again.";
+  if (t.length > 200) return "That is too long. Type just the account, like outlayer.testnet.";
+  return hasAccountName(t) ? null : "Type the account you want checked, like outlayer.testnet.";
 }
 
 /** A label for a new business: what goes before ".v1.lien-13569.testnet". */

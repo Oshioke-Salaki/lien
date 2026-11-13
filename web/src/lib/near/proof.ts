@@ -79,6 +79,23 @@ export async function attestationForTx(tx: string): Promise<Attestation | null> 
   return body?.tdx_quote ? body : null;
 }
 
+/**
+ * The same lookup, done by this app's server: one quiet request from the browser instead of a
+ * dozen probes, most of which find no proof and would each log a 404. Falls back to the direct
+ * lookup if the server can't answer. The proof itself still comes straight from OutLayer.
+ */
+export async function latestAttestationQuiet(id: string): Promise<Attestation | null> {
+  if (typeof window === "undefined") return latestAttestation(id);
+  try {
+    const response = await fetch(`/api/attestation?account=${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) throw new Error(`status ${response.status}`);
+    const { attestation } = (await response.json()) as { attestation: Attestation | null };
+    return attestation;
+  } catch {
+    return latestAttestation(id);
+  }
+}
+
 /** Finds the newest TEE attestation among the business's recent transactions. */
 export async function latestAttestation(id: string): Promise<Attestation | null> {
   const response = await patientFetch(`${TX_API}/v0/account`, {

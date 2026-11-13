@@ -6,6 +6,7 @@
 import { listBusinesses, getCredit, getJobs, getLoans, getNote, isTestRun } from "./near/rpc";
 import type { Business, LoanView, NoteView } from "./near/types";
 import { isTeamSample } from "./demo";
+import { distinctName } from "./names";
 
 export type Activity = { at: number; businessId: string; businessName: string; text: string; key: string };
 
@@ -31,9 +32,9 @@ const money = (units: string | bigint) => {
   return `$${(cents / 100n).toLocaleString("en-US")}.${(cents % 100n).toString().padStart(2, "0")}`;
 };
 
-function activityFor(b: Business, loans: LoanView[], jobs: Awaited<ReturnType<typeof getJobs>>): Activity[] {
+function activityFor(b: Business, loans: LoanView[], jobs: Awaited<ReturnType<typeof getJobs>>, all: Business[]): Activity[] {
   const items: Activity[] = [];
-  const base = { businessId: b.id, businessName: b.name };
+  const base = { businessId: b.id, businessName: distinctName(b, all) };
   for (const job of jobs.slice(0, 4)) {
     if (job.status === "Done") items.push({ ...base, at: Number(job.created_at), key: `${b.id}:job:${job.id}`, text: `sold a safety check for ${money(job.paid)}, and its lenders were paid their share` });
     else if (job.status === "Refunded") items.push({ ...base, at: Number(job.created_at), key: `${b.id}:job:${job.id}`, text: `refunded a check that couldn't finish (${money(job.paid)} back to the buyer)` });
@@ -78,7 +79,7 @@ export async function readMarket(): Promise<MarketSnapshot> {
         closedDue += BigInt(loan.terms.total_due);
       }
     }
-    if (isFeatured(b)) activity.push(...activityFor(b, loans, jobs));
+    if (isFeatured(b)) activity.push(...activityFor(b, loans, jobs, businesses));
   }
   return {
     businesses,
@@ -105,42 +106,62 @@ export type PositionsSnapshot = {
   credits: Array<{ businessId: string; amount: string }>;
   operated: string[];
   bids: string[];
+  /** Auctions this account won: the business it bought, and for how much. */
+  bought: Array<{ businessId: string; price: string }>;
   checked: number;
   total: number;
   unread: number;
+  /** Businesses that could not be read in time, so the page can say which. */
+  unreadIds: string[];
   at: number;
 };
+
+const withTimeout = <T,>(work: Promise<T>, ms: number) =>
+  Promise.race([work, new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))]);
 
 /**
  * Everything one account holds, across every business (test ones too, since a position can
  * sit anywhere). Read in batches within a time budget: a partial answer, with how far it got,
  * beats a page that waits forever.
  */
-export async function readPositions(account: string, budgetMs = 20_000): Promise<PositionsSnapshot> {
+export async function readPositions(account: string, budgetMs = 14_000): Promise<PositionsSnapshot> {
   const started = Date.now();
   const businesses = await listBusinesses({ includeTests: true });
+  // Real businesses first, test runs last: if time runs out, it is the test runs that wait.
   const ordered = [...businesses].sort((a, b) => Number(isTestRun(a.id)) - Number(isTestRun(b.id)));
   const positions: PositionJson[] = [];
   const credits: Array<{ businessId: string; amount: string }> = [];
+  const bought: Array<{ businessId: string; price: string }> = [];
   const held = new Set<string>();
-  let checked = 0, unread = 0;
-  for (let i = 0; i < ordered.length; i += 6) {
-    if (Date.now() - started > budgetMs) break;
-    const batch = await Promise.allSettled(
-      ordered.slice(i, i + 6).map(async (b) => {
-        const [loans, credit] = await Promise.all([getLoans(b.id), getCredit(b.id, account)]);
-        const notes = await Promise.all(loans.map(async (loan) => ({ loan, note: await getNote(b.id, loan.id, account) })));
-        return { b, credit, notes };
-      }),
-    );
-    for (const r of batch) {
-      checked++;
-      if (r.status !== "fulfilled") { unread++; continue; }
-      const { b, credit, notes } = r.value;
-      for (const { loan, note } of notes) if (note) { positions.push({ businessId: b.id, loan, note }); held.add(b.id); }
-      if (credit > 0n) { credits.push({ businessId: b.id, amount: credit.toString() }); held.add(b.id); }
+  const unreadIds: string[] = [];
+
+  const readOne = async (b: Business) => {
+    const [loans, credit] = await Promise.all([getLoans(b.id), getCredit(b.id, account)]);
+    const notes = await Promise.all(loans.map(async (loan) => ({ loan, note: await getNote(b.id, loan.id, account) })));
+    return { credit, notes, loans };
+  };
+
+  // A small pool instead of batches: one slow business never holds up the next five.
+  let next = 0;
+  const worker = async () => {
+    while (next < ordered.length) {
+      const b = ordered[next++]!;
+      const left = budgetMs - (Date.now() - started);
+      if (left < 500) { unreadIds.push(b.id); continue; }
+      try {
+        const { credit, notes, loans } = await withTimeout(readOne(b), Math.min(6_000, left));
+        for (const { loan, note } of notes) if (note) { positions.push({ businessId: b.id, loan, note }); held.add(b.id); }
+        if (credit > 0n) { credits.push({ businessId: b.id, amount: credit.toString() }); held.add(b.id); }
+        for (const loan of loans) {
+          if (loan.status === "Sold" && loan.auction.high_bidder === account) { bought.push({ businessId: b.id, price: loan.auction.high_bid }); held.add(b.id); }
+        }
+      } catch {
+        unreadIds.push(b.id);
+      }
     }
-  }
+  };
+  await Promise.all(Array.from({ length: 8 }, worker));
+
   const operated = businesses.filter((b) => b.operator === account).map((b) => b.id);
   const bids = businesses.filter((b) => b.current_loan?.status === "Foreclosed" && b.current_loan.auction.high_bidder === account).map((b) => b.id);
   const keep = new Set([...held, ...operated, ...bids]);
@@ -150,9 +171,11 @@ export async function readPositions(account: string, budgetMs = 20_000): Promise
     credits,
     operated,
     bids,
-    checked,
+    bought,
+    checked: ordered.length - unreadIds.length,
     total: ordered.length,
-    unread,
+    unread: unreadIds.length,
+    unreadIds,
     at: Math.floor(Date.now() / 1000),
   };
 }

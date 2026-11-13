@@ -28,10 +28,10 @@ export function JobsPanel({ business: b }: { business: Business }) {
               <tr><th scope="col">Checked</th><th scope="col" className="hidden w-[24%] 2xl:table-cell">Customer</th><th scope="col" className="w-[124px]">Result</th><th scope="col" className="r w-[80px]">Paid</th><th scope="col" className="r hidden w-[150px] sm:table-cell">When (UTC)</th></tr>
             </thead>
             <tbody>
-              {jobs.map((job) => {
+              {group(jobs).map(({ job, count }) => {
                 const report = parseReport(job.report);
                 return (
-                  <JobRow key={job.id} job={job} result={job.status === "Done" && report ? `${report.level} risk` : STATUS[job.status]} open={open === job.id} onToggle={() => setOpen(open === job.id ? null : job.id)} />
+                  <JobRow key={job.id} job={job} count={count} result={job.status === "Done" && report ? `${report.level} risk` : STATUS[job.status]} open={open === job.id} onToggle={() => setOpen(open === job.id ? null : job.id)} />
                 );
               })}
             </tbody>
@@ -43,12 +43,31 @@ export function JobsPanel({ business: b }: { business: Business }) {
   );
 }
 
-function JobRow({ job, result, open, onToggle }: { job: Job; result: string; open: boolean; onToggle: () => void }) {
+/** The Lien team's own accounts: their purchases are tests and the heartbeat, not customers. */
+export const isTeamAccount = (account: string) => /^lien-f\d+-\d+\.testnet$/.test(account) || account === "lien-13569.testnet";
+
+/** Back-to-back sales of the same check, by the same buyer, with the same result, read as one row "×4". */
+function group(jobs: Job[]): Array<{ job: Job; count: number }> {
+  const out: Array<{ job: Job; count: number }> = [];
+  for (const job of jobs) {
+    const last = out[out.length - 1];
+    if (last && last.job.input.trim() === job.input.trim() && last.job.payer === job.payer && last.job.status === job.status) last.count++;
+    else out.push({ job, count: 1 });
+  }
+  return out;
+}
+
+function JobRow({ job, count, result, open, onToggle }: { job: Job; count: number; result: string; open: boolean; onToggle: () => void }) {
+  const team = isTeamAccount(job.payer);
   return (
     <>
       <tr data-row="link" onClick={onToggle} data-testid={`job-${job.id}`}>
         <td className="min-w-0">
-          <button type="button" className="block max-w-full truncate text-left hover:underline" title={job.input} aria-expanded={open} onClick={(e) => { e.stopPropagation(); onToggle(); }}>{job.input || "(empty)"}</button>
+          <span className="flex min-w-0 items-center gap-2">
+            <button type="button" className="block min-w-0 truncate text-left hover:underline" title={job.input} aria-expanded={open} onClick={(e) => { e.stopPropagation(); onToggle(); }}>{job.input || "(empty)"}</button>
+            {count > 1 ? <span className="shrink-0 text-[13px] muted">×{count}</span> : null}
+            {team ? <span className="chip shrink-0 text-[12px]" title="Bought by the Lien team's own test account, not a customer">Lien team</span> : null}
+          </span>
         </td>
         <td title={job.payer} className="hidden truncate 2xl:table-cell">{shortAccount(job.payer, 22)}</td>
         <td className="truncate first-letter:uppercase">{result}</td>
@@ -76,10 +95,14 @@ function Concentration({ jobs, uniquePayers }: { jobs: Job[]; uniquePayers: numb
   if (!n) return null;
   const share = Math.round((n / jobs.length) * 100);
   const concentrated = share >= 50 && jobs.length >= 3;
+  const teamSales = jobs.filter((j) => isTeamAccount(j.payer)).length;
+  const outsiders = [...counts.keys()].filter((p) => !isTeamAccount(p)).length;
   return (
     <p data-testid="concentration" className={`mb-4 rounded-[12px] p-4 text-[15px] ${concentrated ? "bg-[var(--warn-bg,#2a2114)]" : "bg-[var(--surface-2)]"}`}>
-      {uniquePayers} {uniquePayers === 1 ? "customer has" : "different customers have"} bought from it. The biggest, <span title={top}>{shortAccount(top, 22)}</span>, bought {share}% of the last {jobs.length} {jobs.length === 1 ? "sale" : "sales"}.
-      {concentrated ? " So treat its sales as a claim, not proof that people want it: that one buyer could be its own owner." : ""}
+      {uniquePayers} {uniquePayers === 1 ? "customer has" : "different customers have"} bought from it in all.
+      {teamSales ? ` Of the last ${jobs.length} sales, ${teamSales} ${teamSales === 1 ? "was" : "were"} the Lien team's own test ${teamSales === 1 ? "purchase" : "purchases"} (tagged), and ${outsiders} ${outsiders === 1 ? "other buyer" : "other buyers"} bought the rest.` : ""}
+      {" "}The biggest buyer, <span title={top}>{shortAccount(top, 22)}</span>, bought {share}% of the last {jobs.length} {jobs.length === 1 ? "sale" : "sales"}.
+      {concentrated ? (isTeamAccount(top) ? " That is the Lien team testing it, so these sales show it works, not that customers want it." : " So treat its sales as a claim, not proof that people want it: that one buyer could be its own owner.") : ""}
     </p>
   );
 }

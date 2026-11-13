@@ -24,6 +24,7 @@ test("one loan, from creation to foreclosure and redemption, through the app", a
   // Start a business.
   await page.goto("/create");
   await page.getByTestId("create-label").fill(label);
+  await page.getByTestId("create-name").fill(`Test ${label}`);
   await expect(page.getByTestId("create-form")).toContainText("is free");
   await page.getByTestId("create-submit").click();
   await expect(page).toHaveURL(new RegExp(`/b/${id}`), { timeout: 90_000 });
@@ -93,5 +94,5 @@ test("one loan, from creation to foreclosure and redemption, through the app", a
 
   // Everything is on the positions screen too.
   await page.goto("/portfolio");
-  await expect(page.getByTestId("notes-table")).toContainText("Sentinel");
+  await expect(page.getByTestId("notes-table")).toContainText(`Test ${label}`);
 });

@@ -6,11 +6,12 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { ActivityFeed } from "@/components/market/ActivityFeed";
 import { Bar, EmptyState, ErrorState, Info, PageHead, Skeleton, StandingLabel, STANDING_TONE } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
-import { money, moneyUp, pct, percent, share, shortAccount } from "@/lib/format";
+import { money, moneyUp, pct, percent, repaidMoney, share, shortAccount } from "@/lib/format";
 import { fetchMarket } from "@/lib/snapshotClient";
 import { isFeatured, type MarketSnapshot } from "@/lib/snapshot";
 import type { Business } from "@/lib/near/types";
 import { isBoughtSample, isTeamSample } from "@/lib/demo";
+import { distinctName } from "@/lib/names";
 import { auctionEnded, isAlert, standing, type Standing } from "@/lib/status";
 
 /** What needs a decision comes first, then what can be funded. */
@@ -105,7 +106,7 @@ export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
               <EmptyState title="Nothing is listed yet" body="A business here is an AI agent that sells a service and can borrow against its sales. Start one and it appears here." action={{ href: "/create", label: "Start a business" }} />
             ) : (
               <ul className="space-y-2">
-                {rows.map((b) => <MarketRow key={b.id} business={b} onOpen={() => router.push(`/b/${b.id}`)} />)}
+                {rows.map((b) => <MarketRow key={b.id} business={b} name={distinctName(b, all)} onOpen={() => router.push(`/b/${b.id}`)} />)}
               </ul>
             )}
             {started.length ? (
@@ -116,7 +117,7 @@ export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
                 </summary>
                 <p className="px-5 pb-3 text-[14px] text-[var(--ink-2)]">Businesses people started while trying Lien, with fewer than three different customers so far.</p>
                 <ul className="space-y-2 px-2 pb-2">
-                  {started.map((b) => <MarketRow key={b.id} business={b} onOpen={() => router.push(`/b/${b.id}`)} />)}
+                  {started.map((b) => <MarketRow key={b.id} business={b} name={distinctName(b, all)} onOpen={() => router.push(`/b/${b.id}`)} />)}
                 </ul>
               </details>
             ) : null}
@@ -173,7 +174,7 @@ function TryIt({ rows }: { rows: Business[] }) {
   );
 }
 
-function MarketRow({ business: b, onOpen }: { business: Business; onOpen: () => void }) {
+function MarketRow({ business: b, name, onOpen }: { business: Business; name: string; onOpen: () => void }) {
   const s = standing(b);
   const loan = b.current_loan;
   const raising = loan?.status === "Funding";
@@ -185,7 +186,7 @@ function MarketRow({ business: b, onOpen }: { business: Business; onOpen: () => 
       className={`grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 rounded-[16px] bg-[var(--surface)] p-5 transition-colors duration-150 hover:bg-[var(--surface-2)] lg:gap-6 lg:py-4 ${COLS}`}
     >
       <div className="min-w-0">
-        <Link className="text-[17px] font-medium hover:underline" href={`/b/${b.id}`} onClick={(e) => e.stopPropagation()}>{b.name}</Link>
+        <Link className="text-[17px] font-medium hover:underline" href={`/b/${b.id}`} onClick={(e) => e.stopPropagation()}>{name}</Link>
         <div className="truncate text-[13px] muted" title={b.id}>{isTeamSample(b) ? "Sample by the Lien team" : isBoughtSample(b) ? `Bought by ${shortAccount(b.operator, 22)}` : shortAccount(b.id, 36)}</div>
       </div>
       <div className="justify-self-end lg:justify-self-start"><StandingLabel standing={s} /></div>
@@ -193,7 +194,7 @@ function MarketRow({ business: b, onOpen }: { business: Business; onOpen: () => 
         {loan ? (
           <>
             <div className="mb-2 flex justify-between gap-3 text-[14px]">
-              <span className="num">{raising ? `${money(loan.funded)} of ${money(loan.terms.principal)} raised` : `${money(loan.repaid)} of ${money(loan.terms.total_due)} paid back`}</span>
+              <span className="num">{raising ? `${money(loan.funded)} of ${money(loan.terms.principal)} raised` : `${repaidMoney(loan.terms.total_due, loan.repaid)} of ${money(loan.terms.total_due)} paid back`}</span>
               <span className="num muted">{pct(progress)}</span>
             </div>
             <Bar value={progress} tone={raising ? "var(--accent)" : STANDING_TONE[s]} label={raising ? `${pct(progress)} raised` : `${pct(progress)} repaid`} />

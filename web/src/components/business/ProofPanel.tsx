@@ -5,7 +5,7 @@ import { AccountLink, Panel, Term } from "@/components/ui";
 import { attestationUrl, deployment, txUrl } from "@/lib/config";
 import { dateTime, money, shortHash } from "@/lib/format";
 import { GLOSSARY } from "@/lib/glossary";
-import { checkBuild, checkCode, checkNoKeys, checkSolvent, latestAttestation, type Attestation, type Check } from "@/lib/near/proof";
+import { checkBuild, checkCode, checkNoKeys, checkSolvent, latestAttestationQuiet, type Attestation, type Check } from "@/lib/near/proof";
 import type { Business } from "@/lib/near/types";
 
 type State = "checking" | "ok" | "fail" | "unknown";
@@ -89,7 +89,7 @@ export function ProofPanel({ business: b, listed }: { business: Business; listed
   useEffect(() => {
     let alive = true;
     if (jobsDone === 0) return;
-    latestAttestation(id).then((a) => { if (alive) setAttestation(a); }).catch(() => { if (alive) setAttestation(null); });
+    latestAttestationQuiet(id).then((a) => { if (alive) setAttestation(a); }).catch(() => { if (alive) setAttestation(null); });
     return () => { alive = false; };
   }, [id, jobsDone, round]);
 
@@ -127,7 +127,7 @@ export function ProofPanel({ business: b, listed }: { business: Business; listed
 function AttestationRow({ attestation, pinned, jobsDone }: { attestation: Attestation | null | undefined; pinned: string; jobsDone: number }) {
   if (attestation === undefined) return <Result claim="enclave" state="checking" detail="Finding the latest proof from the secure computer" />;
   if (attestation === null) {
-    return <Result claim="enclave" state="unknown" waiting={jobsDone === 0} detail={jobsDone === 0 ? "No checks have run yet. The proof appears with the first one." : "Couldn't load the proof right now. Use Check again to retry."} />;
+    return <Result claim="enclave" state="unknown" waiting={jobsDone === 0} detail={jobsDone === 0 ? "No checks have run yet. The proof appears with the first one." : "Proof not available for this business's recent jobs right now. Use Check again to retry."} />;
   }
   const matches = attestation.executed_wasm_sha256 === pinned;
   return (

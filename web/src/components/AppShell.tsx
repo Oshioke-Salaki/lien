@@ -227,7 +227,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    // Escape closes the phone menu, like any other overlay.
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    if (open) window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   return (

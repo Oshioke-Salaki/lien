@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { money, owedMoney } from "./format";
+import { moneyUp, owedMoney, repaidMoney } from "./format";
 import { isTeamSample, sampleNote } from "./demo";
 import { standing, STANDING_LABEL } from "./status";
 import type { Business, LoanView } from "./near/types";
@@ -28,13 +28,19 @@ describe("one state per auction", () => {
 });
 
 describe("figures that add up", () => {
-  it("shows still-owed as the rounded total minus the rounded repaid amount", () => {
+  const toNumber = (m: string) => Number(m.replace(/[$,]/g, ""));
+  it("shows repaid and still-owed so they add up to the total", () => {
     // 110.000000 due, 19.274999 repaid: rounded separately these would show 19.27 and 90.73.
     const total = "110000000";
-    const repaid = "19275000";
-    const owed = owedMoney(total, repaid);
-    const toNumber = (m: string) => Number(m.replace(/[$,]/g, ""));
-    expect(toNumber(owed) + toNumber(money(repaid))).toBeCloseTo(110, 2);
+    const repaid = "19274999";
+    expect(toNumber(owedMoney(total, repaid)) + toNumber(repaidMoney(total, repaid))).toBeCloseTo(110, 2);
+  });
+  it("rounds what is owed up, so it matches 'Pay it all' and paying it clears the debt", () => {
+    const total = "110000000";
+    const repaid = "19274999";
+    expect(owedMoney(total, repaid)).toBe("$90.73");
+    expect(owedMoney(total, repaid)).toBe(moneyUp(BigInt(total) - BigInt(repaid)));
+    expect(owedMoney(total, total)).toBe("$0.00");
   });
 });
 

@@ -13,9 +13,10 @@ import type { PositionsSnapshot } from "@/lib/snapshot";
 import type { Business, LoanStatus, LoanView, NoteView } from "@/lib/near/types";
 import { standing } from "@/lib/status";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { distinctName } from "@/lib/names";
 
 type Position = { business: Business; loan: LoanView; note: NoteView };
-type Data = { positions: Position[]; credits: Array<{ business: Business; amount: bigint }>; operated: Business[]; bids: Business[]; unread: number };
+type Data = { positions: Position[]; credits: Array<{ business: Business; amount: bigint }>; operated: Business[]; bids: Business[]; bought: Array<{ business: Business; price: bigint }>; unread: number; all: Business[]; readAt: number };
 
 const CLOSED: Partial<Record<LoanStatus, string>> = { Repaid: "Paid in full", Sold: "Taken over and sold", Cancelled: "Cancelled" };
 
@@ -28,7 +29,10 @@ function toData(snapshot: PositionsSnapshot): Data {
     credits: snapshot.credits.flatMap((c) => (byId.has(c.businessId) ? [{ business: byId.get(c.businessId)!, amount: BigInt(c.amount) }] : [])),
     operated: pick(snapshot.operated),
     bids: pick(snapshot.bids),
+    bought: (snapshot.bought ?? []).flatMap((x) => (byId.has(x.businessId) ? [{ business: byId.get(x.businessId)!, price: BigInt(x.price) }] : [])),
     unread: snapshot.unread,
+    all: snapshot.businesses,
+    readAt: Math.floor(Date.now() / 1000),
   };
 }
 
@@ -85,6 +89,11 @@ export function PortfolioScreen() {
   const owed = data?.credits.reduce((sum, c) => sum + c.amount, 0n) ?? 0n;
   const lent = data?.positions.reduce((sum, p) => sum + BigInt(p.note.principal), 0n) ?? 0n;
   const ready_to_collect = claimable + owed;
+  // Only a complete read may say "none": a partial one says it is still checking.
+  const complete = !!data && live.total > 0 && live.checked >= live.total && data.unread === 0;
+  const nameOf = (b: Business) => distinctName(b, data?.all ?? []);
+  const stillChecking = <p className="rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px] text-[var(--ink-2)]">Still checking the rest of the market…</p>;
+  const nowSecs = data?.readAt ?? 0;
 
   return (
     <div className="space-y-6">
@@ -97,7 +106,7 @@ export function PortfolioScreen() {
           <Panel>
             <p className="text-[14px] muted">Ready to collect</p>
             <p className="num mt-1 text-[clamp(44px,5.4vw,64px)] leading-none font-medium tracking-[-0.03em]" data-testid="collect-total">{money(ready_to_collect)}</p>
-            <p className="mt-3 text-[15px] text-[var(--ink-2)]">{data.positions.length ? `You lent ${money(lent)} in total, across ${data.positions.length} ${data.positions.length === 1 ? "loan" : "loans"}. Repayments arrive with every sale those businesses make; collect them any time.` : "You have not lent yet."}</p>
+            <p className="mt-3 text-[15px] text-[var(--ink-2)]">{data.positions.length ? `You lent ${money(lent)} in total, across ${data.positions.length} ${data.positions.length === 1 ? "loan" : "loans"}. Repayments arrive with every sale those businesses make; collect them any time.` : complete ? "You have not lent yet." : "Looking for your loans…"}</p>
           </Panel>
 
           {data.credits.length ? (
@@ -105,7 +114,7 @@ export function PortfolioScreen() {
               <ul className="space-y-2">
                 {data.credits.map(({ business, amount }) => (
                   <li key={business.id} className="flex items-center justify-between gap-3 rounded-[12px] bg-[var(--surface-2)] px-4 py-3 text-[15px]">
-                    <span>{money(amount)} from <Link className="link" href={`/b/${business.id}`}>{business.name}</Link></span>
+                    <span>{money(amount)} from <Link className="link" href={`/b/${business.id}`}>{nameOf(business)}</Link></span>
                     <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={async () => { await run(withdrawCredit(business.id, account!), { done: "Paid out to you" }); await live.refresh(); }}>Collect</button>
                   </li>
                 ))}
@@ -113,16 +122,33 @@ export function PortfolioScreen() {
             </Panel>
           ) : null}
 
-          {live.checked < live.total ? <p role="status" className="flex items-center gap-2 rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]" data-testid="positions-checking"><span className="spinner spinner-ink" aria-hidden />Checked {live.checked} of {live.total} businesses so far; the rest are read on the next refresh.</p> : null}
-          {data.unread > 0 ? <p role="status" className="rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]">{data.unread} {data.unread === 1 ? "business" : "businesses"} could not be read just now, so a position there may be missing. This page checks again every few seconds.</p> : null}
+          {!complete ? <p role="status" className="flex items-center gap-2 rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]" data-testid="positions-checking"><span className="spinner spinner-ink" aria-hidden />Checked {live.checked} of {live.total} businesses; the rest are read again in a few seconds.</p> : null}
           {data.bids.length ? (
             <Panel title="Your bids" aside={`${data.bids.length}`}>
               <ul className="space-y-2" data-testid="bids">
-                {data.bids.map((b) => (
-                  <li key={b.id}>
-                    <Link className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-[var(--surface-2)] px-4 py-3 text-[15px] transition-colors hover:bg-[var(--surface-3)]" href={`/b/${b.id}`}>
-                      <span><span className="font-medium">{b.name}</span>: you are the highest bidder at {money(b.current_loan!.auction.high_bid)}</span>
-                      <span className="text-[14px] muted">{b.current_loan!.auction.ends_at ? `Ends ${dateTime(b.current_loan!.auction.ends_at)}` : ""}</span>
+                {data.bids.map((b) => {
+                  const auction = b.current_loan!.auction;
+                  const ended = auction.ends_at !== null && nowSecs >= auction.ends_at;
+                  return (
+                    <li key={b.id}>
+                      <Link className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-[var(--surface-2)] px-4 py-3 text-[15px] transition-colors hover:bg-[var(--surface-3)]" href={`/b/${b.id}`}>
+                        <span><span className="font-medium">{nameOf(b)}</span>: {ended ? `you won at ${money(auction.high_bid)}. Auction ended: complete the sale to take control.` : `you are the highest bidder at ${money(auction.high_bid)}`}</span>
+                        <span className="text-[14px] muted">{!ended && auction.ends_at ? `Ends ${dateTime(auction.ends_at)}` : ""}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Panel>
+          ) : null}
+          {data.bought.length ? (
+            <Panel title="Businesses you bought at auction" aside={`${data.bought.length}`}>
+              <ul className="space-y-2" data-testid="bought">
+                {data.bought.map(({ business, price }) => (
+                  <li key={business.id}>
+                    <Link className="flex items-center justify-between gap-3 rounded-[12px] bg-[var(--surface-2)] px-4 py-3 text-[15px] transition-colors hover:bg-[var(--surface-3)]" href={`/b/${business.id}`}>
+                      <span>You bought <span className="font-medium">{nameOf(business)}</span> for {money(price)}</span>
+                      <span className="text-[14px] muted">{business.operator === account ? "You own it" : "Sold on since"}</span>
                     </Link>
                   </li>
                 ))}
@@ -131,7 +157,7 @@ export function PortfolioScreen() {
           ) : null}
 
           <Panel title="Money you lent" aside={`${data.positions.length} ${data.positions.length === 1 ? "loan" : "loans"}`}>
-            {data.positions.length === 0 ? <EmptyState title="You have not lent yet" body="Lend to a business that is raising money. Your share of the loan appears here, with repayments from every sale ready to collect." action={{ href: "/market", label: "See what is raising" }} /> : (
+            {data.positions.length === 0 && !complete ? stillChecking : data.positions.length === 0 ? <EmptyState title="You have not lent yet" body="Lend to a business that is raising money. Your share of the loan appears here, with repayments from every sale ready to collect." action={{ href: "/market", label: "See what is raising" }} /> : (
               <>
               {/* Phones: one card per loan, so nothing scrolls sideways. */}
               <ul className="space-y-3 sm:hidden" data-testid="notes-cards">
@@ -142,7 +168,7 @@ export function PortfolioScreen() {
                   return (
                     <li key={key} className="space-y-3 rounded-[14px] bg-[var(--surface-2)] p-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Link className="font-medium hover:underline" href={`/b/${business.id}`}>{business.name}</Link>
+                        <Link className="font-medium hover:underline" href={`/b/${business.id}`}>{nameOf(business)}</Link>
                         {open ? <StandingLabel standing={standing(business)} /> : <span className="chip">{CLOSED[loan.status] ?? loan.status}</span>}
                       </div>
                       <dl className="dl text-[15px]">
@@ -162,7 +188,7 @@ export function PortfolioScreen() {
               </ul>
               <div className="hidden w-full overflow-x-auto sm:block">
                 <table className="table min-w-[680px]" data-testid="notes-table">
-                  <thead><tr><th scope="col">Business</th><th scope="col">How it is doing</th><th scope="col" className="r">You lent</th><th scope="col" className="r">Share of the loan</th><th scope="col" className="r">Collected</th><th scope="col" className="r">Ready</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
+                  <thead><tr><th scope="col">Business</th><th scope="col">How it is doing</th><th scope="col" className="r">You lent</th><th scope="col" className="r">Share of the loan</th><th scope="col" className="r">Collected</th><th scope="col" className="r">Ready</th><th scope="col" className="text-right"><span className="sr-only">Actions</span></th></tr></thead>
                   <tbody>
                     {data.positions.map(({ business, loan, note }) => {
                       const ready = BigInt(note.claimable);
@@ -170,7 +196,7 @@ export function PortfolioScreen() {
                       return (
                         <Fragment key={`${business.id}:${loan.id}`}>
                         <tr>
-                          <td><Link className="font-medium hover:underline" href={`/b/${business.id}`}>{business.name}</Link><div className="text-[13px] muted">Loan {loan.id + 1}</div></td>
+                          <td><Link className="font-medium hover:underline" href={`/b/${business.id}`}>{nameOf(business)}</Link><div className="text-[13px] muted">Loan {loan.id + 1}</div></td>
                           <td>{open ? <StandingLabel standing={standing(business)} /> : <span className="chip">{CLOSED[loan.status] ?? loan.status}</span>}</td>
                           <td className="r">{money(note.principal)}</td>
                           <td className="r">{pct(share(note.principal, loan.terms.principal))}</td>
@@ -192,12 +218,12 @@ export function PortfolioScreen() {
           </Panel>
 
           <Panel title="Businesses you own" aside={`${data.operated.length}`}>
-            {data.operated.length === 0 ? <EmptyState title="You own no businesses yet" body="Start one in a minute: an AI agent that sells a service and can borrow against its sales." action={{ href: "/create", label: "Start a business" }} /> : (
+            {data.operated.length === 0 && !complete ? stillChecking : data.operated.length === 0 ? <EmptyState title="You own no businesses yet" body="Start one in a minute: an AI agent that sells a service and can borrow against its sales." action={{ href: "/create", label: "Start a business" }} /> : (
               <ul className="space-y-2">
                 {data.operated.map((b) => (
                   <li key={b.id}>
                     <Link className="flex items-center justify-between gap-3 rounded-[12px] bg-[var(--surface-2)] px-4 py-3 text-[15px] transition-colors hover:bg-[var(--surface-3)]" href={`/b/${b.id}`}>
-                      <span className="font-medium">{b.name}</span>
+                      <span className="font-medium">{nameOf(b)}</span>
                       <StandingLabel standing={standing(b)} />
                     </Link>
                   </li>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Info, Panel, Term } from "@/components/ui";
-import { dateTime, duration, fromNow, money, moneyExact, owedMoney, pct, percent, share } from "@/lib/format";
+import { dateTime, duration, fromNow, money, moneyExact, owedMoney, pct, percent, repaidMoney, share } from "@/lib/format";
 import { GLOSSARY } from "@/lib/glossary";
 import { useLive } from "@/hooks/useLive";
 import { getLoans } from "@/lib/near/rpc";
@@ -22,8 +22,9 @@ function PaymentClock({ loan, now }: { loan: LoanView; now: number }) {
   const span = Math.max(1, end - start);
   const at = (t: number) => Math.max(0, Math.min(100, ((t - start) / span) * 100));
   const paidPct = share(loan.repaid, loan.terms.total_due);
-  const breach = loan.breach_at;
-  const foreclosable = loan.foreclosable_at;
+  // Once taken over, the schedule's warning marks no longer apply.
+  const breach = loan.status === "Active" ? loan.breach_at : null;
+  const foreclosable = loan.status === "Active" ? loan.foreclosable_at : null;
   return (
     <div className="mt-5 space-y-3" data-testid="payment-clock">
       <div>
@@ -33,7 +34,7 @@ function PaymentClock({ loan, now }: { loan: LoanView; now: number }) {
         </div>
       </div>
       <div>
-        <div className="mb-2 flex justify-between text-[14px] muted"><span>Time on the loan</span><span>Ends {dateTime(end)}</span></div>
+        <div className="mb-2 flex justify-between text-[14px] muted"><span>Length of the loan</span><span>Loan ends {dateTime(end)}</span></div>
         <div className="relative h-[10px] rounded-full bg-[var(--surface-3)]" role="img" aria-label={`Term progress: ${Math.round(at(now))}% elapsed`}>
           <div className="h-full rounded-full bg-[var(--ink-2)] transition-[width] duration-1000" style={{ width: `${at(now)}%` }} />
           {breach !== null ? <span className="absolute -inset-y-[3px] w-[3px] rounded-full bg-[var(--warn)]" style={{ left: `${at(breach)}%` }} title="Falls behind if unpaid" /> : null}
@@ -104,7 +105,7 @@ export function DebtPanel({ business: b, now }: { business: Business; now: numbe
         </div>
         <dl className="num grid grid-cols-[auto_auto] gap-x-6 gap-y-2 text-[15px]">
           <dt className="muted">{raising ? "Raised" : "Paid back"}<Info label={raising ? "raised" : "paid back"} tip={raising ? "Money lenders have put in so far. It is held by the contract until the loan is full." : "Money that has reached lenders so far, from sales and payments."} /></dt>
-          <dd className="text-right">{money(raising ? loan.funded : loan.repaid)}</dd>
+          <dd className="text-right">{raising ? money(loan.funded) : repaidMoney(loan.terms.total_due, loan.repaid)}</dd>
           <dt className="muted">{raising ? "Goal" : "Total to repay"}</dt>
           <dd className="text-right">{money(raising ? loan.terms.principal : loan.terms.total_due)}</dd>
           <dt className="muted">Lenders<Info label="lenders" tip="How many accounts have lent to this loan. Each gets its share of every repayment." /></dt>
