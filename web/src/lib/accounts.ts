@@ -36,6 +36,25 @@ export function checkInputProblem(text: string): string | null {
   return hasAccountName(t) ? null : "Type the account you want checked, like outlayer.testnet.";
 }
 
+/**
+ * What a check would look at, refused before any money moves when it can't be a real account
+ * on this network: capital letters (NEAR names are lowercase), a malformed name, or on the
+ * test network a mainnet .near name. Null when the text is fine to send.
+ */
+export function targetProblem(text: string, testnet: boolean): string | null {
+  const t = text.trim();
+  if (!t) return null;
+  const names = [...t.matchAll(/[A-Za-z\d._-]+\.(?:testnet|near)(?![A-Za-z\d_-])/gi)].map((m) => m[0]);
+  const upper = names.find((n) => /[A-Z]/.test(n));
+  if (upper) return `NEAR account names are lowercase: try ${upper.toLowerCase()}.`;
+  const malformed = names.find((n) => n.length <= 64 && !ACCOUNT_ID.test(n));
+  if (malformed && !hasAccountName(t)) return `${malformed} is not a valid NEAR account name. Names use lowercase letters, digits, - and _, joined by dots.`;
+  if (testnet && names.length && names.every((n) => /\.near$/.test(n))) {
+    return `${names[0]} is a mainnet name. This is the test network, so only .testnet accounts can be checked, like outlayer.testnet.`;
+  }
+  return checkInputProblem(t);
+}
+
 /** A label for a new business: what goes before ".v1.lien-13569.testnet". */
 export function labelProblem(label: string): string | null {
   if (!label) return "Choose an account name.";

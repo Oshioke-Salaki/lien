@@ -5,7 +5,8 @@ import { useTx } from "@/components/Tx";
 import { Panel } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
 import { isTestnet } from "@/lib/config";
-import { money, parseAmount } from "@/lib/format";
+import { money } from "@/lib/format";
+import { amountProblem, parseMoney } from "@/lib/amounts";
 import { forward } from "@/lib/near/actions";
 import { tokenBalance } from "@/lib/near/rpc";
 import type { Business } from "@/lib/near/types";
@@ -42,7 +43,7 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
     return () => { alive = false; };
   }, []);
 
-  const wanted = useMemo(() => parseAmount(amountText), [amountText]);
+  const wanted = useMemo(() => parseMoney(amountText), [amountText]);
   const pending = inbox.data ?? 0n;
 
   const getQuote = async () => {
@@ -92,7 +93,7 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
                 {routes.map((r) => <option key={r.assetId} value={r.assetId}>{r.label}</option>)}
               </select>
             </label>
-            <AmountField label="Business receives" unit={isTestnet ? "dollars" : "USDC"} value={amountText} onChange={setAmountText} />
+            <AmountField label="Business receives" unit={isTestnet ? "dollars" : "USDC"} value={amountText} onChange={setAmountText} error={amountProblem(amountText)} />
             <TextField label="Your address on that chain, for refunds" testId="intents-refund" value={refundTo} onChange={setRefundTo} placeholder="0x…" />
             <button type="submit" className="btn btn-secondary w-full" data-testid="intents-quote" disabled={state === "loading" || !wanted || !refundTo.trim()}>{state === "loading" ? "Finding a route…" : isTestnet ? "See a live price (nothing is sent)" : "Get a live quote"}</button>
           </form>

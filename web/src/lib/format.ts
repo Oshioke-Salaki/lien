@@ -84,9 +84,15 @@ export function inputAmount(value: bigint | string): string {
   return full.includes(".") ? full.replace(/0+$/, "").replace(/\.$/, "") : full;
 }
 
-/** Parses "12.5" into base units. Returns null for anything that is not an amount. */
+/**
+ * Parses "12.5" into base units. Returns null for anything that is not an amount. A comma is
+ * only ever a thousands separator in its proper place ("1,000.50"): "1,5" is not read as 15.
+ * Every money field in the app goes through this one rule (and lib/amounts.ts for the reason).
+ */
 export function parseAmount(text: string): bigint | null {
-  const clean = text.trim().replace(/,/g, "");
+  const trimmed = text.trim();
+  if (trimmed.includes(",") && !/^\d{1,3}(,\d{3})+(\.\d*)?$/.test(trimmed)) return null;
+  const clean = trimmed.replace(/,/g, "");
   if (!/^\d*\.?\d*$/.test(clean) || clean === "" || clean === ".") return null;
   const [whole = "0", fraction = ""] = clean.split(".");
   if (fraction.length > Number(DECIMALS)) return null;

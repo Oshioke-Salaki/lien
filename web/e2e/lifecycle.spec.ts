@@ -70,6 +70,7 @@ test("one loan, from creation to foreclosure and redemption, through the app", a
   await expect(page.getByTestId("foreclose")).toBeVisible({ timeout: 180_000 });
   await expect(page.getByTestId("foreclose")).toBeEnabled({ timeout: 120_000 });
   await page.getByTestId("foreclose").click();
+  await page.getByTestId("foreclose-confirm").click();
   await expect(page.getByTestId("foreclosure-notice")).toBeVisible();
 
   // It keeps serving, and the operator's share is locked.

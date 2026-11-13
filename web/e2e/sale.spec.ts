@@ -44,6 +44,7 @@ test("a stranger buys a foreclosed business and takes control", async ({ browser
   await expect(buyer.getByTestId("foreclose")).toBeVisible({ timeout: 120_000 });
   await expect(buyer.getByTestId("foreclose")).toBeEnabled({ timeout: 120_000 });
   await buyer.getByTestId("foreclose").click();
+  await buyer.getByTestId("foreclose-confirm").click();
   await expect(buyer.getByTestId("foreclosure-notice")).toBeVisible();
 
   // A low bid is refused before it can be signed.

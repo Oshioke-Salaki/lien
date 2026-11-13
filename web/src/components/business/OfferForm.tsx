@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useTx } from "@/components/Tx";
-import { duration, money, parseAmount, unitName } from "@/lib/format";
+import { duration, money, unitName } from "@/lib/format";
+import { amountProblem, parseMoney } from "@/lib/amounts";
 import { projectPayoff } from "@/lib/math";
 import { bpsFrom, minimumWarning, validateTerms } from "@/lib/terms";
 import { createOffer } from "@/lib/near/actions";
@@ -28,12 +29,12 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
   const [times, setTimes] = useState(PRESETS.standard);
 
   const terms = useMemo<LoanTerms | null>(() => {
-    const p = parseAmount(principal);
+    const p = parseMoney(principal);
     const rate = bpsFrom(interest);
     const l = bpsFrom(lender);
     const o = bpsFrom(operator);
     const r = bpsFrom(reserve);
-    const m = parseAmount(minPayment === "" ? "0" : minPayment);
+    const m = parseMoney(minPayment === "" ? "0" : minPayment);
     if (p === null || rate === null || l === null || o === null || r === null || m === null) return null;
     return {
       principal: p.toString(),
@@ -57,7 +58,7 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
     : shareValues.some((v) => !Number.isFinite(v) || v < 0 || v > 100) ? "Shares and the lowest first bid are percentages from 0 to 100."
     : terms ? validateTerms(terms) : "Amounts: dollars with at most two decimals, like 100 or 12.50.";
   const warning = terms ? minimumWarning(terms) : null;
-  const revenuePerWindow = parseAmount(revenue);
+  const revenuePerWindow = parseMoney(revenue);
   const projection = terms && revenuePerWindow !== null ? projectPayoff({
     totalDue: BigInt(terms.total_due),
     lenderBps: terms.lender_bps,
@@ -92,10 +93,10 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTimes(PRESETS.standard)}>90 day loan</button>
         <button type="button" className="btn btn-secondary btn-sm" data-testid="preset-demo" onClick={() => setTimes(PRESETS.demo)}>Short demo clocks</button>
       </div>
-      <AmountField label="Borrow" value={principal} onChange={setPrincipal} testId="offer-principal" hint="Up to $100,000 on the test network." />
+      <AmountField label="Borrow" value={principal} onChange={setPrincipal} testId="offer-principal" error={amountProblem(principal)} hint="Up to $100,000 on the test network." />
       <div className="grid grid-cols-2 gap-3">
         <TextField label="Interest, %" value={interest} onChange={setInterest} />
-        <AmountField label="Minimum payment" value={minPayment} onChange={setMinPayment} testId="offer-min" />
+        <AmountField label="Minimum payment" value={minPayment} onChange={setMinPayment} testId="offer-min" error={amountProblem(minPayment)} />
         <TextField label="Lenders' share of sales, %" value={lender} onChange={setLender} />
         <TextField label="Your share of sales, %" value={operator} onChange={setOperator} />
       </div>
@@ -109,7 +110,7 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
       </div>
 
       <div className="inset space-y-2 text-[15px]" data-testid="offer-preview">
-        <AmountField label={`If you earn this much every ${duration(times.window)}`} value={revenue} onChange={setRevenue} />
+        <AmountField label={`If you earn this much every ${duration(times.window)}`} value={revenue} onChange={setRevenue} error={amountProblem(revenue)} />
         {terms && projection && BigInt(terms.principal) > 0n ? (
           <>
             <p>Lenders put in {money(terms.principal)} and get back {money(terms.total_due)}.</p>
