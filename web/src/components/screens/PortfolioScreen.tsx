@@ -5,11 +5,11 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { ConnectButtons, useTx } from "@/components/Tx";
 import { EmptyState, ErrorState, PageHead, Panel, Skeleton, StandingLabel } from "@/components/ui";
 import { REFRESH_EVENT } from "@/lib/events";
-import { remember, remembered } from "@/lib/mine";
 import { dateTime, money, pct, share } from "@/lib/format";
 import { claim, withdrawCredit } from "@/lib/near/actions";
 import { ShareTransfer } from "@/components/business/ShareTransfer";
-import { getCredit, getLoans, getNote, isTestRun, listBusinesses } from "@/lib/near/rpc";
+import { fetchPositions } from "@/lib/snapshotClient";
+import type { PositionsSnapshot } from "@/lib/snapshot";
 import type { Business, LoanStatus, LoanView, NoteView } from "@/lib/near/types";
 import { standing } from "@/lib/status";
 import { useWallet } from "@/lib/wallet/WalletProvider";
@@ -19,57 +19,24 @@ type Data = { positions: Position[]; credits: Array<{ business: Business; amount
 
 const CLOSED: Partial<Record<LoanStatus, string>> = { Repaid: "Paid in full", Sold: "Taken over and sold", Cancelled: "Cancelled" };
 
-/** Reads one business's loans and this account's place in them, retrying once if a node drops it. */
-async function readOne(business: Business, account: string) {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      const [loans, credit] = await Promise.all([getLoans(business.id), getCredit(business.id, account)]);
-      const notes = await Promise.all(loans.map(async (loan) => ({ loan, note: await getNote(business.id, loan.id, account) })));
-      return { business, credit, positions: notes.flatMap(({ loan, note }) => (note ? [{ business, loan, note }] : [])) };
-    } catch (error) {
-      if (attempt >= 1) throw error;
-    }
-  }
+/** The server's snapshot, turned back into the shapes this page renders. */
+function toData(snapshot: PositionsSnapshot): Data {
+  const byId = new Map(snapshot.businesses.map((b) => [b.id, b]));
+  const pick = (ids: string[]) => ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
+  return {
+    positions: snapshot.positions.flatMap((p) => (byId.has(p.businessId) ? [{ business: byId.get(p.businessId)!, loan: p.loan, note: p.note }] : [])),
+    credits: snapshot.credits.flatMap((c) => (byId.has(c.businessId) ? [{ business: byId.get(c.businessId)!, amount: BigInt(c.amount) }] : [])),
+    operated: pick(snapshot.operated),
+    bids: pick(snapshot.bids),
+    unread: snapshot.unread,
+  };
 }
-
-type Progress = (data: Data, checked: number, total: number) => void;
 
 /**
- * Reads every business this account could hold something in, and reports as it goes:
- * the ones it has dealt with first (remembered in this browser), then the real
- * businesses, then test ones. A page with some positions beats a page of skeletons.
+ * Positions, read by the server in one request (lib/snapshot.ts) instead of dozens of RPC
+ * calls from this browser, re-read after every transaction and every 15 seconds. If the
+ * server ran out of time, it says how far it got and the next read carries on.
  */
-async function load(account: string, progress: Progress): Promise<void> {
-  const businesses = await listBusinesses({ includeTests: true });
-  const mine = new Set(remembered(account));
-  const rank = (b: Business) => (mine.has(b.id) || b.operator === account ? 0 : isTestRun(b.id) ? 2 : 1);
-  const ordered = [...businesses].sort((a, b) => rank(a) - rank(b));
-  const read: Awaited<ReturnType<typeof readOne>>[] = [];
-  let unread = 0;
-  const snapshot = (): Data => ({
-    positions: read.flatMap((p) => p.positions),
-    credits: read.filter((p) => p.credit > 0n).map((p) => ({ business: p.business, amount: p.credit })),
-    operated: businesses.filter((b) => b.operator === account),
-    // Auctions this account is winning right now.
-    bids: businesses.filter((b) => b.current_loan?.status === "Foreclosed" && b.current_loan.auction.high_bidder === account),
-    unread,
-  });
-  // Small batches keep public RPC nodes from refusing a burst; one unreadable business never hides the rest.
-  for (let i = 0; i < ordered.length; i += 4) {
-    const batch = await Promise.allSettled(ordered.slice(i, i + 4).map((b) => readOne(b, account)));
-    for (const r of batch) {
-      if (r.status === "fulfilled") {
-        read.push(r.value);
-        if (r.value.positions.length || r.value.credit > 0n) remember(account, r.value.business.id);
-      } else unread++;
-    }
-    progress(snapshot(), Math.min(ordered.length, i + 4), ordered.length);
-  }
-  if (ordered.length === 0) progress(snapshot(), 0, 0);
-  if (ordered.length > 0 && read.length === 0) throw new Error("Your positions could not be read from the network.");
-}
-
-/** Positions, filled in batch by batch, re-read after every transaction and every 15 seconds. */
 function usePositions(account: string | null) {
   const [state, setState] = useState<{ for: string | null; data?: Data; checked: number; total: number; error?: string }>({ for: null, checked: 0, total: 0 });
   const generation = useRef(0);
@@ -77,11 +44,10 @@ function usePositions(account: string | null) {
     if (!account) return;
     const mine = ++generation.current;
     try {
-      await load(account, (data, checked, total) => {
-        if (mine === generation.current) setState({ for: account, data, checked, total });
-      });
+      const snapshot = await fetchPositions(account);
+      if (mine === generation.current) setState({ for: account, data: toData(snapshot), checked: snapshot.checked, total: snapshot.total });
     } catch (error) {
-      if (mine === generation.current) setState((s) => ({ ...s, for: account, checked: s.total, error: error instanceof Error ? error.message : String(error) }));
+      if (mine === generation.current) setState((s) => ({ ...s, for: account, error: error instanceof Error ? error.message : String(error) }));
     }
   }, [account]);
   useEffect(() => {
@@ -147,7 +113,7 @@ export function PortfolioScreen() {
             </Panel>
           ) : null}
 
-          {live.checked < live.total ? <p role="status" className="flex items-center gap-2 rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]" data-testid="positions-checking"><span className="spinner spinner-ink" aria-hidden />Checked {live.checked} of {live.total} businesses for anything of yours…</p> : null}
+          {live.checked < live.total ? <p role="status" className="flex items-center gap-2 rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]" data-testid="positions-checking"><span className="spinner spinner-ink" aria-hidden />Checked {live.checked} of {live.total} businesses so far; the rest are read on the next refresh.</p> : null}
           {data.unread > 0 ? <p role="status" className="rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]">{data.unread} {data.unread === 1 ? "business" : "businesses"} could not be read just now, so a position there may be missing. This page checks again every few seconds.</p> : null}
           {data.bids.length ? (
             <Panel title="Your bids" aside={`${data.bids.length}`}>
@@ -166,7 +132,35 @@ export function PortfolioScreen() {
 
           <Panel title="Money you lent" aside={`${data.positions.length} ${data.positions.length === 1 ? "loan" : "loans"}`}>
             {data.positions.length === 0 ? <EmptyState title="You have not lent yet" body="Lend to a business that is raising money. Your share of the loan appears here, with repayments from every sale ready to collect." action={{ href: "/market", label: "See what is raising" }} /> : (
-              <div className="w-full overflow-x-auto">
+              <>
+              {/* Phones: one card per loan, so nothing scrolls sideways. */}
+              <ul className="space-y-3 sm:hidden" data-testid="notes-cards">
+                {data.positions.map(({ business, loan, note }) => {
+                  const ready = BigInt(note.claimable);
+                  const open = business.current_loan?.id === loan.id;
+                  const key = `${business.id}:${loan.id}`;
+                  return (
+                    <li key={key} className="space-y-3 rounded-[14px] bg-[var(--surface-2)] p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Link className="font-medium hover:underline" href={`/b/${business.id}`}>{business.name}</Link>
+                        {open ? <StandingLabel standing={standing(business)} /> : <span className="chip">{CLOSED[loan.status] ?? loan.status}</span>}
+                      </div>
+                      <dl className="dl text-[15px]">
+                        <dt>You lent</dt><dd>{money(note.principal)}</dd>
+                        <dt>Share of the loan</dt><dd>{pct(share(note.principal, loan.terms.principal))}</dd>
+                        <dt>Collected</dt><dd>{money(note.claimed)}</dd>
+                        <dt>Ready to collect</dt><dd>{money(ready)}</dd>
+                      </dl>
+                      <div className="flex flex-wrap gap-2">
+                        {ready > 0n ? <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={async () => { await run(claim(business.id, loan.id), { requiredOn: business.id, done: `Collected ${money(ready)}` }); await live.refresh(); }}>Collect {money(ready)}</button> : <span className="text-[14px] muted">Nothing to collect yet</span>}
+                        <button type="button" className="btn btn-sm btn-secondary" aria-expanded={moving === key} onClick={() => setMoving(moving === key ? null : key)}>Transfer</button>
+                      </div>
+                      {moving === key ? <ShareTransfer business={business.id} loanId={loan.id} lent={BigInt(note.principal)} ready={ready} onDone={async () => { setMoving(null); await live.refresh(); }} /> : null}
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="hidden w-full overflow-x-auto sm:block">
                 <table className="table min-w-[680px]" data-testid="notes-table">
                   <thead><tr><th scope="col">Business</th><th scope="col">How it is doing</th><th scope="col" className="r">You lent</th><th scope="col" className="r">Share of the loan</th><th scope="col" className="r">Collected</th><th scope="col" className="r">Ready</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
                   <tbody>
@@ -182,7 +176,7 @@ export function PortfolioScreen() {
                           <td className="r">{pct(share(note.principal, loan.terms.principal))}</td>
                           <td className="r">{money(note.claimed)}</td>
                           <td className="r">{money(ready)}</td>
-                          <td className="text-right whitespace-nowrap"><button type="button" className={`btn btn-sm ${ready === 0n ? "btn-secondary" : "btn-primary"}`} disabled={busy || ready === 0n} onClick={async () => { await run(claim(business.id, loan.id), { requiredOn: business.id, done: `Collected ${money(ready)}` }); await live.refresh(); }}>Collect</button>{" "}<button type="button" className="btn btn-sm btn-secondary" aria-expanded={moving === `${business.id}:${loan.id}`} onClick={() => setMoving(moving === `${business.id}:${loan.id}` ? null : `${business.id}:${loan.id}`)}>Transfer</button></td>
+                          <td className="text-right whitespace-nowrap">{ready > 0n ? <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={async () => { await run(claim(business.id, loan.id), { requiredOn: business.id, done: `Collected ${money(ready)}` }); await live.refresh(); }}>Collect</button> : <span className="text-[14px] muted">Nothing yet</span>}{" "}<button type="button" className="btn btn-sm btn-secondary" aria-expanded={moving === `${business.id}:${loan.id}`} onClick={() => setMoving(moving === `${business.id}:${loan.id}` ? null : `${business.id}:${loan.id}`)}>Transfer</button></td>
                         </tr>
                         {moving === `${business.id}:${loan.id}` ? (
                           <tr><td colSpan={7}><ShareTransfer business={business.id} loanId={loan.id} lent={BigInt(note.principal)} ready={ready} onDone={async () => { setMoving(null); await live.refresh(); }} /></td></tr>
@@ -193,6 +187,7 @@ export function PortfolioScreen() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </Panel>
 

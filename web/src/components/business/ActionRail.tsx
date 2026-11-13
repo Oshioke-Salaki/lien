@@ -6,17 +6,18 @@ import { Info, Panel, Term } from "@/components/ui";
 import { usePay } from "@/hooks/usePay";
 import { useLive } from "@/hooks/useLive";
 import { isTestnet } from "@/lib/config";
-import { CENT, centsUp, dateTime, duration, fromNow, inputAmount, money, moneyUp, nearAmount, parseAmount, pct, percent, share, toYocto } from "@/lib/format";
+import { CENT, centsUp, dateTime, duration, fromNow, inputAmount, money, moneyUp, nearAmount, owedMoney, parseAmount, pct, percent, share, toYocto } from "@/lib/format";
 import { hasAccountName } from "@/lib/accounts";
 import { GLOSSARY } from "@/lib/glossary";
 import * as tx from "@/lib/near/actions";
 import { getCredit, getJob, getLoans, getNote } from "@/lib/near/rpc";
 import type { Business, LoanView, NoteView } from "@/lib/near/types";
-import { auctionEnded, standing } from "@/lib/status";
+import { auctionEnded, isTrapped, standing } from "@/lib/status";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { OfferForm } from "./OfferForm";
 import { ReportCard } from "./ReportCard";
 import { isFinal, loadChecks, saveChecks, type SavedCheck } from "@/lib/checks";
+import { settleNotice } from "@/lib/events";
 import { parseReport } from "@/lib/report";
 import { ShareTransfer } from "./ShareTransfer";
 import { AmountField, checkAmount, TextField, useMyBalance } from "./fields";
@@ -47,7 +48,7 @@ export function ActionRail({ business: b, now, refresh }: Props) {
       <PositionCard business={b} refresh={refresh} />
       {isOperator ? <OperatorCard business={b} now={now} refresh={refresh} /> : null}
       <BuyCard business={b} refresh={refresh} featured={s === "current" || s === "no-loan"} />
-      {loan && (loan.status === "Active" || foreclosed) ? <RepayCard business={b} refresh={refresh} isOperator={isOperator} /> : null}
+      {loan && (loan.status === "Active" || (foreclosed && s !== "sale-ended")) ? <RepayCard business={b} refresh={refresh} isOperator={isOperator} /> : null}
       <TankCard business={b} refresh={refresh} />
     </aside>
   );
@@ -148,14 +149,13 @@ function AuctionCard({ business: b, now, refresh, featured }: Props) {
   const high = BigInt(loan.auction.high_bid);
   const minNext = BigInt(loan.min_next_bid ?? "1");
   const check = checkAmount(text, { min: minNext, balance: balance.data });
-  const outstanding = BigInt(loan.outstanding);
   const iWin = loan.auction.high_bidder === account && account !== null;
   const inside = BigInt(b.ledger.opex);
 
   return (
-    <Panel featured={featured} title="Buy this business" aside={loan.auction.ends_at ? (ended ? "Auction over" : `Ends ${fromNow(loan.auction.ends_at, now)}`) : `${duration(loan.terms.auction_secs)} auction, starts with the first bid`}>
+    <Panel featured={featured} title={ended ? "Auction ended: anyone can complete the sale" : "Buy this business"} aside={loan.auction.ends_at ? (ended ? undefined : `Ends ${fromNow(loan.auction.ends_at, now)}`) : `${duration(loan.terms.auction_secs)} auction, starts with the first bid`}>
       <dl className="dl mb-3" data-testid="auction">
-        <dt>Still owed to lenders<Info label="still owed" tip="What lenders are still owed. The sale price pays this first; anything above it goes to the old owner." /></dt><dd>{money(outstanding)}</dd>
+        <dt>Still owed to lenders<Info label="still owed" tip="What lenders are still owed. The sale price pays this first; anything above it goes to the old owner." /></dt><dd>{owedMoney(loan.terms.total_due, loan.repaid)}</dd>
         <dt>Highest bid</dt><dd>{high > 0n ? money(high) : <span className="muted">No bids yet</span>}</dd>
         {!ended ? <><dt>Lowest bid accepted<Info label="lowest bid" tip="The first bid can't be below the floor set in the loan's terms; after that, each bid must beat the last." /></dt><dd>{moneyUp(minNext)}</dd></> : null}
         <dt>Running money inside<Info label="running money" tip="Money the business keeps to pay for its work. The buyer gets it with the business." /></dt><dd>{money(inside)}</dd>
@@ -265,7 +265,13 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
         }
         if (latest.status === check.status) continue;
         update((all) => all.map((c) => (c.id === check.id && c.since === check.since ? { ...c, confirmed: true, status: latest.status, report: latest.report } : c)));
-        if (latest.status !== "Pending") void refresh();
+        if (latest.status !== "Pending") {
+          // The result is in: say so now, even if the payment is still finalising on the network.
+          settleNotice(latest.status === "Done"
+            ? { summary: "Buy a safety check", tone: "done", title: "Check delivered", text: "The report is ready on this page, and the lenders were paid their share." }
+            : { summary: "Buy a safety check", tone: "done", title: "Check refunded", text: `It couldn't finish, so your ${money(price)} came back automatically.` });
+          void refresh();
+        }
       }
     }, 2_500);
     return () => { alive = false; clearInterval(timer); };
@@ -278,7 +284,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
     const since = Math.floor(Date.now() / 1000);
     // Saved before paying: if the page is refreshed mid-payment, the check is still followed.
     update((all) => [{ id: b.next_job_id, input: text, since, confirmed: false, status: "Pending" }, ...all]);
-    const result = await pay(price, { action: "job", input: text }, "Buy a safety check", "Check paid for", "Paid. A secure computer is running the check now; this usually takes under a minute. You can keep using the page.");
+    const result = await pay(price, { action: "job", input: text }, "Buy a safety check", "Check paid for", "Paid. A secure computer is running the check now; it usually takes under a minute, sometimes up to two. You can keep using the page.");
     const started = result?.events.find((event) => event.event === "job_started");
     const refunded = result?.events.find((event) => event.event === "job_refunded");
     if (result?.ok && started) {
@@ -322,7 +328,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
               <span className="spinner spinner-ink mt-[3px] shrink-0" aria-hidden />
               <span>
                 Your check of <span className="font-medium break-all">{current.input}</span> is running (bought {duration(Math.max(0, now - current.since))} ago).{" "}
-                {now - current.since > 45 ? "The test network's secure computers are slow right now, so this can take a few minutes. If it fails, your money comes back automatically." : "This usually takes under a minute."}
+                {now - current.since > 120 ? "The test network's secure computers are slow right now, so this can take a few minutes. If it fails, your money comes back automatically." : "It usually takes under a minute, sometimes up to two."}
               </span>
             </p>
           ) : current.status === "Done" ? <ReportCard raw={current.report ?? null} /> : (
@@ -366,9 +372,12 @@ function RepayCard({ business: b, refresh, isOperator }: { business: Business; r
     <Panel title={foreclosed ? "Pay off the debt to stop the sale" : "Pay down the debt"}>
       <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
         {foreclosed
-          ? `Paying the full ${money(outstanding)} before the auction ends cancels the sale and gives the business back to its owner. Anyone can pay.`
+          ? `Paying the full ${moneyUp(outstanding)} before the auction ends cancels the sale and gives the business back to its owner. Anyone can pay.`
           : "Anyone can pay, not only the owner. It counts toward the next payment at once, and anything above the debt comes back to you."}
       </p>
+      {!isOperator ? (
+        <p className="mb-3 rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[14px] leading-snug" data-testid="gift-note">You don&rsquo;t own this business, so paying its debt is a gift to its lenders: you won&rsquo;t get it back.</p>
+      ) : null}
       <ConnectGate quiet reason="Connect to pay.">
         <form className="space-y-3" onSubmit={async (e) => {
           e.preventDefault();
@@ -440,11 +449,12 @@ function PositionCard({ business: b, refresh }: { business: Business; refresh: (
                 <dt>Collected so far</dt><dd>{money(note.claimed)}</dd>
                 <dt>Ready to collect</dt><dd data-testid="claimable">{money(claimable)}</dd>
               </dl>
-              <button type="button" data-testid="claim" className="btn btn-primary w-full" disabled={busy || claimable === 0n} onClick={async () => {
-                await run(tx.claim(b.id, loan.id), { requiredOn: b.id, done: `Collected ${money(claimable)}` });
-                await Promise.all([positions.refresh(), credit.refresh(), refresh()]);
-              }}>{claimable === 0n ? "Nothing to collect yet" : `Collect ${money(claimable)}`}</button>
-              {claimable === 0n ? <p className="hint">Repayments arrive with each sale the business makes.</p> : null}
+              {claimable > 0n ? (
+                <button type="button" data-testid="claim" className="btn btn-primary w-full" disabled={busy} onClick={async () => {
+                  await run(tx.claim(b.id, loan.id), { requiredOn: b.id, done: `Collected ${money(claimable)}` });
+                  await Promise.all([positions.refresh(), credit.refresh(), refresh()]);
+                }}>Collect {money(claimable)}</button>
+              ) : <p className="text-[14px] text-[var(--ink-2)]">Nothing to collect yet. Repayments arrive with each sale the business makes.</p>}
               {proposal && proposal.loan_id === loan.id && note.voted_proposal !== proposal.id ? (
                 <div className="callout">
                   <p className="mb-2">The owner wants to change its program (new build <code>{proposal.service.wasm.hash.slice(0, 12)}…</code>, price {money(proposal.service.price)}). It needs lenders holding over half the loan to agree. Agreed so far: {pct(share(proposal.approvals, loan.terms.principal))}.</p>
@@ -475,7 +485,7 @@ function OperatorCard({ business: b, now, refresh }: Props) {
   const [newHash, setNewHash] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const s = standing({ ...b, now });
-  const locked = s === "behind" || s === "foreclosable" || s === "foreclosed" || s === "auction";
+  const locked = isTrapped(s);
   const withdrawCheck = checkAmount(withdraw, { max: opex });
   const priceValue = parseAmount(price);
   const hashValid = /^[0-9a-f]{64}$/.test(newHash);

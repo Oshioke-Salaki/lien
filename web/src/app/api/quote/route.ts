@@ -46,7 +46,8 @@ export async function POST(request: Request) {
       depositType: "ORIGIN_CHAIN",
       destinationAsset: USDC_NEAR,
       amount: body.amount,
-      refundTo: body.refundTo,
+      // EVM addresses are accepted in any letter case; the route API wants them in one.
+      refundTo: /^0x[0-9a-f]{40}$/i.test(body.refundTo.trim()) ? body.refundTo.trim().toLowerCase() : body.refundTo.trim(),
       refundType: "ORIGIN_CHAIN",
       recipient: LIVE ? body.recipient : "intents.near",
       recipientType: "DESTINATION_CHAIN",

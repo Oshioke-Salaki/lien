@@ -1,11 +1,13 @@
 "use client";
 
 import { Info, Panel, Term } from "@/components/ui";
-import { dateTime, duration, fromNow, money, moneyExact, pct, percent, share } from "@/lib/format";
+import { dateTime, duration, fromNow, money, moneyExact, owedMoney, pct, percent, share } from "@/lib/format";
 import { GLOSSARY } from "@/lib/glossary";
+import { useLive } from "@/hooks/useLive";
+import { getLoans } from "@/lib/near/rpc";
 import { splitInflow } from "@/lib/math";
 import type { Business, LoanView } from "@/lib/near/types";
-import { standing } from "@/lib/status";
+import { isTrapped, standing } from "@/lib/status";
 
 /** Loans whose payment window is under an hour run on demo clocks, so a visitor can watch them play out. */
 export const isDemoClock = (loan: LoanView | null) => !!loan && loan.terms.window_secs < 3_600;
@@ -64,6 +66,7 @@ function headline(b: Business, now: number): string {
     case "foreclosable": return "Missed its payments, and its extra time is up. Anyone can take it over now.";
     case "foreclosed": return "Taken over for its lenders. It keeps selling, and its owner's share of each sale now goes to lenders until it is sold.";
     case "auction": return "Taken over and for sale. The highest bid when the auction ends buys the business.";
+    case "sale-ended": return "Taken over, and its auction has ended. Anyone can complete the sale now: the price goes to lenders first and the highest bidder gets the business.";
     default: return "";
   }
 }
@@ -83,6 +86,7 @@ export function DebtPanel({ business: b, now }: { business: Business; now: numbe
     return (
       <Panel>
         <p className="text-[17px] leading-snug" data-testid="headline">{headline(b, now)}</p>
+        {b.loan_count > 0 ? <LastLoan id={b.id} count={b.loan_count} /> : null}
         <p className="num mt-5 text-[clamp(40px,5vw,56px)] leading-none font-medium tracking-[-0.03em]">{money(revenue)} <span className="text-[17px] font-normal tracking-normal muted">earned from sales</span></p>
       </Panel>
     );
@@ -95,7 +99,7 @@ export function DebtPanel({ business: b, now }: { business: Business; now: numbe
         <div>
           <p className="text-[14px] muted">{raising ? "Still to raise" : "Still owed to lenders"}<Info label={raising ? "still to raise" : "still owed"} tip={raising ? "How much more lenders need to put in before the loan starts." : "What the business still has to pay its lenders, including the fixed interest. Every sale pays some of it automatically."} /></p>
           <p className="num mt-1 text-[clamp(44px,5.4vw,64px)] leading-none font-medium tracking-[-0.03em]" data-testid="big-figure">
-            {money(raising ? BigInt(loan.terms.principal) - BigInt(loan.funded) : loan.outstanding)}
+            {raising ? owedMoney(loan.terms.principal, loan.funded) : owedMoney(loan.terms.total_due, loan.repaid)}
           </p>
         </div>
         <dl className="num grid grid-cols-[auto_auto] gap-x-6 gap-y-2 text-[15px]">
@@ -117,6 +121,19 @@ export function DebtPanel({ business: b, now }: { business: Business; now: numbe
   );
 }
 
+/** How the last loan ended, in the one figure a lender cares about. */
+function LastLoan({ id, count }: { id: string; count: number }) {
+  const live = useLive(() => getLoans(id), `last-loan:${id}:${count}`, 0);
+  const last = [...(live.data ?? [])].sort((a, b) => b.id - a.id)[0];
+  if (!last || (last.status !== "Repaid" && last.status !== "Sold")) return null;
+  return (
+    <p className="mt-3 text-[15px] text-[var(--ink-2)]" data-testid="recovered">
+      {last.status === "Repaid" ? "It paid its last loan back in full: " : "Its last loan ended in a takeover and sale: "}
+      lenders recovered {money(last.repaid)} of {money(last.terms.total_due)}.
+    </p>
+  );
+}
+
 /** Where each sale goes, using the contract's own rule on the price of one job. */
 export function WaterfallPanel({ business: b, now }: { business: Business; now: number }) {
   const loan = b.current_loan;
@@ -124,7 +141,7 @@ export function WaterfallPanel({ business: b, now }: { business: Business; now: 
   const open = loan && (loan.status === "Active" || loan.status === "Foreclosed");
   const raising = loan?.status === "Funding";
   const s = standing({ ...b, now });
-  const trapped = s === "behind" || s === "foreclosable" || s === "foreclosed" || s === "auction";
+  const trapped = isTrapped(s);
   // While raising, show the split the lenders agreed to, as it will run once the loan starts.
   const split = open || raising
     ? splitInflow(price, raising ? BigInt(loan!.terms.total_due) : BigInt(loan!.outstanding), loan!.terms.lender_bps, loan!.terms.operator_bps, trapped)
@@ -133,7 +150,7 @@ export function WaterfallPanel({ business: b, now }: { business: Business; now: 
     { key: "Lenders", value: split.lender, color: "var(--accent)" },
     { key: "Owner", value: split.operator, color: "var(--ink-2)" },
     { key: "Kept for running costs", value: split.opex, color: "#6b6158" },
-  ];
+  ].filter((p) => loan || p.key === "Kept for running costs");
   const aside = trapped ? "The owner's share goes to lenders now" : raising ? "Once the loan starts" : !loan ? "No loan, so nothing goes to lenders" : undefined;
   return (
     <Panel title={`Where each ${money(price)} sale goes`} aside={aside}>
@@ -150,7 +167,7 @@ export function WaterfallPanel({ business: b, now }: { business: Business; now: 
           </div>
         ))}
       </dl>
-      <p className="mt-4 text-[14px] text-[var(--ink-2)]">The contract splits every sale the moment it is paid. Nobody, not even the owner, can change this during the loan.</p>
+      <p className="mt-4 text-[14px] text-[var(--ink-2)]">{loan ? "The contract splits every sale the moment it is paid. Nobody, not even the owner, can change this during the loan." : "With no loan, every sale stays with the business. Once it borrows, lenders are paid first from each sale."}</p>
     </Panel>
   );
 }

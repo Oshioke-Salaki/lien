@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { accountUrl } from "@/lib/config";
 import { shortAccount } from "@/lib/format";
 import { STANDING_LABEL, type Standing } from "@/lib/status";
@@ -29,6 +29,7 @@ export const STANDING_TONE: Record<Standing, string> = {
   foreclosable: "var(--danger)",
   foreclosed: "var(--danger)",
   auction: "var(--warn)",
+  "sale-ended": "var(--warn)",
 };
 
 export function StandingLabel({ standing }: { standing: Standing }) {
@@ -86,30 +87,75 @@ export function Bar({ value, tone = "var(--accent)", label }: { value: number; t
  * A word that has to stay, with its meaning one tap, hover or keyboard focus away.
  * The definition is also the button's description, so screen readers hear it too.
  */
-export function Term({ children, tip }: { children: ReactNode; tip: string }) {
-  const [open, setOpen] = useState(false);
+/**
+ * A short explanation that opens on hover (with a mouse), on click or tap, and from the
+ * keyboard; closes on Escape or a click elsewhere. It is placed above its trigger (below
+ * when there is no room) and kept inside the screen, so it never covers the figure it explains.
+ */
+function useTip() {
+  const [hover, setHover] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const wrap = useRef<HTMLSpanElement>(null);
+  const tip = useRef<HTMLSpanElement>(null);
+  const [place, setPlace] = useState<{ left: number; top: number } | null>(null);
+  const open = hover || pinned;
+
+  useEffect(() => {
+    if (!pinned) return;
+    const away = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setPinned(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setPinned(false); };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", away); document.removeEventListener("keydown", esc); };
+  }, [pinned]);
+
+  useLayoutEffect(() => {
+    if (!open || !wrap.current || !tip.current) return;
+    const anchor = wrap.current.getBoundingClientRect();
+    const box = tip.current.getBoundingClientRect();
+    const gap = 8;
+    const left = Math.min(Math.max(gap, anchor.left + anchor.width / 2 - box.width / 2), window.innerWidth - box.width - gap);
+    const above = anchor.top - box.height - gap;
+    setPlace({ left, top: above >= gap ? above : anchor.bottom + gap });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => { setHover(false); setPinned(false); };
+    window.addEventListener("scroll", close, { passive: true });
+    window.addEventListener("resize", close);
+    return () => { window.removeEventListener("scroll", close); window.removeEventListener("resize", close); };
+  }, [open]);
+
+  const trigger = {
+    "aria-expanded": open,
+    onClick: () => setPinned((v) => !v),
+    onPointerEnter: (e: React.PointerEvent) => { if (e.pointerType === "mouse") setHover(true); },
+    onPointerLeave: (e: React.PointerEvent) => { if (e.pointerType === "mouse") setHover(false); },
+    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Escape") { setPinned(false); setHover(false); } },
+  };
+  const tipStyle: React.CSSProperties = place ? { position: "fixed", left: place.left, top: place.top } : { position: "fixed", left: -9999, top: 0 };
+  return { open, wrap, tip, trigger, tipStyle };
+}
+
+export function Term({ children, tip: text }: { children: ReactNode; tip: string }) {
   const id = useId();
+  const { open, wrap, tip, trigger, tipStyle } = useTip();
   return (
-    <span className="term" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
-      <button type="button" aria-expanded={open} aria-describedby={id} onClick={() => setOpen((v) => !v)} onBlur={() => setOpen(false)} onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}>
-        {children}
-      </button>
-      <span id={id} role="tooltip" className="term-tip" hidden={!open}>{tip}</span>
+    <span className="term" ref={wrap}>
+      <button type="button" aria-describedby={id} {...trigger}>{children}</button>
+      <span id={id} ref={tip} role="tooltip" className="term-tip" hidden={!open} style={tipStyle}>{text}</span>
     </span>
   );
 }
 
-/**
- * A small "i" beside a number that says what it means in one sentence: on tap, hover or
- * keyboard focus. `label` names the number for screen readers ("About: still owed").
- */
-export function Info({ tip, label }: { tip: string; label: string }) {
-  const [open, setOpen] = useState(false);
+export function Info({ tip: text, label }: { tip: string; label: string }) {
   const id = useId();
+  const { open, wrap, tip, trigger, tipStyle } = useTip();
   return (
-    <span className="info" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
-      <button type="button" className="info-dot" aria-label={`About: ${label}`} aria-expanded={open} aria-describedby={id} onClick={() => setOpen((v) => !v)} onBlur={() => setOpen(false)} onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}>i</button>
-      <span id={id} role="tooltip" className="term-tip" hidden={!open}>{tip}</span>
+    <span className="info" ref={wrap}>
+      <button type="button" className="info-dot" aria-label={`About: ${label}`} aria-describedby={id} {...trigger}>i</button>
+      <span id={id} ref={tip} role="tooltip" className="term-tip" hidden={!open} style={tipStyle}>{text}</span>
     </span>
   );
 }

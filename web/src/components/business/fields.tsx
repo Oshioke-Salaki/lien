@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { useLive } from "@/hooks/useLive";
 
 import { isRegistered, tokenBalance } from "@/lib/near/rpc";
@@ -54,7 +54,10 @@ const UNITS = [
 
 export function DurationField({ label, secs, onChange, hint, testId }: { label: string; secs: number; onChange: (secs: number) => void; hint?: string; testId?: string }) {
   const id = useId();
-  const unit = [...UNITS].reverse().find((u) => secs >= u.secs && secs % u.secs === 0) ?? UNITS[0]!;
+  const derived = [...UNITS].reverse().find((u) => secs >= u.secs && secs % u.secs === 0) ?? UNITS[0]!;
+  // The unit stays what the person chose: typing 0 never turns "days" into "minutes".
+  const [chosen, setChosen] = useState<number | null>(null);
+  const unit = chosen !== null && (secs === 0 || secs % chosen === 0) ? UNITS.find((u) => u.secs === chosen)! : derived;
   return (
     <div className="field">
       <label htmlFor={id} className="mb-[6px] block text-[14px]">{label}</label>
@@ -70,7 +73,7 @@ export function DurationField({ label, secs, onChange, hint, testId }: { label: 
             onChange(Number.isFinite(n) ? n * unit.secs : 0);
           }}
         />
-        <select aria-label={`${label} unit`} className="input w-auto shrink-0 pr-8" value={unit.secs} onChange={(e) => onChange((secs / unit.secs) * Number(e.target.value))}>
+        <select aria-label={`${label} unit`} className="input w-auto shrink-0 pr-8" value={unit.secs} onChange={(e) => { const next = Number(e.target.value); setChosen(next); onChange((secs / unit.secs) * next); }}>
           {UNITS.map((u) => <option key={u.secs} value={u.secs}>{u.label}</option>)}
         </select>
       </div>

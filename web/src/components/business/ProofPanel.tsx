@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AccountLink, Panel, Term } from "@/components/ui";
 import { attestationUrl, deployment, txUrl } from "@/lib/config";
-import { money, shortHash } from "@/lib/format";
+import { dateTime, money, shortHash } from "@/lib/format";
 import { GLOSSARY } from "@/lib/glossary";
 import { checkBuild, checkCode, checkNoKeys, checkSolvent, latestAttestation, type Attestation, type Check } from "@/lib/near/proof";
 import type { Business } from "@/lib/near/types";
@@ -16,7 +16,7 @@ const CLAIMS: Record<string, { label: string; plain: string }> = {
   keys: { label: "Nobody can withdraw its money", plain: "The account has no keys at all, so no person, not even its owner, can move money out." },
   code: { label: "It runs the standard Lien contract", plain: "Its rules are the same public contract every Lien business runs." },
   build: { label: "Its program is public", plain: "Anyone can download the exact program it runs and check it is the one promised." },
-  ledger: { label: "Its books add up", plain: "The money it holds matches everything it owes." },
+  ledger: { label: "Its books add up", plain: "Every dollar it holds is accounted for: owed to lenders, to the owner, kept for running costs, or held for refunds and bids." },
   enclave: { label: "Its work runs on a sealed computer", plain: "Each check runs on a secure computer that proves which program it ran." },
 };
 
@@ -79,7 +79,7 @@ export function ProofPanel({ business: b, listed }: { business: Business; listed
     const set = (row: Row) => { if (alive) setRows((all) => ({ ...all, ledger: row })); };
     const parsed = JSON.parse(ledgerKey) as Business["ledger"];
     toRow(
-      checkSolvent({ id, ledger: parsed } as Business).then((c) => ({ ok: c.ok, detail: `Holds ${money(c.held)}, owes ${money(c.owed)}` })),
+      checkSolvent({ id, ledger: parsed } as Business).then((c) => ({ ok: c.ok, detail: c.ok ? `Holds ${money(c.held)}, and every dollar of it is accounted for` : `Holds ${money(c.held)}, but its books account for ${money(c.owed)}` })),
       set,
       "Comparing what it holds with what it owes",
     );
@@ -127,7 +127,7 @@ export function ProofPanel({ business: b, listed }: { business: Business; listed
 function AttestationRow({ attestation, pinned, jobsDone }: { attestation: Attestation | null | undefined; pinned: string; jobsDone: number }) {
   if (attestation === undefined) return <Result claim="enclave" state="checking" detail="Finding the latest proof from the secure computer" />;
   if (attestation === null) {
-    return <Result claim="enclave" state="unknown" waiting={jobsDone === 0} detail={jobsDone === 0 ? "No checks have run yet. The proof appears with the first one." : "No proof was found among recent transactions."} />;
+    return <Result claim="enclave" state="unknown" waiting={jobsDone === 0} detail={jobsDone === 0 ? "No checks have run yet. The proof appears with the first one." : "Couldn't load the proof right now. Use Check again to retry."} />;
   }
   const matches = attestation.executed_wasm_sha256 === pinned;
   return (
@@ -138,8 +138,19 @@ function AttestationRow({ attestation, pinned, jobsDone }: { attestation: Attest
         <>
           {matches ? "The latest Intel TDX quote names the pinned program. " : "The latest quote names a different program. "}
           <Term tip={GLOSSARY.sealedComputer}>What is this?</Term>{" · "}
-          <a className="link" href={attestationUrl(attestation.transaction_hash)} target="_blank" rel="noreferrer">See the quote</a>{" · "}
           <a className="link" href={txUrl(attestation.transaction_hash)} target="_blank" rel="noreferrer">See the transaction</a>
+          {/* The quote itself, as this page just loaded it, so the evidence never depends on a link working later. */}
+          <details className="mt-2" data-testid="quote">
+            <summary className="cursor-pointer text-[var(--ink-2)] hover:text-[var(--ink)]">Show the quote</summary>
+            <dl className="dl mt-2 rounded-[10px] bg-[var(--surface-2)] p-3 text-[13px]">
+              <dt>Program that ran</dt><dd><code>{shortHash(attestation.executed_wasm_sha256)}</code></dd>
+              <dt>Request</dt><dd>#{attestation.request_id}</dd>
+              <dt>When</dt><dd>{dateTime(Number(attestation.timestamp))}</dd>
+              <dt>Worker measurement</dt><dd><code>{shortHash(attestation.worker_measurement)}</code></dd>
+              <dt>Intel TDX quote</dt><dd><code title={attestation.tdx_quote}>{attestation.tdx_quote.slice(0, 24)}…</code></dd>
+            </dl>
+            <a className="link mt-2 inline-block" href={attestationUrl(attestation.transaction_hash)} target="_blank" rel="noreferrer">Open it on OutLayer</a>
+          </details>
         </>
       )}
     />
