@@ -1564,6 +1564,7 @@ class Diagram {
       if (other && other !== b) return;
       b = this.btn = h('button', 'loop-pause dg-pause', host);
       b.type = 'button';
+      b.dataset.loopName = loopName(host);
       b.addEventListener('click', () => (this.userPaused ? this.play() : this.pause()));
     }
     const corner = this.corner || 'br';
@@ -1576,7 +1577,7 @@ class Diagram {
     }
     const paused = this.userPaused;
     b.setAttribute('aria-pressed', paused ? 'true' : 'false');
-    b.setAttribute('aria-label', paused ? 'Play animation' : 'Pause animation');
+    b.setAttribute('aria-label', `${paused ? 'Play' : 'Pause'} animation: ${b.dataset.loopName}`);
     b.classList.toggle('is-paused', paused);
     const icon = paused ? '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M4 2.5v9l7.5-4.5z"/></svg>' : '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 2.5h2.5v9H3.5zM8 2.5h2.5v9H8z"/></svg>';
     if (b.dataset.state !== String(paused)) { b.innerHTML = icon; b.dataset.state = String(paused); }
@@ -1686,3 +1687,17 @@ const api = { mount, auto, presets, ready, instances, version: '1.2.0' };
 if (typeof window !== 'undefined') window.TPDiagram = api;
 export default api;
 export { mount, auto, presets, ready };
+
+// Every pause button on a page needs its own name for screen readers: "Pause animation: How it works".
+// The name comes from the nearest labelled region; a second loop in the same region is numbered.
+function loopName(el) {
+  const __loopNames = (globalThis.__loopNames = globalThis.__loopNames || new Map());
+  const labelled = el.closest('[aria-labelledby]');
+  const heading = labelled && document.getElementById(labelled.getAttribute('aria-labelledby').split(' ')[0]);
+  const labelEl = el.closest('[aria-label]:not(button)');
+  const raw = (heading && heading.textContent) || (labelEl && labelEl.getAttribute('aria-label')) || document.title || 'this page';
+  const base = raw.split(':')[0].replace(/\s+/g, ' ').trim().slice(0, 60);
+  const n = (__loopNames.get(base) || 0) + 1;
+  __loopNames.set(base, n);
+  return n > 1 ? `${base} (${n})` : base;
+}

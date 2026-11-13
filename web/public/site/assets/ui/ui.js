@@ -199,8 +199,9 @@ export function pausable(box, ctl) {
     btn.type = 'button';
     btn.className = 'ui-pause loop-pause';
     p = { btn, ctls: new Set(), paused: false, off: () => {} };
+    const name = loopName(card || box);
     const show = () => {
-      const label = `${p.paused ? 'Play' : 'Pause'} animation`;
+      const label = `${p.paused ? 'Play' : 'Pause'} animation: ${name}`;
       btn.innerHTML = p.paused ? ICON_PLAY : ICON_PAUSE;
       btn.setAttribute('aria-label', label);
       btn.title = label;
@@ -731,3 +732,17 @@ export const withLoop = (ctl, destroy) => ({ pause: ctl.pause, resume: ctl.resum
 
 const ui = { load, loadAll, start, startAll, plan, loop, restart, hold, pausable, grounds, isStill, reduced, POINTER_SVG };
 export default ui;
+
+// Every pause button on a page needs its own name for screen readers: "Pause animation: How it works".
+// The name comes from the nearest labelled region; a second loop in the same region is numbered.
+function loopName(el) {
+  const __loopNames = (globalThis.__loopNames = globalThis.__loopNames || new Map());
+  const labelled = el.closest('[aria-labelledby]');
+  const heading = labelled && document.getElementById(labelled.getAttribute('aria-labelledby').split(' ')[0]);
+  const labelEl = el.closest('[aria-label]:not(button)');
+  const raw = (heading && heading.textContent) || (labelEl && labelEl.getAttribute('aria-label')) || document.title || 'this page';
+  const base = raw.split(':')[0].replace(/\s+/g, ' ').trim().slice(0, 60);
+  const n = (__loopNames.get(base) || 0) + 1;
+  __loopNames.set(base, n);
+  return n > 1 ? `${base} (${n})` : base;
+}

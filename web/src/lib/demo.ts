@@ -19,6 +19,14 @@ export function isSample(id: string): boolean {
 /** A sample the Lien team still owns. */
 export const isTeamSample = (b: { id: string; operator: string }) => isSample(b.id) && TEAM.has(b.operator);
 
+/** Owned by a free test account made in a browser (lib/wallet/guest.ts), or by a test script. */
+export const isGuestOwned = (b: { operator: string }) =>
+  /\.guests\.[a-z\d-]+\.testnet$/.test(b.operator) || b.operator.startsWith("lien-guest-");
+
+/** Businesses made to poke at the product (reviews, audits, probes), named as such. */
+export const looksLikeProbe = (b: { id: string; name: string }) =>
+  /\b(probe|audit|critic|test|lumen)\b/i.test(b.name) || /^(audit|critic|probe|lumen)-/.test(b.id);
+
 /** A sample someone bought at auction. */
 export const isBoughtSample = (b: { id: string; operator: string }) => isSample(b.id) && !TEAM.has(b.operator);
 

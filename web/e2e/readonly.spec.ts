@@ -48,6 +48,9 @@ test.describe("landing page", () => {
     await page.getByTestId("sim-stop").click();
     await expect(page.getByTestId("notice")).toHaveAttribute("data-state", "active");
     await expect(page.getByTestId("notice")).toContainText("Lien released");
+    // 80% of $4,000 is more than the whole debt: the figure says so instead of a different number.
+    await expect(page.getByTestId("monthly-lender")).toHaveText("$1,100, the whole debt (80% would be $3,200)");
+    await expect(page.getByTestId("notice")).not.toContainText("keeps everything");
   });
 
   test("never scrolls sideways", async ({ page }) => {
