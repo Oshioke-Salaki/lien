@@ -3,9 +3,9 @@
 // on every poll gets throttled (429s, CORS-blocked retries); one cached server read does not.
 // Every figure still comes from the contracts' own views.
 
-import { listBusinesses, getCredit, getJobs, getLoans, getNote, isTestRun } from "./near/rpc";
+import { listBusinesses, listBusinessIds, getBusiness, getCredit, getJobs, getLoans, getNote, isTestRun } from "./near/rpc";
 import type { Business, LoanView, NoteView } from "./near/types";
-import { isTeamSample } from "./demo";
+import { isGuestOwned, isTeamSample, looksLikeProbe } from "./demo";
 import { distinctName } from "./names";
 
 export type Activity = { at: number; businessId: string; businessName: string; text: string; key: string };
@@ -26,11 +26,7 @@ export type MarketStats = {
 
 export type MarketSnapshot = { businesses: Business[]; stats: MarketStats; activity: Activity[]; at: number };
 
-const money = (units: string | bigint) => {
-  const v = BigInt(units);
-  const cents = (v + 5_000n) / 10_000n;
-  return `$${(cents / 100n).toLocaleString("en-US")}.${(cents % 100n).toString().padStart(2, "0")}`;
-};
+import { money, repaidMoney } from "./format";
 
 function activityFor(b: Business, loans: LoanView[], jobs: Awaited<ReturnType<typeof getJobs>>, all: Business[]): Activity[] {
   const items: Activity[] = [];
@@ -45,13 +41,18 @@ function activityFor(b: Business, loans: LoanView[], jobs: Awaited<ReturnType<ty
     if (loan.activated_at) items.push({ ...base, at: loan.activated_at, key: `${b.id}:loan:${loan.id}:active`, text: `raised its ${size} loan in full` });
     if (loan.foreclosed_at) items.push({ ...base, at: loan.foreclosed_at, key: `${b.id}:loan:${loan.id}:taken`, text: "was taken over for its lenders after missing payments" });
     if (loan.closed_at && loan.status === "Repaid") items.push({ ...base, at: loan.closed_at, key: `${b.id}:loan:${loan.id}:repaid`, text: `paid back its ${size} loan in full` });
-    if (loan.closed_at && loan.status === "Sold") items.push({ ...base, at: loan.closed_at, key: `${b.id}:loan:${loan.id}:sold`, text: `was sold at auction; lenders recovered ${money(loan.repaid)} of ${money(loan.terms.total_due)}` });
+    if (loan.closed_at && loan.status === "Sold") items.push({ ...base, at: loan.closed_at, key: `${b.id}:loan:${loan.id}:sold`, text: `was sold at auction; lenders recovered ${repaidMoney(loan.terms.total_due, loan.repaid)} of ${money(loan.terms.total_due)}` });
   }
   return items;
 }
 
-/** Featured on the market: the team's own samples, and any business real customers use. */
-export const isFeatured = (b: Business) => isTeamSample(b) || b.stats.unique_payers >= 3;
+/**
+ * Featured on the market: the team's own samples, and any business real customers use. Probes
+ * and businesses owned by throwaway test accounts stay in the folded "started by visitors" list,
+ * however many people tried them.
+ */
+export const isFeatured = (b: Business) =>
+  isTeamSample(b) || (b.stats.unique_payers >= 3 && !isGuestOwned(b) && !looksLikeProbe(b));
 
 export async function readMarket(): Promise<MarketSnapshot> {
   const businesses = await listBusinesses();
@@ -108,63 +109,110 @@ export type PositionsSnapshot = {
   bids: string[];
   /** Auctions this account won: the business it bought, and for how much. */
   bought: Array<{ businessId: string; price: string }>;
+  /** Businesses whose loans, notes and credit were read (fresh, or from the last good read). */
+  readIds: string[];
   checked: number;
   total: number;
   unread: number;
-  /** Businesses that could not be read in time, so the page can say which. */
+  /** Businesses that could not be read in time, so the page can say which and keep what it had. */
   unreadIds: string[];
   at: number;
 };
 
-const withTimeout = <T,>(work: Promise<T>, ms: number) =>
-  Promise.race([work, new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))]);
+/** Settles within `ms` or rejects, so one slow node never holds up the whole page. */
+export const within = <T,>(work: Promise<T>, ms: number) => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    work,
+    new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("timeout")), ms); }),
+  ]).finally(() => clearTimeout(timer));
+};
+
+/** Runs `task` over `items` with at most `limit` at once. */
+export async function pool<T>(items: T[], limit: number, task: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) await task(items[next++]!);
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
+
+type Holding = {
+  notes: Array<{ loan: LoanView; note: NoteView }>;
+  credit: bigint;
+  bought: Array<{ price: string }>;
+};
+
+/** The last good read of each business for each account, so a slow node never erases a row. */
+const lastGood = new Map<string, Map<string, Holding>>();
+
+/** What a business holds for an account. A business that never borrowed has no notes to read. */
+async function readHolding(b: Business, account: string): Promise<Holding> {
+  if (b.loan_count === 0) return { notes: [], credit: await getCredit(b.id, account), bought: [] };
+  const [loans, credit] = await Promise.all([getLoans(b.id), getCredit(b.id, account)]);
+  // An offer cancelled before anyone lent holds no notes.
+  const lendable = loans.filter((loan) => !(loan.status === "Cancelled" && loan.funded === "0"));
+  const notes = await Promise.all(lendable.map(async (loan) => ({ loan, note: await getNote(b.id, loan.id, account) })));
+  return {
+    notes: notes.flatMap(({ loan, note }) => (note ? [{ loan, note }] : [])),
+    credit,
+    bought: loans.flatMap((loan) => (loan.status === "Sold" && loan.auction.high_bidder === account ? [{ price: loan.auction.high_bid }] : [])),
+  };
+}
 
 /**
- * Everything one account holds, across every business (test ones too, since a position can
- * sit anywhere). Read in batches within a time budget: a partial answer, with how far it got,
- * beats a page that waits forever.
+ * Everything one account holds, read once on the server with a small pool of workers.
+ * Automated test runs are skipped unless the account owns one or the browser says it dealt
+ * with one (`also`). A business that cannot be read in time keeps its last good answer; only
+ * one never read counts as unread, and it is read first on the next request (`first`).
  */
-export async function readPositions(account: string, budgetMs = 14_000): Promise<PositionsSnapshot> {
+export async function readPositions(account: string, { first = [], also = [] }: { first?: string[]; also?: string[] } = {}, budgetMs = 14_000): Promise<PositionsSnapshot> {
   const started = Date.now();
-  const businesses = await listBusinesses({ includeTests: true });
-  // Real businesses first, test runs last: if time runs out, it is the test runs that wait.
-  const ordered = [...businesses].sort((a, b) => Number(isTestRun(a.id)) - Number(isTestRun(b.id)));
+  const ids = await within(listBusinessIds(), 8_000);
+  const listed = await Promise.allSettled(ids.map((id) => within(getBusiness(id), 8_000)));
+  const businesses = listed.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+  const unreadIds = ids.filter((_, i) => listed[i]!.status !== "fulfilled");
+  const extra = new Set(also);
+  const scanned = businesses.filter((b) => !isTestRun(b.id) || b.operator === account || extra.has(b.id));
+
+  const memory = lastGood.get(account) ?? new Map<string, Holding>();
+  // Most recently asked last, and only so many accounts kept: the oldest is forgotten first.
+  lastGood.delete(account);
+  lastGood.set(account, memory);
+  if (lastGood.size > 500) lastGood.delete(lastGood.keys().next().value!);
+  // Never read before, or asked for first: those go to the front of the queue.
+  const urgent = new Set(first);
+  const rank = (b: Business) => (urgent.has(b.id) || !memory.has(b.id) ? 0 : 1);
+  const ordered = [...scanned].sort((a, b) => rank(a) - rank(b));
+
+  await pool(ordered, 6, async (b) => {
+    const left = budgetMs - (Date.now() - started);
+    if (left < 500) return;
+    try {
+      memory.set(b.id, await within(readHolding(b, account), Math.min(8_000, left)));
+    } catch {
+      /* the last good read, if any, stands */
+    }
+  });
+
   const positions: PositionJson[] = [];
   const credits: Array<{ businessId: string; amount: string }> = [];
   const bought: Array<{ businessId: string; price: string }> = [];
   const held = new Set<string>();
-  const unreadIds: string[] = [];
-
-  const readOne = async (b: Business) => {
-    const [loans, credit] = await Promise.all([getLoans(b.id), getCredit(b.id, account)]);
-    const notes = await Promise.all(loans.map(async (loan) => ({ loan, note: await getNote(b.id, loan.id, account) })));
-    return { credit, notes, loans };
-  };
-
-  // A small pool instead of batches: one slow business never holds up the next five.
-  let next = 0;
-  const worker = async () => {
-    while (next < ordered.length) {
-      const b = ordered[next++]!;
-      const left = budgetMs - (Date.now() - started);
-      if (left < 500) { unreadIds.push(b.id); continue; }
-      try {
-        const { credit, notes, loans } = await withTimeout(readOne(b), Math.min(6_000, left));
-        for (const { loan, note } of notes) if (note) { positions.push({ businessId: b.id, loan, note }); held.add(b.id); }
-        if (credit > 0n) { credits.push({ businessId: b.id, amount: credit.toString() }); held.add(b.id); }
-        for (const loan of loans) {
-          if (loan.status === "Sold" && loan.auction.high_bidder === account) { bought.push({ businessId: b.id, price: loan.auction.high_bid }); held.add(b.id); }
-        }
-      } catch {
-        unreadIds.push(b.id);
-      }
-    }
-  };
-  await Promise.all(Array.from({ length: 8 }, worker));
+  const readIds: string[] = [];
+  for (const b of scanned) {
+    const holding = memory.get(b.id);
+    if (!holding) { unreadIds.push(b.id); continue; }
+    readIds.push(b.id);
+    for (const { loan, note } of holding.notes) { positions.push({ businessId: b.id, loan, note }); held.add(b.id); }
+    if (holding.credit > 0n) { credits.push({ businessId: b.id, amount: holding.credit.toString() }); held.add(b.id); }
+    for (const { price } of holding.bought) { bought.push({ businessId: b.id, price }); held.add(b.id); }
+  }
 
   const operated = businesses.filter((b) => b.operator === account).map((b) => b.id);
   const bids = businesses.filter((b) => b.current_loan?.status === "Foreclosed" && b.current_loan.auction.high_bidder === account).map((b) => b.id);
   const keep = new Set([...held, ...operated, ...bids]);
+  const total = scanned.length + (ids.length - businesses.length);
   return {
     businesses: businesses.filter((b) => keep.has(b.id)),
     positions,
@@ -172,8 +220,9 @@ export async function readPositions(account: string, budgetMs = 14_000): Promise
     operated,
     bids,
     bought,
-    checked: ordered.length - unreadIds.length,
-    total: ordered.length,
+    readIds,
+    checked: readIds.length,
+    total,
     unread: unreadIds.length,
     unreadIds,
     at: Math.floor(Date.now() / 1000),

@@ -9,6 +9,9 @@ import { dateTime, money, pct, share } from "@/lib/format";
 import { claim, withdrawCredit } from "@/lib/near/actions";
 import { ShareTransfer } from "@/components/business/ShareTransfer";
 import { fetchPositions } from "@/lib/snapshotClient";
+import { mergePositions } from "@/lib/positions";
+import { remembered } from "@/lib/mine";
+import { isTestRun } from "@/lib/near/rpc";
 import type { PositionsSnapshot } from "@/lib/snapshot";
 import type { Business, LoanStatus, LoanView, NoteView } from "@/lib/near/types";
 import { standing } from "@/lib/status";
@@ -38,19 +41,28 @@ function toData(snapshot: PositionsSnapshot): Data {
 
 /**
  * Positions, read by the server in one request (lib/snapshot.ts) instead of dozens of RPC
- * calls from this browser, re-read after every transaction and every 15 seconds. If the
- * server ran out of time, it says how far it got and the next read carries on.
+ * calls from this browser, re-read after every transaction and every 15 seconds. Each read
+ * is folded into the last (lib/positions.ts): a business the server could not reach this
+ * time keeps its rows, and is asked for first next time, so the count only ever goes up.
  */
 function usePositions(account: string | null) {
   const [state, setState] = useState<{ for: string | null; data?: Data; checked: number; total: number; error?: string }>({ for: null, checked: 0, total: 0 });
   const generation = useRef(0);
+  const last = useRef<{ for: string | null; snapshot?: PositionsSnapshot }>({ for: null });
   const refresh = useCallback(async () => {
     if (!account) return;
     const mine = ++generation.current;
+    const prev = last.current.for === account ? last.current.snapshot : undefined;
     try {
-      const snapshot = await fetchPositions(account);
-      if (mine === generation.current) setState({ for: account, data: toData(snapshot), checked: snapshot.checked, total: snapshot.total });
+      const snapshot = await fetchPositions(account, { first: prev?.unreadIds, also: remembered(account).filter(isTestRun) });
+      // A later read may have landed first: fold into whatever is newest, never replace it.
+      const base = last.current.for === account ? last.current.snapshot : undefined;
+      const merged = mergePositions(base, snapshot);
+      last.current = { for: account, snapshot: merged };
+      if (mine === generation.current || !base) setState({ for: account, data: toData(merged), checked: merged.checked, total: merged.total });
+      else setState((s) => (s.for === account ? { ...s, data: toData(merged), checked: merged.checked, total: merged.total } : s));
     } catch (error) {
+      // What was already on screen stays; only a first read with nothing to show is an error.
       if (mine === generation.current) setState((s) => ({ ...s, for: account, error: error instanceof Error ? error.message : String(error) }));
     }
   }, [account]);
@@ -58,8 +70,14 @@ function usePositions(account: string | null) {
     void refresh();
     const now = () => void refresh();
     window.addEventListener(REFRESH_EVENT, now);
-    const timer = setInterval(() => { if (document.visibilityState === "visible") void refresh(); }, 15_000);
-    return () => { window.removeEventListener(REFRESH_EVENT, now); clearInterval(timer); };
+    // Faster while some businesses are still unread, then every 15 seconds.
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const pending = (last.current.snapshot?.unread ?? 1) > 0;
+      timer = setTimeout(() => { if (document.visibilityState === "visible") void refresh(); tick(); }, pending ? 5_000 : 15_000);
+    };
+    tick();
+    return () => { window.removeEventListener(REFRESH_EVENT, now); clearTimeout(timer); };
   }, [refresh]);
   const current = state.for === account ? state : { data: undefined, checked: 0, total: 0, error: undefined };
   return { data: current.data, checked: current.checked, total: current.total, error: current.error, refresh };
@@ -87,10 +105,13 @@ export function PortfolioScreen() {
   const data = live.data;
   const claimable = data?.positions.reduce((sum, p) => sum + BigInt(p.note.claimable), 0n) ?? 0n;
   const owed = data?.credits.reduce((sum, c) => sum + c.amount, 0n) ?? 0n;
-  const lent = data?.positions.reduce((sum, p) => sum + BigInt(p.note.principal), 0n) ?? 0n;
   const ready_to_collect = claimable + owed;
+  const inBids = data?.bids.reduce((sum, b) => sum + BigInt(b.current_loan!.auction.high_bid), 0n) ?? 0n;
+  // Every loan counts, including closed ones; a cancelled offer's money went back, so it is not "lent".
+  const openLoans = data?.positions.filter((p) => p.loan.status !== "Cancelled") ?? [];
+  const lent = openLoans.reduce((sum, p) => sum + BigInt(p.note.principal), 0n);
   // Only a complete read may say "none": a partial one says it is still checking.
-  const complete = !!data && live.total > 0 && live.checked >= live.total && data.unread === 0;
+  const complete = !!data && live.checked >= live.total && data.unread === 0;
   const nameOf = (b: Business) => distinctName(b, data?.all ?? []);
   const stillChecking = <p className="rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px] text-[var(--ink-2)]">Still checking the rest of the market…</p>;
   const nowSecs = data?.readAt ?? 0;
@@ -106,7 +127,7 @@ export function PortfolioScreen() {
           <Panel>
             <p className="text-[14px] muted">Ready to collect</p>
             <p className="num mt-1 text-[clamp(44px,5.4vw,64px)] leading-none font-medium tracking-[-0.03em]" data-testid="collect-total">{money(ready_to_collect)}</p>
-            <p className="mt-3 text-[15px] text-[var(--ink-2)]">{data.positions.length ? `You lent ${money(lent)} in total, across ${data.positions.length} ${data.positions.length === 1 ? "loan" : "loans"}. Repayments arrive with every sale those businesses make; collect them any time.` : complete ? "You have not lent yet." : "Looking for your loans…"}</p>
+            <p className="mt-3 text-[15px] text-[var(--ink-2)]">{data.positions.length ? `You lent ${money(lent)} in total, across ${openLoans.length} ${openLoans.length === 1 ? "loan" : "loans"}${openLoans.length !== data.positions.length ? `, plus ${data.positions.length - openLoans.length} cancelled ${data.positions.length - openLoans.length === 1 ? "offer" : "offers"} that hand your money back` : ""}. Repayments arrive with every sale those businesses make; collect them any time.` : complete ? "You have not lent yet." : "Looking for your loans…"}{inBids > 0n ? ` You also have ${money(inBids)} in ${data.bids.length === 1 ? "a bid" : `${data.bids.length} bids`}, held until the auction ends or someone outbids you.` : ""}</p>
           </Panel>
 
           {data.credits.length ? (

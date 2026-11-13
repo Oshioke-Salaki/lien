@@ -30,4 +30,5 @@ const markets = new Map<string, Entry<MarketSnapshot>>();
 const positions = new Map<string, Entry<PositionsSnapshot>>();
 
 export const cachedMarket = () => cached(markets, "market", 5_000, readMarket);
-export const cachedPositions = (account: string) => cached(positions, account, 4_000, () => readPositions(account));
+export const cachedPositions = (account: string, hints: { first?: string[]; also?: string[] } = {}) =>
+  cached(positions, `${account}|${[...(hints.first ?? [])].sort().join(",")}|${[...(hints.also ?? [])].sort().join(",")}`, 4_000, () => readPositions(account, hints));
