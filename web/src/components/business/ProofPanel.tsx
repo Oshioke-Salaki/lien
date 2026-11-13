@@ -58,6 +58,8 @@ const toRow = (promise: Promise<Check>, set: (row: Row) => void, fallback: strin
 export function ProofPanel({ business: b, listed }: { business: Business; listed: boolean | undefined }) {
   const [rows, setRows] = useState<Record<string, Row>>({});
   const [attestation, setAttestation] = useState<Attestation | null | undefined>(undefined);
+  // Bumped by "Check again", which reruns every check against its source.
+  const [round, setRound] = useState(0);
   const { id } = b;
   const { url, hash } = b.service.wasm;
   const jobsDone = b.stats.jobs_done;
@@ -70,7 +72,7 @@ export function ProofPanel({ business: b, listed }: { business: Business; listed
     toRow(checkCode(id), set("code"), "Comparing its code with the published one");
     toRow(checkBuild(url, hash), set("build"), "Downloading the program and fingerprinting it here");
     return () => { alive = false; };
-  }, [id, url, hash]);
+  }, [id, url, hash, round]);
 
   useEffect(() => {
     let alive = true;
@@ -82,14 +84,16 @@ export function ProofPanel({ business: b, listed }: { business: Business; listed
       "Comparing what it holds with what it owes",
     );
     return () => { alive = false; };
-  }, [id, ledgerKey]);
+  }, [id, ledgerKey, round]);
 
   useEffect(() => {
     let alive = true;
     if (jobsDone === 0) return;
     latestAttestation(id).then((a) => { if (alive) setAttestation(a); }).catch(() => { if (alive) setAttestation(null); });
     return () => { alive = false; };
-  }, [id, jobsDone]);
+  }, [id, jobsDone, round]);
+
+  const unreached = Object.values(rows).some((r) => r.state === "unknown") || (jobsDone > 0 && attestation === null);
 
   const order = ["keys", "code", "build", "ledger"] as const;
   return (
@@ -101,6 +105,12 @@ export function ProofPanel({ business: b, listed }: { business: Business; listed
         {order.map((key) => (rows[key] ? <Result key={key} claim={key} state={rows[key].state} detail={rows[key].detail} /> : null))}
         <AttestationRow attestation={jobsDone === 0 ? null : attestation} pinned={hash} jobsDone={jobsDone} />
       </ul>
+      {unreached ? (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-[var(--surface-2)] px-4 py-3 text-[14px]">
+          <span className="text-[var(--ink-2)]">A public source did not answer in time. Nothing failed; it simply was not checked.</span>
+          <button type="button" className="btn btn-secondary btn-sm" data-testid="proof-retry" onClick={() => { setAttestation(undefined); setRound((r) => r + 1); }}>Check again</button>
+        </div>
+      ) : null}
       <details className="mt-3 text-[14px]">
         <summary className="cursor-pointer py-2 text-[var(--ink-2)] hover:text-[var(--ink)]">Show the technical proof</summary>
         <dl className="dl mt-2 rounded-[12px] bg-[var(--surface-2)] p-4 text-[14px]">
