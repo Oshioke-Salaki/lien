@@ -45,7 +45,7 @@ function simulator() {
     set('[data-testid="monthly-lender"]', dollars(split.lender));
     set('[data-sim="operator"]', dollars(split.operator));
     set('[data-sim="opex"]', dollars(split.opex));
-    set('[data-testid="payoff"]', months === null ? "never" : `${months} ${months === 1n ? "month" : "months"}`);
+    set('[data-testid="payoff"]', months === null || months > 12n ? "Not within the 12-month term" : `${months} ${months === 1n ? "month" : "months"}`);
     set('[data-sim="repaid"]', dollars(repaid));
     set('[data-testid="still-owed"]', dollars(outstanding));
     set('[data-sim="price"]', dollars(price));
@@ -64,7 +64,7 @@ function simulator() {
     $('[data-sim="running"]', root).hidden = noticed;
     $('[data-sim="stopped"]', root).hidden = !noticed;
     stop.setAttribute("aria-pressed", String(stopped));
-    stop.textContent = stopped ? "Start paying again" : "Stop the payments after 3 months";
+    stop.textContent = stopped ? "Let its sales run again" : "Stop its sales after 3 months";
   };
 
   for (const input of [revenue, share]) input.addEventListener("input", render);
@@ -89,7 +89,9 @@ async function view(account, method, args = {}) {
   throw new Error("unreachable");
 }
 
-const tusd = (v) => (Number(BigInt(v)) / 1e6).toFixed(2);
+const cents = (v) => (BigInt(v) + 5_000n) / 10_000n; // half up, 6-decimal token to cents
+const fromCents = (c) => `${c / 100n}.${String(c % 100n).padStart(2, "0")}`;
+const tusd = (v) => fromCents(cents(v));
 const isTest = (id) => id.startsWith("e2e-") || id.startsWith("ui-");
 
 async function live() {
@@ -112,8 +114,9 @@ async function live() {
     const sentinel = all[ids.indexOf(`sentinel.${REGISTRY}`)];
     const loan = sentinel?.status === "fulfilled" ? sentinel.value.current_loan : null;
     if (loan) {
-      set("sentinel-owed", tusd(loan.outstanding));
+      // Owed is the rounded total less the rounded repaid, so the two always add up to the total.
       set("sentinel-repaid", tusd(loan.repaid));
+      set("sentinel-owed", fromCents(cents(loan.terms.total_due) - cents(loan.repaid)));
       set("sentinel-holders", String(loan.holders));
       set("sentinel-state", loan.is_behind ? "Behind" : loan.status === "Active" ? "Paying on time" : loan.status);
       const bar = document.querySelector('[data-live-bar="sentinel"]');

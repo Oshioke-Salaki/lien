@@ -214,7 +214,7 @@
             <div class="menu-col span-3">
               <p class="t-label">Lenders</p>
               <a href="#market">The market<span>Every loan, read from the chain</span></a>
-              <a href="#try">The simulator<span>Stop the payments, see the recovery</span></a>
+              <a href="#try">The simulator<span>Stop its sales, see what lenders recover</span></a>
               <a href="/portfolio">Your positions<span>Notes, payouts and claims</span></a>
             </div>
             <div class="menu-col span-3">
@@ -274,7 +274,7 @@
                 <div class="biz__row"><span>Repaid $<b data-live="sentinel-repaid">15.53</b> of $110.00</span><span>Due 2 Feb</span></div>
                 <div class="biz__row"><span>How each $0.25 sale is split</span></div>
                 <div class="biz__split" aria-hidden="true"><i></i><i></i><i></i></div>
-                <div class="biz__legend"><span>Lenders<b>$0.075</b></span><span>Owner<b>$0.05</b></span><span>Running costs<b>$0.125</b></span></div>
+                <div class="biz__legend"><span>Lenders<b>$0.075</b></span><span>Owner<b>$0.05</b></span><span>Kept for running costs<b>$0.125</b></span></div>
                 <ul class="biz__jobs ui-list" data-live="sentinel-jobs">
                   <li><span>check near-faucet.testnet</span><span class="biz__lvl is-high">High risk</span><span>$0.25</span></li>
                   <li><span>is v1.lien-13569.testnet safe to pay?</span><span class="biz__lvl is-medium">Medium risk</span><span>$0.25</span></li>
@@ -396,7 +396,7 @@
               <div class="ui ui-notify" data-ui="notify" data-ui-still>
                 <ul class="ui-notify__list" data-notify-list>
                   <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Sentinel Late taken over<time>now</time></span><span class="ui-note__body">Its owner's share now goes to lenders</span></span><span class="ui-btn ui-btn--sm ui-note__btn">Bid</span></li>
-                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Grace period over<time>1m</time></span><span class="ui-note__body">$10.00 due, 0.08 paid</span></span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Grace period over<time>1m</time></span><span class="ui-note__body">$10.00 due, $0.08 paid</span></span></li>
                   <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Check sold for $0.25<time>3m</time></span><span class="ui-note__body">Still serving customers</span></span></li>
                 </ul>
               </div>
@@ -467,14 +467,14 @@
     <div class="wrap">
       <div class="grid">
         <h2 id="try-h" class="span-6">Stop a business paying its loan. <span class="muted">See what lenders get back.</span></h2>
-        <p class="span-5 start-8">A 1,000 dollar loan to a business that sells checks, owing 1,100. The numbers come from the same rule the contract runs.</p>
+        <p class="span-5 start-8">A $1,000 loan over 12 months to a business that sells checks, owing $1,100. Its sales repay lenders automatically; the numbers come from the same rule the contract runs.</p>
       </div>
       <div class="sim">
         <div class="sim__controls">
           <div class="sim__field"><div><label for="sim-revenue">Revenue a month</label><output for="sim-revenue" data-out="revenue">$800</output></div><input id="sim-revenue" data-testid="sim-revenue" type="range" min="100" max="4000" step="100" value="800"></div>
           <div class="sim__field"><div><label for="sim-share">Lenders' share of each sale</label><output for="sim-share" data-out="share">30%</output></div><input id="sim-share" data-testid="sim-share" type="range" min="5" max="80" step="5" value="30"></div>
           <div class="sim__field"><div><label for="sim-bid">Winning bid at auction</label><output for="sim-bid" data-out="bid">$500</output></div><input id="sim-bid" data-testid="sim-bid" type="range" min="100" max="1500" step="50" value="500"></div>
-          <div class="btn-row"><button class="btn btn--primary" type="button" data-testid="sim-stop" aria-pressed="false">Stop the payments after 3 months</button></div>
+          <div class="btn-row"><button class="btn btn--primary" type="button" data-testid="sim-stop" aria-pressed="false">Stop its sales after 3 months</button></div>
         </div>
         <div class="sim__record">
           <div class="notice" data-testid="notice" data-state="active" aria-live="polite">
@@ -486,7 +486,7 @@
               <dt>Owed in total</dt><dd>$1,100</dd>
               <dt>Lenders get each month</dt><dd data-testid="monthly-lender">$240</dd>
               <dt>Owner gets</dt><dd data-sim="operator">$160</dd>
-              <dt>Stays in the business</dt><dd data-sim="opex">$400</dd>
+              <dt>Kept for running costs</dt><dd data-sim="opex">$400</dd>
               <dt>Paid off in</dt><dd data-testid="payoff">5 months</dd>
             </dl>
             <dl data-sim="stopped" hidden>
