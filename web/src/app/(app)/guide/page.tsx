@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
+import { CodeBlock } from "@/components/CodeBlock";
 import { deployment, REPO_URL } from "@/lib/config";
 
 export const metadata: Metadata = { title: "Developer guide" };
 
-const Code = ({ children }: { children: string }) => (
-  // Code keeps its lines; on a phone it scrolls inside its own box instead of widening the page.
-  <pre className="max-w-full min-w-0 overflow-x-auto rounded-[12px] bg-[var(--surface)] p-4 text-[12.5px] leading-relaxed text-[var(--ink-2)] sm:p-5 sm:text-[13.5px]"><code>{children}</code></pre>
-);
+const Code = CodeBlock;
 
 export default function Page() {
   const example = `${"sentinel"}.${deployment.registry}`;
   return (
-    <article className="w-full max-w-[760px] min-w-0 space-y-10 text-[16px] leading-relaxed sm:text-[17px] [&_section]:min-w-0 [&_dd_code]:break-all [&_p_code]:break-words">
+    <article className="w-full max-w-[760px] min-w-0 overflow-x-hidden space-y-10 text-[16px] leading-relaxed sm:text-[17px] [&_section]:min-w-0 [&_dd_code]:break-all [&_p_code]:break-words">
       <header>
         <h1 className="text-[clamp(30px,3.4vw,40px)] leading-[1.05] font-medium tracking-[-0.025em]">Developer guide</h1>
         <p className="mt-3 text-[var(--ink-2)]">How an agent or an app buys from, pays, funds or watches a Lien business. Everything is a normal NEAR call.</p>
@@ -24,7 +22,7 @@ export default function Page() {
   json-args '{"receiver_id":"${example}","amount":"250000",
     "msg":"{\\"action\\":\\"job\\",\\"input\\":\\"is usdc.near safe?\\"}"}' \\
   prepaid-gas '300 Tgas' attached-deposit '1 yoctoNEAR' ...`}</Code>
-        <p>Then read the result by the id in the <code>job_started</code> event. It usually settles in under a minute; on testnet it can take a few.</p>
+        <p>Then read the result by the id in the <code>job_started</code> event. It usually settles in under a minute, sometimes up to two; when the test network is busy it can take a few.</p>
         <Code>{`near contract call-function as-read-only ${example} get_job \\
   json-args '{"job_id":0}' network-config ${deployment.network} now`}</Code>
       </section>
@@ -48,7 +46,7 @@ export default function Page() {
 
       <section className="space-y-3">
         <h2 className="text-[22px] font-medium tracking-[-0.015em]">Calls anyone can make</h2>
-        <p><code>foreclose</code> (take over) once a loan is past its extra time, <code>settle_auction</code> once an auction has ended, <code>cancel_offer</code> after a raise expires, <code>forward</code> on any inbox, <code>withdraw</code> for any account owed money, and <code>expire_job</code> for a job stuck for an hour. None of them can send money anywhere but where it is owed. There is a keeper in <code>ops/src/keeper.ts</code>.</p>
+        <p><code>foreclose</code> (take over) once a loan is past its extra time, <code>settle_auction</code> once an auction has ended, <code>cancel_offer</code> after a raise expires, <code>forward</code> on any inbox, <code>withdraw</code> for any account owed money, and <code>expire_job</code> for a job stuck for an hour. None of them can send money anywhere but where it is owed. There is <a className="link" href={`${REPO_URL}/blob/main/ops/src/keeper.ts`}>a keeper script in the repository</a> that does these chores for every business.</p>
       </section>
 
       <section className="space-y-3">

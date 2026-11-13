@@ -17,14 +17,14 @@ export function HistoryPanel({ business: b }: { business: Business }) {
     <Panel title="Loan history" aside={`${loans.length} ${loans.length === 1 ? "loan" : "loans"}`}>
       <div className="overflow-x-auto">
         <table className="table table-fixed">
-          <thead><tr><th scope="col" className="w-[56px]">Loan</th><th scope="col">Outcome</th><th scope="col" className="r w-[96px]">Borrowed</th><th scope="col" className="r w-[96px]">Paid back</th><th scope="col" className="r hidden w-[120px] sm:table-cell">Closed</th></tr></thead>
+          <thead><tr><th scope="col" className="w-[56px]">Loan</th><th scope="col">Outcome</th><th scope="col" className="r w-[96px]">Borrowed</th><th scope="col" className="r w-[140px]">Lenders got back</th><th scope="col" className="r hidden w-[150px] sm:table-cell">Closed</th></tr></thead>
           <tbody>
             {loans.map((loan) => (
               <tr key={loan.id}>
                 <td>{loan.id + 1}</td>
                 <td className="truncate">{WORD[loan.status]}</td>
                 <td className="r">{money(loan.terms.principal)}</td>
-                <td className="r">{money(loan.repaid)}</td>
+                <td className="r">{loan.status === "Funding" || loan.status === "Cancelled" ? <span className="muted">-</span> : `${money(loan.repaid)} of ${money(loan.terms.total_due)}`}</td>
                 <td className="r hidden whitespace-nowrap sm:table-cell">{loan.closed_at ? dateTime(loan.closed_at) : <span className="muted">-</span>}</td>
               </tr>
             ))}

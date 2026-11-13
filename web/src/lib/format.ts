@@ -51,6 +51,12 @@ export const money = (value: bigint | string) => {
   return dollars(v, amount(toCents(v)));
 };
 
+/**
+ * What is still owed, shown as the total minus what was repaid after rounding both to the cent,
+ * so "repaid" and "still owed" on one screen always add up to the total shown beside them.
+ */
+export const owedMoney = (totalDue: bigint | string, repaid: bigint | string) => money(toCents(totalDue) - toCents(repaid));
+
 /** A minimum, rounded up to the cent, so typing the shown number always clears it. */
 export const moneyUp = (value: bigint | string) => dollars(BigInt(value), amount(centsUp(value)));
 

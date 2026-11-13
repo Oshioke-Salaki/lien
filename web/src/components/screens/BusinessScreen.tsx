@@ -11,7 +11,7 @@ import { AccountLink, ErrorState, Skeleton, StandingLabel, Term } from "@/compon
 import { useChainNow, useLive } from "@/hooks/useLive";
 import { GLOSSARY } from "@/lib/glossary";
 import { getBusiness, listBusinessIds } from "@/lib/near/rpc";
-import { describe, isSample, SAMPLE_NOTE } from "@/lib/demo";
+import { describe, sampleNote } from "@/lib/demo";
 import type { Business } from "@/lib/near/types";
 import { standing } from "@/lib/status";
 
@@ -73,7 +73,7 @@ export function BusinessScreen({ id, initial }: { id: string; initial?: Business
           <StandingLabel standing={standing(b)} />
         </div>
         {b.description ? <p className="max-w-[64ch] text-[17px] leading-snug text-[var(--ink-2)]">{describe(b.id, b.description)}</p> : null}
-        {isSample(b.id) ? <p className="inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-3 py-1 text-[13px] text-[var(--ink-2)]" data-testid="sample-note"><span aria-hidden className="h-[6px] w-[6px] rounded-full bg-[var(--accent)]" />{SAMPLE_NOTE}</p> : null}
+        {sampleNote(b) ? <p className="inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-3 py-1 text-[13px] text-[var(--ink-2)]" data-testid="sample-note"><span aria-hidden className="h-[6px] w-[6px] rounded-full bg-[var(--accent)]" />{sampleNote(b)}</p> : null}
         <p className="flex flex-wrap gap-x-2 gap-y-1 text-[14px] muted">
           <span>An AI business at <AccountLink id={b.id} max={44} /></span>
           <span aria-hidden>·</span>

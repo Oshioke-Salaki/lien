@@ -18,7 +18,9 @@ export function ReportCard({ raw }: { raw: string | null }) {
         <span className="muted"> on {report.network}</span>
       </p>
       <p className="text-[22px] leading-tight font-medium">{report.level[0]!.toUpperCase()}{report.level.slice(1)} risk <span className="num text-[15px] font-normal muted">score {report.score} of 100, higher is riskier</span></p>
-      {MEANING[level] ? <p className="text-[15px]">{MEANING[level]}</p> : null}
+      {report.flags.includes("account_does_not_exist")
+        ? <p className="text-[15px]">No such account on NEAR: don&rsquo;t send anything to it.</p>
+        : MEANING[level] ? <p className="text-[15px]">{MEANING[level]}</p> : null}
       {report.flags.length ? (
         <ul className="list-disc space-y-1 pl-5 text-[15px]">
           {report.flags.map((flag) => <li key={flag}>{FLAG_TEXT[flag] ?? flag.replaceAll("_", " ")}</li>)}

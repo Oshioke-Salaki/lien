@@ -2,14 +2,14 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { txUrl } from "@/lib/config";
-import { REFRESH_EVENT } from "@/lib/events";
+import { REFRESH_EVENT, SETTLE_EVENT, type SettleDetail } from "@/lib/events";
 import type { TxRequest } from "@/lib/near/actions";
 import { friendlyError, isFeeShortfall, type TxResult } from "@/lib/near/outcome";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 
 export type Prepared = { summary: string; prepare: () => Promise<TxRequest> };
 
-type Notice = { id: number; tone: "pending" | "done" | "error"; title: string; text: string; hash?: string; faucet?: boolean };
+type Notice = { id: number; tone: "pending" | "done" | "error"; title: string; text: string; hash?: string; faucet?: boolean; summary?: string; settled?: boolean };
 
 const NEAR_FAUCET = "https://near-faucet.io/";
 
@@ -44,9 +44,10 @@ export function TxProvider({ children }: { children: ReactNode }) {
   const run = useCallback<TxContextValue["run"]>(async (request, options = {}) => {
     const id = ++counter.current;
     setBusy(true);
-    setNotices((all) => [...all.slice(-2), { id, tone: "pending", title: request.summary, text: options.pending ?? "Waiting for the network. This usually takes a few seconds." }]);
+    setNotices((all) => [...all.slice(-2), { id, tone: "pending", title: request.summary, summary: request.summary, text: options.pending ?? "Waiting for the network. This usually takes a few seconds." }]);
     const finish = (notice: Omit<Notice, "id">) => {
-      setNotices((all) => all.map((n) => (n.id === id ? { id, ...notice } : n)));
+      // A notice already settled by its outcome keeps saying so when the transaction confirms.
+      setNotices((all) => all.map((n) => (n.id === id ? (n.settled && notice.tone === "done" ? { ...n, hash: notice.hash ?? n.hash } : { id, ...notice }) : n)));
       if (notice.tone === "done") setTimeout(() => dismiss(id), 9_000);
     };
     const update = (text: string) => setNotices((all) => all.map((n) => (n.id === id ? { ...n, text } : n)));
@@ -62,8 +63,9 @@ export function TxProvider({ children }: { children: ReactNode }) {
       // Every screen re-reads the chain now, instead of on its next poll.
       if (result.ok) {
         window.dispatchEvent(new Event(REFRESH_EVENT));
-        // Providers lag each other by a block or two; a second read makes sure the page catches up.
+        // Providers lag each other by a block or two; later reads make sure every figure catches up.
         setTimeout(() => window.dispatchEvent(new Event(REFRESH_EVENT)), 2_500);
+        setTimeout(() => window.dispatchEvent(new Event(REFRESH_EVENT)), 6_000);
       }
       return result;
     } catch (error) {
@@ -75,6 +77,20 @@ export function TxProvider({ children }: { children: ReactNode }) {
       setBusy(false);
     }
   }, [send, dismiss, kind]);
+
+  // Settles a pending notice as soon as its outcome is known (lib/events.ts).
+  useEffect(() => {
+    const settle = (event: Event) => {
+      const { summary, title, text, tone } = (event as CustomEvent<SettleDetail>).detail;
+      setNotices((all) => all.map((n) => {
+        if (n.tone !== "pending" || n.summary !== summary) return n;
+        setTimeout(() => dismiss(n.id), 9_000);
+        return { ...n, tone, title, text, settled: true };
+      }));
+    };
+    window.addEventListener(SETTLE_EVENT, settle);
+    return () => window.removeEventListener(SETTLE_EVENT, settle);
+  }, [dismiss]);
 
   const notify = useCallback((title: string, text: string) => {
     const id = ++counter.current;

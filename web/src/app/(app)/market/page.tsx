@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { MarketScreen } from "@/components/screens/MarketScreen";
-import { listBusinesses } from "@/lib/near/rpc";
+import { cachedMarket } from "@/lib/snapshotCache";
 
 /** Server rendering waits at most this long for the chain; after that the page renders and loads live in the browser. */
 const within = <T,>(work: Promise<T>, ms = 4_000) =>
@@ -12,6 +12,6 @@ export const metadata: Metadata = { title: "Market" };
 export const revalidate = 10;
 
 export default async function Page() {
-  const initial = await within(listBusinesses());
+  const initial = await within(cachedMarket());
   return <MarketScreen initial={initial} />;
 }

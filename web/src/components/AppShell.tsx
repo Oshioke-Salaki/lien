@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ConnectButtons, useTx } from "@/components/Tx";
 import { Mark } from "@/components/Mark";
 import { deployment, isTestnet, NETWORK } from "@/lib/config";
-import { money, shortAccount } from "@/lib/format";
+import { money } from "@/lib/format";
 import { faucet } from "@/lib/near/actions";
 import { isRegistered, tokenBalance, viewAccount } from "@/lib/near/rpc";
 import { useLive } from "@/hooks/useLive";
@@ -20,6 +20,7 @@ const NAV = [
   { href: "/market", label: "Market", icon: "M3 13h4v6H3zM10 8h4v11h-4zM17 4h4v15h-4z" },
   { href: "/portfolio", label: "Your positions", icon: "M4 6h16v12H4zM4 10h16M8 14h3" },
   { href: "/create", label: "Start a business", icon: "M12 5v14M5 12h14" },
+  { href: "/proof", label: "Proof", icon: "M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3zM9 12l2 2 4-4" },
   { href: "/guide", label: "Developer guide", icon: "M8 7l-5 5 5 5M16 7l5 5-5 5" },
 ];
 
@@ -29,12 +30,30 @@ function NavIcon({ d }: { d: string }) {
   );
 }
 
+/**
+ * The last balance read for each account, shared by every place that shows it (the sidebar,
+ * the phone menu), so opening the menu never shows a loading bar for a figure already on screen.
+ */
+const balances = new Map<string, bigint>();
+const readBalance = (account: string) => async () => {
+  const value = await tokenBalance(account);
+  balances.set(account, value);
+  return value;
+};
+
+/** "grtejvp….testnet": the account's own first part, then its network. */
+export function shortAccountName(account: string): string {
+  const first = account.split(".")[0] ?? account;
+  const tail = account.includes(".") ? account.slice(account.lastIndexOf(".")) : "";
+  return first.length > 8 || account.length > 20 ? `${first.slice(0, 8)}…${tail}` : account;
+}
+
 function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
   const { account, kind, disconnect, ready, backup } = useWallet();
   const { run, busy } = useTx();
   const [confirming, setConfirming] = useState(false);
   const [showBackup, setShowBackup] = useState(false);
-  const balance = useLive(account ? () => tokenBalance(account) : null, `balance:${account}`, 8_000);
+  const balance = useLive(account ? readBalance(account) : null, `balance:${account}`, 8_000, account ? balances.get(account) : undefined);
 
   if (!ready) return <div className="skeleton h-[132px]" />;
   if (!account && quietWhenOut) {
@@ -72,15 +91,15 @@ function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
     void disconnect();
   };
   const label = kind === "guest" ? "Free test account" : "Your wallet";
-  const shortId = account.length > 12 ? `${account.slice(0, 8)}…` : account;
+  const shortId = shortAccountName(account);
 
   return (
     <div className="space-y-3 rounded-[14px] bg-[var(--surface)] p-4 text-[14px]" data-testid="account-box">
       <div className="flex items-center gap-3">
-        <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--accent-tint)] text-[14px] font-medium text-[var(--accent)]">{label.slice(0, 1)}</span>
+        <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--accent-tint)] text-[14px] font-medium text-[var(--accent)]">{account.slice(0, 1).toUpperCase()}</span>
         <div className="min-w-0">
           <p className="font-medium">{label}</p>
-          <p className="muted" title={account}>{kind === "guest" ? shortId : shortAccount(account, 24)}</p>
+          <p className="muted" title={account}>{shortId}</p>
         </div>
       </div>
       <div>
@@ -112,12 +131,22 @@ function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
 
 /** The one line that holds a free test account, with a plain warning and a copy button. */
 function BackupPanel({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"idle" | "copied" | "failed">("idle");
+  const area = useRef<HTMLTextAreaElement>(null);
   return (
     <div className="space-y-2 rounded-[10px] bg-[var(--surface-2)] p-3" data-testid="backup">
       <p className="text-[13px] leading-snug text-[var(--ink-2)]">Keep this line somewhere safe to use this test account in another browser. Anyone with it controls the account, but it only ever holds test money.</p>
-      <textarea readOnly value={text} rows={3} className="input w-full resize-none text-[12px] break-all" aria-label="Backup of this test account" onFocus={(e) => e.currentTarget.select()} />
-      <button type="button" className="btn btn-secondary btn-sm" onClick={async () => { try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2_000); } catch { /* the line can still be selected and copied by hand */ } }}>{copied ? "Copied" : "Copy the backup"}</button>
+      <textarea ref={area} readOnly value={text} rows={3} className="input w-full resize-none text-[12px] break-all" aria-label="Backup of this test account" onFocus={(e) => e.currentTarget.select()} />
+      <button type="button" className="btn btn-secondary btn-sm" aria-live="polite" onClick={async () => {
+        let ok = false;
+        try { await navigator.clipboard.writeText(text); ok = true; } catch {
+          // Some browsers block the clipboard API: select the line and copy it the old way.
+          area.current?.select();
+          try { ok = document.execCommand("copy"); } catch { ok = false; }
+        }
+        setCopied(ok ? "copied" : "failed");
+        setTimeout(() => setCopied("idle"), 2_500);
+      }}>{copied === "copied" ? "Copied" : copied === "failed" ? "Select the line above and copy it" : "Copy the backup"}</button>
     </div>
   );
 }
@@ -152,7 +181,7 @@ function RestoreAccount() {
 /** On a phone the balance stays in sight next to the menu, not only inside it. */
 function TopBarBalance() {
   const { account } = useWallet();
-  const balance = useLive(account ? () => tokenBalance(account) : null, `balance:${account}`, 8_000);
+  const balance = useLive(account ? readBalance(account) : null, `balance:${account}`, 8_000, account ? balances.get(account) : undefined);
   if (!account) return null;
   return (
     <span className="num rounded-full bg-[var(--surface)] px-3 py-[6px] text-[14px] font-medium" aria-label={`Balance: ${balance.data === undefined ? "loading" : money(balance.data)}`}>

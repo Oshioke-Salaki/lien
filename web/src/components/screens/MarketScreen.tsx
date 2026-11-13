@@ -7,13 +7,14 @@ import { ActivityFeed } from "@/components/market/ActivityFeed";
 import { Bar, EmptyState, ErrorState, Info, PageHead, Skeleton, StandingLabel, STANDING_TONE } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
 import { money, moneyUp, pct, percent, share, shortAccount } from "@/lib/format";
-import { listBusinesses } from "@/lib/near/rpc";
+import { fetchMarket } from "@/lib/snapshotClient";
+import { isFeatured, type MarketSnapshot } from "@/lib/snapshot";
 import type { Business } from "@/lib/near/types";
-import { isSample } from "@/lib/demo";
+import { isBoughtSample, isTeamSample } from "@/lib/demo";
 import { auctionEnded, isAlert, standing, type Standing } from "@/lib/status";
 
 /** What needs a decision comes first, then what can be funded. */
-const ORDER: Record<Standing, number> = { foreclosable: 0, auction: 1, foreclosed: 2, behind: 3, funding: 4, current: 5, "no-loan": 6 };
+const ORDER: Record<Standing, number> = { foreclosable: 0, "sale-ended": 1, auction: 1, foreclosed: 2, behind: 3, funding: 4, current: 5, "no-loan": 6 };
 
 function nextStep(s: Standing) {
   switch (s) {
@@ -21,6 +22,7 @@ function nextStep(s: Standing) {
     case "foreclosable": return "Take over";
     case "foreclosed":
     case "auction": return "Bid";
+    case "sale-ended": return "Complete the sale";
     case "no-loan": return "Buy a check";
     default: return "View";
   }
@@ -28,18 +30,19 @@ function nextStep(s: Standing) {
 
 const COLS = "lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1.6fr)_minmax(0,1fr)_auto]";
 
-export function MarketScreen({ initial }: { initial?: Business[] }) {
-  const live = useLive(listBusinesses, "market", 8_000, initial);
+export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
+  // One cached server read for the whole market, instead of a burst of RPC calls per visitor.
+  const live = useLive(fetchMarket, "market", 10_000, initial);
   const router = useRouter();
   const all = useMemo(
-    () => [...(live.data ?? [])].sort((a, b) => ORDER[standing(a)] - ORDER[standing(b)]),
+    () => [...(live.data?.businesses ?? [])].sort((a, b) => ORDER[standing(a)] - ORDER[standing(b)]),
     [live.data],
   );
-  // Featured: the team's samples and any business with real activity. Businesses a visitor
-  // started and never used are listed separately, folded, so they never crowd the market.
-  const featured = (b: Business) => isSample(b.id) || b.stats.unique_payers >= 2;
-  const rows = all.filter(featured);
-  const started = all.filter((b) => !featured(b));
+  // Featured: the team's own samples and any business three or more different customers use.
+  // Everything else a visitor started is listed separately, folded, so it never crowds the market.
+  const rows = all.filter(isFeatured);
+  const started = all.filter((b) => !isFeatured(b));
+  const stats = live.data?.stats;
   const now = all.reduce((latest, b) => Math.max(latest, b.now), 0);
   const count = (s: Standing[]) => rows.filter((b) => s.includes(standing(b))).length;
   const raisingCount = count(["funding"]);
@@ -52,9 +55,7 @@ export function MarketScreen({ initial }: { initial?: Business[] }) {
     `${alerts} ${alerts === 1 ? "needs" : "need"} attention`,
     ...(noLoan ? [`${noLoan} with no loan`] : []),
   ].join(", ");
-  const lent = rows.reduce((sum, b) => sum + (b.current_loan && b.current_loan.status !== "Funding" ? BigInt(b.current_loan.funded) : 0n), 0n);
-  const repaid = rows.reduce((sum, b) => sum + (b.current_loan ? BigInt(b.current_loan.repaid) : 0n), 0n);
-  const sold = rows.reduce((sum, b) => sum + b.stats.jobs_done, 0);
+  const recovery = stats && BigInt(stats.closedDue) > 0n ? pct(share(stats.closedRecovered, stats.closedDue)) : null;
 
   return (
     <div className="space-y-8">
@@ -78,15 +79,18 @@ export function MarketScreen({ initial }: { initial?: Business[] }) {
         <ErrorState message="The network could not be reached, so the market cannot be shown right now." onRetry={() => void live.refresh()} />
       ) : (
         <>
-          <dl className="grid grid-cols-3 gap-2 sm:gap-3">
+          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3" data-testid="market-stats">
             {[
-              { label: "Lent out now", tip: "Money lenders have in loans that have started, across the featured businesses.", value: live.loaded ? money(lent) : null },
-              { label: "Repaid to lenders", tip: "Money that has already reached lenders on these loans, from sales and payments.", value: live.loaded ? money(repaid) : null },
-              { label: "Checks sold", tip: "Safety checks these businesses have sold and delivered. Each sale repays their lenders first.", value: live.loaded ? sold.toLocaleString("en-US") : null },
+              { label: "Lent out now", tip: "Money lenders have in loans that are running or taken over, across every business on Lien.", value: stats ? money(stats.lentNow) : null },
+              { label: "Repaid to lenders, all loans", tip: "Every dollar that has reached lenders, on open and closed loans. It only ever goes up.", value: stats ? money(stats.repaidAllTime) : null },
+              { label: "Lent in total", tip: "Everything lenders have ever put into loans that started.", value: stats ? money(stats.lentAllTime) : null },
+              { label: "Loans closed", tip: "Loans paid back in full, and loans whose business missed payments and was taken over.", value: stats ? `${stats.loansRepaid} repaid, ${stats.loansTakenOver} taken over` : null },
+              { label: "Lenders recovered", tip: "On loans that have closed, what reached lenders against what those loans owed, including after a takeover and sale.", value: stats ? (recovery ?? "No closed loans yet") : null },
+              { label: "Checks sold", tip: "Safety checks every business here has sold and delivered. Each sale repays its lenders first.", value: stats ? stats.checksSold.toLocaleString("en-US") : null },
             ].map((stat) => (
               <div key={stat.label} className="rounded-[16px] bg-[var(--surface)] p-3 sm:p-5">
                 <dt className="text-[13px] leading-snug muted sm:text-[14px]">{stat.label}<Info label={stat.label} tip={stat.tip} /></dt>
-                <dd className="num mt-2 text-[18px] sm:text-[28px] leading-none font-medium tracking-[-0.02em]">{stat.value ?? <span className="skeleton inline-block h-6 w-full max-w-32 align-middle" />}</dd>
+                <dd className="num mt-2 text-[18px] sm:text-[26px] leading-tight font-medium tracking-[-0.02em]">{stat.value ?? <span className="skeleton inline-block h-6 w-full max-w-32 align-middle" />}</dd>
               </div>
             ))}
           </dl>
@@ -110,7 +114,7 @@ export function MarketScreen({ initial }: { initial?: Business[] }) {
                   Started by visitors ({started.length})
                   <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-180">▾</span>
                 </summary>
-                <p className="px-5 pb-3 text-[14px] text-[var(--ink-2)]">Businesses people started while trying Lien, with no loan or sales yet.</p>
+                <p className="px-5 pb-3 text-[14px] text-[var(--ink-2)]">Businesses people started while trying Lien, with fewer than three different customers so far.</p>
                 <ul className="space-y-2 px-2 pb-2">
                   {started.map((b) => <MarketRow key={b.id} business={b} onOpen={() => router.push(`/b/${b.id}`)} />)}
                 </ul>
@@ -118,11 +122,11 @@ export function MarketScreen({ initial }: { initial?: Business[] }) {
             ) : null}
           </section>
 
-          {live.loaded && rows.length ? <ActivityFeed businesses={rows} now={now} /> : null}
+          {live.loaded && rows.length ? <ActivityFeed items={live.data?.activity ?? []} now={now} /> : null}
 
           {live.loaded ? <TryIt rows={rows} /> : null}
           <p className="max-w-[72ch] text-[14px] muted">
-            Every figure is read live from the network. No person holds the keys to any business here, so none of this depends on trusting Lien.
+            Every figure is read live from the network. No person holds the keys to any business here, so none of this depends on trusting Lien. <Link className="link" href="/proof">See every promise and its proof</Link>.
           </p>
         </>
       )}
@@ -136,12 +140,14 @@ function TryIt({ rows }: { rows: Business[] }) {
   const raising = pick("funding");
   const late = pick("foreclosable", "behind");
   const sale = pick("foreclosed", "auction");
+  const ended = pick("sale-ended");
   const serving = pick("current") ?? rows[0];
   const steps = [
     raising && { href: `/b/${raising.id}`, action: `Lend to ${raising.name}`, result: "You get a share of the loan, repaid from every sale it makes." },
-    serving && { href: `/b/${serving.id}`, action: `Buy a safety check from ${serving.name}`, result: "A report on any account, usually in under a minute. If it fails, you get your money back." },
+    serving && { href: `/b/${serving.id}`, action: `Buy a safety check from ${serving.name}`, result: "A report on any account, usually in under a minute, sometimes up to two. If it fails, you get your money back." },
     late && { href: `/b/${late.id}`, action: `Take over ${late.name}`, result: "It missed its payments, so anyone can take it over for its lenders. It keeps serving customers." },
     sale && { href: `/b/${sale.id}`, action: `Bid on ${sale.name}`, result: "The highest bid takes a running business." },
+    !sale && ended && { href: `/b/${ended.id}`, action: `Complete the sale of ${ended.name}`, result: "Its auction has ended. Anyone can complete the sale; the price goes to lenders first." },
   ].filter((s): s is { href: string; action: string; result: string } => Boolean(s));
   if (!steps.length) return null;
   return (
@@ -180,7 +186,7 @@ function MarketRow({ business: b, onOpen }: { business: Business; onOpen: () => 
     >
       <div className="min-w-0">
         <Link className="text-[17px] font-medium hover:underline" href={`/b/${b.id}`} onClick={(e) => e.stopPropagation()}>{b.name}</Link>
-        <div className="truncate text-[13px] muted" title={b.id}>{isSample(b.id) ? "Sample by the Lien team" : shortAccount(b.id, 36)}</div>
+        <div className="truncate text-[13px] muted" title={b.id}>{isTeamSample(b) ? "Sample by the Lien team" : isBoughtSample(b) ? `Bought by ${shortAccount(b.operator, 22)}` : shortAccount(b.id, 36)}</div>
       </div>
       <div className="justify-self-end lg:justify-self-start"><StandingLabel standing={s} /></div>
       <div className="col-span-2 min-w-0 lg:col-span-1">

@@ -10,6 +10,7 @@ import { isPayableAccount, labelProblem } from "@/lib/accounts";
 import { money, shortHash, toYocto } from "@/lib/format";
 import { createBusiness } from "@/lib/near/actions";
 import { accountExists } from "@/lib/near/rpc";
+import { checkBuild } from "@/lib/near/proof";
 import type { Service } from "@/lib/near/types";
 import { topUpGuest } from "@/lib/wallet/guest";
 import { useWallet } from "@/lib/wallet/WalletProvider";
@@ -70,7 +71,9 @@ export function CreateScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorKey]);
   const missingVendors = vendorCheck?.key === vendorKey ? vendorCheck.missing : [];
-  const vendorError = badVendors.length
+  const emptyVendor = vendors.trim() !== "" && vendors.split(",").some((v) => v.trim() === "");
+  const vendorError = emptyVendor ? "There is an empty item between commas. Remove the extra comma."
+    : badVendors.length
     ? `${badVendors.length === 1 ? `"${badVendors[0]}" is not` : `${badVendors.length} of these are not`} a NEAR account name. Account names look like vendor.testnet; separate several with commas.`
     : missingVendors.length ? `There is no account called ${missingVendors[0]} on this network.`
     : account && vendorList.includes(account) ? "You cannot be your own vendor: lenders would never accept it, and the contract refuses it." : null;
@@ -82,9 +85,27 @@ export function CreateScreen() {
   const perDayCheck = perDay.trim() === "" ? { value: 0n, error: null } : checkAmount(perDay, { max: MAX_PER_DAY });
   const perTxValue = perTxCheck.error ? null : perTxCheck.value ?? 0n;
   const perDayValue = perDayCheck.error ? null : perDayCheck.value ?? 0n;
-  const descriptionError = description.length > 500 ? "Keep it under 500 characters." : null;
-  const hashError = hash && !/^[0-9a-f]{64}$/.test(hash) ? "64 lowercase hex characters." : null;
-  const urlError = url && !url.startsWith("https://") ? "Must start with https://" : null;
+  const descriptionError = !description.trim() ? "Say in a line what it sells, so customers and lenders know." : description.length > 500 ? "Keep it under 500 characters." : null;
+  const hashError = hash && !/^[0-9a-f]{64}$/.test(hash) ? "64 lowercase hex characters." : /^0{64}$/.test(hash) ? "That is not a real fingerprint." : null;
+  const urlError = url && !/^https:\/\/[^\s/]+\.[^\s]+$/.test(url) ? "A full https:// address of the program file." : null;
+
+  // The program is downloaded and fingerprinted here before anything is signed: a business must
+  // run exactly the file its fingerprint names. Keyed by both, so a stale answer never shows.
+  const [program, setProgram] = useState<{ key: string; state: "ok" | "mismatch" | "unreachable" } | null>(null);
+  const programKey = `${url}|${hash}`;
+  useEffect(() => {
+    if (!url || !hash || hashError || urlError) return;
+    let alive = true;
+    const timer = setTimeout(async () => {
+      const result = await checkBuild(url, hash).then((c) => (c.ok ? "ok" : /could not be fetched/.test(c.detail) ? "unreachable" : "mismatch") as "ok" | "mismatch" | "unreachable", () => "unreachable" as const);
+      if (alive) setProgram({ key: programKey, state: result });
+    }, 500);
+    return () => { alive = false; clearTimeout(timer); };
+    // programKey stands for the url and hash.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [programKey, hashError, urlError]);
+  const programState = program?.key === programKey ? program.state : null;
+  const programError = programState === "mismatch" ? "The file at that address does not match this fingerprint." : programState === "unreachable" ? "Couldn't check the program file: its address did not answer." : null;
   const limitError = perTxValue !== null && perDayValue !== null && perTxValue > perDayValue ? "The limit per payment cannot be above the daily limit." : null;
 
   // The first thing still missing, said plainly next to the button.
@@ -100,6 +121,8 @@ export function CreateScreen() {
     : perDayCheck.error ? `Most per day: ${perDayCheck.error}`
     : limitError ? limitError
     : !url || !hash || hashError || urlError ? "Its program: check the build URL and its SHA-256."
+    : programError ? `Its program: ${programError}`
+    : programState === null ? "Checking its program file…"
     : null;
   const ready = blocker === null && priceValue !== null && perTxValue !== null && perDayValue !== null;
 
@@ -159,7 +182,7 @@ export function CreateScreen() {
             <TextField label="What it does" value={description} onChange={setDescription} multiline error={descriptionError} />
           </>)}
           {step("What it may spend on", "It can only pay these accounts, up to these limits, whatever its program asks for. This is what keeps a loan safe.", <>
-            <TextField label="Vendors it may pay" value={vendors} onChange={setVendors} error={vendorError} hint={vendorList.length ? "Accounts it may pay, separated by commas." : "With no vendors it can't pay anyone for its work. Add at least one, like the service it buys compute from."} />
+            <TextField label="Vendors it may pay" value={vendors} onChange={(v) => setVendors(v.toLowerCase())} error={vendorError} hint={vendorList.length ? "Accounts it may pay, separated by commas." : "With no vendors it can't pay anyone for its work. Add at least one, like the service it buys compute from."} />
             <div className="grid gap-4 sm:grid-cols-2">
               <AmountField label="Most per payment" value={perTx} onChange={setPerTx} error={perTxCheck.error ?? limitError} />
               <AmountField label="Most per day" value={perDay} onChange={setPerDay} error={perDayCheck.error} />
@@ -171,7 +194,7 @@ export function CreateScreen() {
               <div className="mt-4 space-y-4">
                 <p className="hint">Publish it to FastFS and paste its URL and SHA-256. Sentinel&rsquo;s source is in the repository.</p>
                 <TextField label="Build URL" value={url} onChange={setUrl} error={urlError} />
-                <TextField label="SHA-256 of the build" value={hash} onChange={setHash} error={hashError} />
+                <TextField label="SHA-256 of the build" value={hash} onChange={(v) => setHash(v.trim().toLowerCase())} error={hashError ?? programError} hint={programState === "ok" ? "Checked: the file matches this fingerprint." : undefined} />
               </div>
             </details>
           </>)}
