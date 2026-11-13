@@ -30,6 +30,9 @@ function simulator() {
     const monthly = BigInt(revenue.value) * USD;
     const lenderBps = Number(share.value) * 100;
     const split = splitInflow(monthly, TOTAL_DUE, lenderBps, OPERATOR_BPS, false);
+    // The lenders' share as set; the contract never takes more than is owed, so above the debt it stops there.
+    const wanted = (monthly * BigInt(lenderBps)) / BPS;
+    const capped = wanted > split.lender;
     const months = split.lender > 0n ? (TOTAL_DUE + split.lender - 1n) / split.lender : null;
     const paid = split.lender * MONTHS;
     const repaid = paid < TOTAL_DUE ? paid : TOTAL_DUE;
@@ -42,7 +45,7 @@ function simulator() {
     set('[data-out="revenue"]', `$${Number(revenue.value).toLocaleString("en-US")}`);
     set('[data-out="share"]', `${share.value}%`);
     set('[data-out="bid"]', `$${Number(bid.value).toLocaleString("en-US")}`);
-    set('[data-testid="monthly-lender"]', dollars(split.lender));
+    set('[data-testid="monthly-lender"]', capped ? `${dollars(split.lender)}, the whole debt (${share.value}% would be ${dollars(wanted)})` : dollars(split.lender));
     set('[data-sim="operator"]', dollars(split.operator));
     set('[data-sim="opex"]', dollars(split.opex));
     set('[data-testid="payoff"]', months === null || months > 12n ? "Not within the 12-month term" : `${months} ${months === 1n ? "month" : "months"}`);
@@ -58,7 +61,7 @@ function simulator() {
     set('[data-sim="title"]', noticed ? "Notice of foreclosure" : cleared ? "Lien released" : "Record of lien");
     set('[data-sim="note"]', noticed
       ? "The address and the service stay exactly as they were. Only the owner changes."
-      : cleared ? "The debt cleared before payments stopped, so the owner keeps everything."
+      : cleared ? "The debt was repaid before sales stopped, so the lien is released: the owner keeps the business, and nothing more goes to lenders."
       : months === null || months > 12n ? "At this revenue the loan isn't repaid in its 12 months: at the end, anyone could take the business over."
       : "Current. Nobody holds a key to this business.");
     $('[data-sim="stamp"]', root).hidden = !noticed;
@@ -90,9 +93,15 @@ async function view(account, method, args = {}) {
   throw new Error("unreachable");
 }
 
+// The app's one rounding rule (web/src/lib/format.ts): amounts round half up to the cent, what is
+// still owed rounds UP, and what was repaid is the rounded total less what is owed, so the two
+// always add up and match the app to the cent.
 const cents = (v) => (BigInt(v) + 5_000n) / 10_000n; // half up, 6-decimal token to cents
-const fromCents = (c) => `${c / 100n}.${String(c % 100n).padStart(2, "0")}`;
+const centsUp = (v) => (BigInt(v) + 9_999n) / 10_000n;
+const fromCents = (c) => `${(c / 100n).toLocaleString("en-US")}.${String(c % 100n).padStart(2, "0")}`;
 const tusd = (v) => fromCents(cents(v));
+const owedUsd = (total, repaid) => { const left = BigInt(total) - BigInt(repaid); return fromCents(centsUp(left > 0n ? left : 0n)); };
+const repaidUsd = (total, repaid) => { const left = BigInt(total) - BigInt(repaid); return fromCents(cents(total) - centsUp(left > 0n ? left : 0n)); };
 const isTest = (id) => id.startsWith("e2e-") || id.startsWith("ui-");
 
 async function live() {
@@ -115,9 +124,8 @@ async function live() {
     const sentinel = all[ids.indexOf(`sentinel.${REGISTRY}`)];
     const loan = sentinel?.status === "fulfilled" ? sentinel.value.current_loan : null;
     if (loan) {
-      // Owed is the rounded total less the rounded repaid, so the two always add up to the total.
-      set("sentinel-repaid", tusd(loan.repaid));
-      set("sentinel-owed", fromCents(cents(loan.terms.total_due) - cents(loan.repaid)));
+      set("sentinel-repaid", repaidUsd(loan.terms.total_due, loan.repaid));
+      set("sentinel-owed", owedUsd(loan.terms.total_due, loan.repaid));
       set("sentinel-holders", String(loan.holders));
       set("sentinel-state", loan.is_behind ? "Behind" : loan.status === "Active" ? "Paying on time" : loan.status);
       const bar = document.querySelector('[data-live-bar="sentinel"]');
@@ -136,6 +144,8 @@ async function live() {
 }
 
 const SAMPLE = /^(sentinel|lookout|watchtower|beacon)/;
+// Only the samples the Lien team still runs (web/src/lib/demo.ts TEAM): not copies visitors made or bought.
+const TEAM = new Set(["lien-f1-3833.testnet", "lien-f4-3863.testnet"]);
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ESC[c]);
 
@@ -146,18 +156,21 @@ function renderMarket(ids, all) {
   const rows = [];
   ids.forEach((id, i) => {
     const r = all[i];
-    if (r.status !== "fulfilled" || !SAMPLE.test(id)) return;
+    if (r.status !== "fulfilled" || !SAMPLE.test(id) || !TEAM.has(r.value.operator)) return;
     const a = r.value;
     const loan = a.current_loan;
     let state = "No loan", sub = "Sells safety checks", warn = false, rank = 5;
     if (loan && loan.status === "Funding") { state = "Raising"; sub = `$${tusd(loan.funded)} of $${tusd(loan.terms.principal)} raised`; rank = 1; }
-    else if (loan && loan.status === "Active" && loan.foreclosable_at !== null && a.now >= loan.foreclosable_at) { state = "Can be taken over"; sub = `Missed payments, $${tusd(loan.outstanding)} owed`; warn = true; rank = 0; }
-    else if (loan && loan.status === "Active") { state = loan.is_behind ? "Behind" : "Paying on time"; sub = `$${tusd(loan.repaid)} of $${tusd(loan.terms.total_due)} paid back`; warn = loan.is_behind; rank = 3; }
-    else if (loan && loan.status === "Foreclosed") { state = "For sale"; sub = `Lowest bid $${tusd(loan.min_next_bid || "0")}`; warn = true; rank = 2; }
+    else if (loan && loan.status === "Active" && loan.foreclosable_at !== null && a.now >= loan.foreclosable_at) { state = "Can be taken over"; sub = `Missed payments, $${owedUsd(loan.terms.total_due, loan.repaid)} owed`; warn = true; rank = 0; }
+    else if (loan && loan.status === "Active") { state = loan.is_behind ? "Behind" : "Paying on time"; sub = `$${repaidUsd(loan.terms.total_due, loan.repaid)} of $${tusd(loan.terms.total_due)} paid back`; warn = loan.is_behind; rank = 3; }
+    else if (loan && loan.status === "Foreclosed") { state = "For sale"; sub = `Lowest bid $${fromCents(centsUp(loan.min_next_bid || "0"))}`; warn = true; rank = 2; }
     const sel = id.startsWith("sentinel-north.") ? ' class="is-sel"' : "";
-    rows.push({ rank, html: `<li${sel}><a href="/b/${esc(id)}"><span class="mk__who"><b>${esc(a.name)}</b><span>${esc(sub)}</span></span><span class="ui-chip${warn ? " is-warn" : ""}">${esc(state)}</span></a></li>` });
+    rows.push({ rank, name: a.name, html: `<li${sel}><a href="/b/${esc(id)}"><span class="mk__who"><b>${esc(a.name)}</b><span>${esc(sub)}</span></span><span class="ui-chip${warn ? " is-warn" : ""}">${esc(state)}</span></a></li>` });
   });
-  if (rows.length) list.innerHTML = rows.sort((x, y) => x.rank - y.rank).slice(0, 6).map((r) => r.html).join("");
+  // One row per name: two samples both called "Lookout" show once, the one most worth acting on.
+  const seen = new Set();
+  const unique = rows.sort((x, y) => x.rank - y.rank).filter((r) => (seen.has(r.name) ? false : (seen.add(r.name), true)));
+  if (unique.length) list.innerHTML = unique.slice(0, 6).map((r) => r.html).join("");
 }
 
 simulator();
