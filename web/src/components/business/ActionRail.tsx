@@ -12,12 +12,11 @@ import { getCredit, getJob, getLoans, getNote } from "@/lib/near/rpc";
 import type { Business, Job, LoanView, NoteView } from "@/lib/near/types";
 import { auctionEnded, standing } from "@/lib/status";
 import { useWallet } from "@/lib/wallet/WalletProvider";
-import { IntentsPanel } from "./IntentsPanel";
 import { OfferForm } from "./OfferForm";
 import { ReportCard } from "./ReportCard";
 import { AmountField, checkAmount, TextField, useMyBalance } from "./fields";
 
-type Props = { business: Business; now: number; refresh: () => Promise<void> };
+type Props = { business: Business; now: number; refresh: () => Promise<void>; featured?: boolean };
 
 const ConnectGate = Gate;
 
@@ -31,25 +30,25 @@ export function ActionRail({ business: b, now, refresh }: Props) {
   return (
     <aside className="space-y-4" aria-label="Actions">
       {!account && ready ? (
-        <Panel title="Take part">
-          <p className="mb-3 text-[15px]">Connect to lend, buy, bid or foreclose. Everything else on this page is open to read.</p>
-          <ConnectButtons />
-        </Panel>
+        <section className="panel p-5" aria-labelledby="take-part">
+          <h2 id="take-part" className="text-[18px] font-medium tracking-[-0.01em]">Take part in this loan</h2>
+          <p className="mt-2 mb-4 text-[15px] leading-snug text-[var(--ink-2)]">Connect to lend, buy, bid or foreclose. A free test account is ready in about ten seconds. Everything else here is open to read.</p>
+          <ConnectButtons compact />
+        </section>
       ) : null}
-      {loan?.status === "Funding" ? <LendCard business={b} now={now} refresh={refresh} /> : null}
-      {s === "behind" || s === "foreclosable" ? <ForecloseCard business={b} now={now} refresh={refresh} /> : null}
-      {foreclosed ? <AuctionCard business={b} now={now} refresh={refresh} /> : null}
-      <BuyCard business={b} refresh={refresh} />
-      {loan && (loan.status === "Active" || foreclosed) ? <RepayCard business={b} refresh={refresh} isOperator={isOperator} /> : null}
+      {loan?.status === "Funding" ? <LendCard business={b} now={now} refresh={refresh} featured /> : null}
+      {s === "behind" || s === "foreclosable" ? <ForecloseCard business={b} now={now} refresh={refresh} featured /> : null}
+      {foreclosed ? <AuctionCard business={b} now={now} refresh={refresh} featured /> : null}
       <PositionCard business={b} refresh={refresh} />
       {isOperator ? <OperatorCard business={b} now={now} refresh={refresh} /> : null}
+      <BuyCard business={b} refresh={refresh} featured={s === "current" || s === "no-loan"} />
+      {loan && (loan.status === "Active" || foreclosed) ? <RepayCard business={b} refresh={refresh} isOperator={isOperator} /> : null}
       <TankCard business={b} refresh={refresh} />
-      <IntentsPanel business={b} refresh={refresh} />
     </aside>
   );
 }
 
-function LendCard({ business: b, now, refresh }: Props) {
+function LendCard({ business: b, now, refresh, featured }: Props) {
   const loan = b.current_loan!;
   const { busy, run } = useTx();
   const pay = usePay(b.id);
@@ -68,7 +67,7 @@ function LendCard({ business: b, now, refresh }: Props) {
   if (expired) {
     return (
       <Panel title="Raising has ended">
-        <p className="mb-3 text-[15px]">This loan did not fill in time. Cancelling lets every lender claim their money back.</p>
+        <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">This loan did not fill in time. Cancelling lets every lender claim their money back.</p>
         <ConnectGate quiet reason="Connect to cancel it. Anyone can.">
           <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={async () => { await run(tx.cancelOffer(b.id), { requiredOn: b.id, done: "The offer was cancelled" }); await refresh(); }}>Cancel the offer</button>
         </ConnectGate>
@@ -77,7 +76,7 @@ function LendCard({ business: b, now, refresh }: Props) {
   }
 
   return (
-    <Panel title="Lend to this business" aside={`Closes ${fromNow(loan.funding_deadline, now)}`}>
+    <Panel featured={featured} title="Lend to this business" aside={`Closes ${fromNow(loan.funding_deadline, now)}`}>
       <ConnectGate quiet reason="Connect to lend. You can read everything without one.">
         <form className="space-y-3" onSubmit={async (e) => {
           e.preventDefault();
@@ -102,13 +101,13 @@ function LendCard({ business: b, now, refresh }: Props) {
   );
 }
 
-function ForecloseCard({ business: b, now, refresh }: Props) {
+function ForecloseCard({ business: b, now, refresh, featured }: Props) {
   const loan = b.current_loan!;
   const { busy, run } = useTx();
   const ready = loan.foreclosable_at !== null && now >= loan.foreclosable_at;
   return (
-    <Panel title={ready ? "This business can be foreclosed" : "This business is behind"}>
-      <p className="mb-3 text-[15px]">
+    <Panel featured={featured} title={ready ? "This business can be foreclosed" : "This business is behind"}>
+      <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
         {ready
           ? "It missed its payments and its grace period is over. Anyone can take this step, and the business keeps running for lenders."
           : `A payment clears this at once. If none comes, anyone can foreclose ${fromNow(loan.foreclosable_at!, now)}.`}
@@ -122,7 +121,7 @@ function ForecloseCard({ business: b, now, refresh }: Props) {
   );
 }
 
-function AuctionCard({ business: b, now, refresh }: Props) {
+function AuctionCard({ business: b, now, refresh, featured }: Props) {
   const loan = b.current_loan!;
   const { account } = useWallet();
   const { busy, run } = useTx();
@@ -137,7 +136,7 @@ function AuctionCard({ business: b, now, refresh }: Props) {
   const iWin = loan.auction.high_bidder === account && account !== null;
 
   return (
-    <Panel title="Buy this business" aside={loan.auction.ends_at ? (ended ? "Auction over" : `Ends ${fromNow(loan.auction.ends_at, now)}`) : "No bids yet"}>
+    <Panel featured={featured} title="Buy this business" aside={loan.auction.ends_at ? (ended ? "Auction over" : `Ends ${fromNow(loan.auction.ends_at, now)}`) : "No bids yet"}>
       <dl className="dl mb-3" data-testid="auction">
         <dt>Debt outstanding</dt><dd>{money(outstanding)}</dd>
         <dt>Highest bid</dt><dd>{high > 0n ? money(high) : <span className="muted">none</span>}</dd>
@@ -167,7 +166,7 @@ function AuctionCard({ business: b, now, refresh }: Props) {
   );
 }
 
-function BuyCard({ business: b, refresh }: { business: Business; refresh: () => Promise<void> }) {
+function BuyCard({ business: b, refresh, featured }: { business: Business; refresh: () => Promise<void>; featured?: boolean }) {
   const pay = usePay(b.id);
   const { busy } = useTx();
   const balance = useMyBalance();
@@ -190,8 +189,8 @@ function BuyCard({ business: b, refresh }: { business: Business; refresh: () => 
   }, [job, b.id, refresh]);
 
   return (
-    <Panel title={`Buy a check, ${money(price)}`}>
-      <p className="mb-3 text-[15px]">
+    <Panel featured={featured} title={`Buy a check, ${money(price)}`}>
+      <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
         Sealed code reads a NEAR account from the chain and scores what could go wrong if you trust it. If the run fails, your money comes back.
       </p>
       <ConnectGate quiet reason="Connect to buy one.">
@@ -210,7 +209,7 @@ function BuyCard({ business: b, refresh }: { business: Business; refresh: () => 
         </form>
       </ConnectGate>
       {job ? (
-        <div className="mt-4 bg-[var(--paper-sage)] p-3" data-testid="job-result" aria-live="polite">
+        <div className="inset appear mt-4" data-testid="job-result" aria-live="polite">
           {!job.result || job.result.status === "Pending" ? (
             <p className="flex items-center gap-2 text-[15px]"><span className="spinner spinner-ink" aria-hidden /> Running in the enclave, usually about 15 seconds.</p>
           ) : job.result.status === "Done" ? <ReportCard raw={job.result.report} /> : (
@@ -233,7 +232,7 @@ function RepayCard({ business: b, refresh, isOperator }: { business: Business; r
   const foreclosed = loan.status === "Foreclosed";
   return (
     <Panel title={foreclosed ? "Redeem this business" : "Pay down the debt"}>
-      <p className="mb-3 text-[15px]">
+      <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
         {foreclosed ? `Paying the full ${money(outstanding)} cancels the sale and returns the business to its operator. Anyone can pay.` : "Anyone can pay. Payments count towards the schedule right away, and anything above the debt comes back."}
       </p>
       <ConnectGate quiet reason="Connect to pay.">
@@ -313,14 +312,14 @@ function PositionCard({ business: b, refresh }: { business: Business; refresh: (
                 await Promise.all([positions.refresh(), credit.refresh(), refresh()]);
               }}>{claimable === 0n ? "Nothing to collect yet" : `Collect ${money(claimable)}`}</button>
               {proposal && proposal.loan_id === loan.id && note.voted_proposal !== proposal.id ? (
-                <div className="bg-[var(--yellow)] p-3 text-[15px]">
+                <div className="callout">
                   <p className="mb-2">A change is proposed: new build <code>{proposal.service.wasm.hash.slice(0, 12)}…</code>, price {money(proposal.service.price)}. Approved so far: {share(proposal.approvals, loan.funded)}%.</p>
                   <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={async () => { await run(tx.approveChange(b.id, proposal.id), { requiredOn: b.id, done: "Your approval is recorded" }); await Promise.all([positions.refresh(), refresh()]); }}>Approve it</button>
                 </div>
               ) : null}
               {open ? (
                 <details className="text-[14px]">
-                  <summary className="cursor-pointer muted">Sell or move this note</summary>
+                  <summary className="cursor-pointer py-2 text-[var(--ink-2)] hover:text-[var(--ink)]">Sell or move this note</summary>
                   <form className="mt-2 space-y-2" onSubmit={async (e) => {
                     e.preventDefault();
                     if (!to.trim()) return;
@@ -377,11 +376,11 @@ function OperatorCard({ business: b, now, refresh }: Props) {
         {!loan ? (
           <>
             <details open={b.loan_count === 0}>
-              <summary className="cursor-pointer text-[15px] font-medium">Borrow against this business</summary>
+              <summary className="cursor-pointer rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[15px] font-medium transition-colors hover:bg-[var(--surface-3)]">Borrow against this business</summary>
               <div className="mt-3"><OfferForm business={b} refresh={refresh} /></div>
             </details>
             <details>
-              <summary className="cursor-pointer text-[15px] font-medium">Withdraw working capital</summary>
+              <summary className="cursor-pointer rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[15px] font-medium transition-colors hover:bg-[var(--surface-3)]">Withdraw working capital</summary>
               <form className="mt-3 space-y-2" onSubmit={async (e) => {
                 e.preventDefault();
                 if (!withdrawCheck.value || withdrawCheck.error) return;
@@ -394,7 +393,7 @@ function OperatorCard({ business: b, now, refresh }: Props) {
               </form>
             </details>
             <details>
-              <summary className="cursor-pointer text-[15px] font-medium">Change the price</summary>
+              <summary className="cursor-pointer rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[15px] font-medium transition-colors hover:bg-[var(--surface-3)]">Change the price</summary>
               <form className="mt-3 space-y-2" onSubmit={async (e) => {
                 e.preventDefault();
                 if (!priceValue) return;
@@ -411,7 +410,7 @@ function OperatorCard({ business: b, now, refresh }: Props) {
 
         {loan?.status === "Active" ? (
           <details>
-            <summary className="cursor-pointer text-[15px] font-medium">Propose a new build to lenders</summary>
+            <summary className="cursor-pointer rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[15px] font-medium transition-colors hover:bg-[var(--surface-3)]">Propose a new build to lenders</summary>
             {b.proposal ? (
               <p className="mt-3 text-[15px]">A change is open and has {share(b.proposal.approvals, loan.funded)}% approval. It expires {fromNow(b.proposal.expires_at, now)}.</p>
             ) : (
@@ -443,11 +442,11 @@ function TankCard({ business: b, refresh }: { business: Business; refresh: () =>
   const perJob = BigInt(b.service.compute_deposit);
   const low = tank < perJob * 5n;
   if (!low) {
-    return <p className="px-1 text-[14px] muted" data-testid="tank">Compute funds: {nearAmount(b.tank)} NEAR, enough for about {(tank / perJob).toString()} jobs.</p>;
+    return <p className="px-2 text-[14px] muted" data-testid="tank">Compute funds: {nearAmount(b.tank)} NEAR, enough for about {(tank / perJob).toString()} jobs.</p>;
   }
   return (
     <Panel title="Low on compute funds">
-      <p className="mb-3 text-[15px]">It has {nearAmount(b.tank)} NEAR left. Without compute it cannot sell, and it will fall behind. Anyone can top it up, and lenders have the most reason to.</p>
+      <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">It has {nearAmount(b.tank)} NEAR left. Without compute it cannot sell, and it will fall behind. Anyone can top it up, and lenders have the most reason to.</p>
       {account ? (
         <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={async () => { await run(tx.fundTank(b.id, toYocto("1")), { requiredOn: b.id, done: "1 NEAR added" }); await refresh(); }}>Add 1 NEAR</button>
       ) : null}

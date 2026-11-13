@@ -69,11 +69,11 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
   return (
     <Panel title="Pay this business from any chain">
       <div className="space-y-3" data-testid="intents">
-        <p className="text-[15px]">Income sent to its inbox goes through the same waterfall as everything else. NEAR Intents handles the route.</p>
+        <p className="text-[15px] leading-snug text-[var(--ink-2)]">Income sent to its inbox goes through the same waterfall as everything else. NEAR Intents handles the route.</p>
         <p className="text-[14px] break-all"><span className="muted">Inbox: </span><code>{b.collector}</code></p>
 
         {pending > 0n ? (
-          <div className="bg-[var(--yellow)] p-3 text-[15px]">
+          <div className="callout">
             <p className="mb-2">{money(pending)} is waiting in the inbox.</p>
             <button type="button" className="btn btn-primary btn-sm" data-testid="forward" disabled={busy || !account} onClick={async () => { await run(forward(b.collector), { done: "Forwarded into the waterfall" }); await Promise.all([inbox.refresh(), refresh()]); }}>Run it through the waterfall</button>
           </div>
@@ -95,7 +95,7 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
 
         {error ? <p role="alert" className="hint" data-error="true">{error}</p> : null}
         {quote ? (
-          <div className="bg-[var(--paper-sage)] p-3 text-[15px]" data-testid="intents-result">
+          <div className="inset appear text-[15px]" data-testid="intents-result">
             <p>You send {quote.amountInFormatted}. It arrives in about {quote.timeEstimate} seconds.</p>
             {quote.depositAddress ? (
               <p className="mt-2 break-all">Send to: <code>{quote.depositAddress}</code></p>

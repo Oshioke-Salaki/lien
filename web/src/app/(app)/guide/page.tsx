@@ -4,20 +4,20 @@ import { deployment, REPO_URL } from "@/lib/config";
 export const metadata: Metadata = { title: "Developer guide" };
 
 const Code = ({ children }: { children: string }) => (
-  <pre className="overflow-x-auto bg-black p-4 text-[14px] leading-relaxed text-[#f4f4f4]"><code>{children}</code></pre>
+  <pre className="overflow-x-auto rounded-[12px] bg-[var(--surface)] p-5 text-[13.5px] leading-relaxed text-[var(--ink-2)]"><code>{children}</code></pre>
 );
 
 export default function Page() {
   const example = `${"sentinel"}.${deployment.registry}`;
   return (
-    <article className="max-w-[760px] space-y-8 text-[17px] leading-relaxed">
+    <article className="max-w-[760px] space-y-10 text-[17px] leading-relaxed">
       <header>
-        <h1 className="text-[28px] leading-tight font-medium tracking-[-0.01em]">Developer guide</h1>
-        <p className="mt-1">How an agent or an app buys from, pays, funds or watches a Lien business. Everything is a normal NEAR call.</p>
+        <h1 className="text-[clamp(30px,3.4vw,40px)] leading-[1.05] font-medium tracking-[-0.025em]">Developer guide</h1>
+        <p className="mt-3 text-[var(--ink-2)]">How an agent or an app buys from, pays, funds or watches a Lien business. Everything is a normal NEAR call.</p>
       </header>
 
       <section className="space-y-3">
-        <h2 className="text-[20px] font-medium">Buy a job</h2>
+        <h2 className="text-[22px] font-medium tracking-[-0.015em]">Buy a job</h2>
         <p>Send the token with a message saying what you want. The contract holds the money until the run finishes, and refunds it if the run fails.</p>
         <Code>{`near contract call-function as-transaction ${deployment.token} ft_transfer_call \\
   json-args '{"receiver_id":"${example}","amount":"250000",
@@ -29,7 +29,7 @@ export default function Page() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[20px] font-medium">Every transfer message</h2>
+        <h2 className="text-[22px] font-medium tracking-[-0.015em]">Every transfer message</h2>
         <div className="panel overflow-x-auto">
           <table className="table min-w-[520px]">
             <thead><tr><th scope="col">Message</th><th scope="col">What it does</th></tr></thead>
@@ -46,19 +46,19 @@ export default function Page() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[20px] font-medium">Calls anyone can make</h2>
+        <h2 className="text-[22px] font-medium tracking-[-0.015em]">Calls anyone can make</h2>
         <p><code>foreclose</code> once a loan is past grace, <code>settle_auction</code> once an auction has ended, <code>cancel_offer</code> after a raise expires, <code>forward</code> on any inbox, <code>withdraw</code> for any account owed money, and <code>expire_job</code> for a job stuck for an hour. None of them can send money anywhere but where it is owed. There is a keeper in <code>ops/src/keeper.ts</code>.</p>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[20px] font-medium">Read the market as JSON</h2>
+        <h2 className="text-[22px] font-medium tracking-[-0.015em]">Read the market as JSON</h2>
         <Code>{`GET /api/agents        every business, in full
 GET /api/agents/{id}   one business, with its recent jobs
 GET /llms.txt          this guide for an agent to read`}</Code>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[20px] font-medium">Write your own agent</h2>
+        <h2 className="text-[22px] font-medium tracking-[-0.015em]">Write your own agent</h2>
         <p>Your build reads the job as JSON on stdin and prints its result on stdout. Output of <code>ok: false</code> refunds the customer. It can ask to pay vendors, and the contract refuses anything outside the policy lenders agreed to.</p>
         <Code>{`stdin : {"job_id":0,"payer":"a.near","input":"..."}
 stdout: {"ok":true,
@@ -68,7 +68,7 @@ stdout: {"ok":true,
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[20px] font-medium">This deployment</h2>
+        <h2 className="text-[22px] font-medium tracking-[-0.015em]">This deployment</h2>
         <dl className="dl text-[15px]">
           <dt>Network</dt><dd>{deployment.network}</dd>
           <dt>Registry</dt><dd><code>{deployment.registry}</code></dd>
