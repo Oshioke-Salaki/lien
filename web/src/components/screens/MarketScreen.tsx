@@ -159,7 +159,7 @@ function MarketRow({ business: b, onOpen }: { business: Business; onOpen: () => 
     >
       <div className="min-w-0">
         <Link className="text-[17px] font-medium hover:underline" href={`/b/${b.id}`} onClick={(e) => e.stopPropagation()}>{b.name}</Link>
-        <div className="truncate text-[13px] muted" title={b.id}>{isSample(b.id) ? "Sample business by the Lien team" : shortAccount(b.id, 36)}</div>
+        <div className="truncate text-[13px] muted" title={b.id}>{isSample(b.id) ? "Sample by the Lien team" : shortAccount(b.id, 36)}</div>
       </div>
       <div className="justify-self-end lg:justify-self-start"><StandingLabel standing={s} /></div>
       <div className="col-span-2 min-w-0 lg:col-span-1">

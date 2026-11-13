@@ -146,7 +146,8 @@ test.describe("other screens", () => {
   test("create validates before anything is signed", async ({ page }) => {
     await page.goto("/create");
     await page.getByTestId("create-label").fill("Bad Name!");
-    await expect(page.getByTestId("create-form")).toContainText("2 to 32 lowercase");
+    // The form names what is wrong (the field lowercases as you type, so the "!" and the space are left).
+    await expect(page.getByTestId("create-form")).toContainText("Use only letters, numbers, - and _.");
     await page.getByTestId("create-label").fill("sentinel");
     await expect(page.getByTestId("create-form")).toContainText("That name is taken");
   });
