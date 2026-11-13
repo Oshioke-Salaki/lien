@@ -59,6 +59,7 @@ function simulator() {
     set('[data-sim="note"]', noticed
       ? "The address and the service stay exactly as they were. Only the owner changes."
       : cleared ? "The debt cleared before payments stopped, so the owner keeps everything."
+      : months === null || months > 12n ? "At this revenue the loan isn't repaid in its 12 months: at the end, anyone could take the business over."
       : "Current. Nobody holds a key to this business.");
     $('[data-sim="stamp"]', root).hidden = !noticed;
     $('[data-sim="running"]', root).hidden = noticed;
@@ -68,7 +69,7 @@ function simulator() {
   };
 
   for (const input of [revenue, share]) input.addEventListener("input", render);
-  bid.addEventListener("input", () => { stopped = true; render(); });
+  bid.addEventListener("input", render);
   stop.addEventListener("click", () => { stopped = !stopped; render(); });
   render();
 }

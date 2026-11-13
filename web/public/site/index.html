@@ -160,6 +160,7 @@
   .cmp tbody th { font-size: var(--t-body); font-weight: 500; width: 40%; }
   .cmp .no { color: var(--muted); }
   .cmp .is-lien { color: var(--accent); font-weight: 500; }
+  .cmp td.no.is-lien { color: var(--muted); font-weight: 400; }
   .cmp thead .is-lien { font-size: var(--t-lead); }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   @media (max-width: 1023px) { .cmp tbody th { font-size: var(--t-body); width: 34%; } }
@@ -215,7 +216,7 @@
               <p class="t-label">Lenders</p>
               <a href="#market">The market<span>Every loan, read from the chain</span></a>
               <a href="#try">The simulator<span>Stop its sales, see what lenders recover</span></a>
-              <a href="/portfolio">Your positions<span>Notes, payouts and claims</span></a>
+              <a href="/portfolio">Your positions<span>Your loans, bids and repayments</span></a>
             </div>
             <div class="menu-col span-3">
               <p class="t-label">Borrowers</p>
@@ -225,7 +226,7 @@
             </div>
             <div class="menu-col span-3">
               <p class="t-label">Trust</p>
-              <a href="#proof">Check every claim<span>Proofs that run in your browser</span></a>
+              <a href="/proof">Check every claim<span>Each promise with its live proof</span></a>
               <a href="#compare">How it compares<span>Other ways to lend to agents</span></a>
             </div>
           </div>
@@ -233,7 +234,7 @@
       </div>
       <div class="nav__item"><a class="nav__link" href="#market">Market</a></div>
       <div class="nav__item"><a class="nav__link" href="#try">Simulator</a></div>
-      <div class="nav__item"><a class="nav__link" href="#proof">Proof</a></div>
+      <div class="nav__item"><a class="nav__link" href="/proof">Proof</a></div>
       <div class="nav__item"><a class="nav__link" href="#compare">Compare</a></div>
       <div class="nav__item"><a class="nav__link" href="#questions">Questions</a></div>
     </nav>
@@ -463,7 +464,7 @@
     </div>
   </section>
 
-  <section class="section ground-inverse" id="try" data-moment="iris-opens" data-moment-opts='{"from": "base"}' aria-labelledby="try-h">
+  <section class="section ground-surface" id="try" data-moment="iris-opens" data-moment-opts='{"from": "base"}' aria-labelledby="try-h">
     <div class="wrap">
       <div class="grid">
         <h2 id="try-h" class="span-6">Stop a business paying its loan. <span class="muted">See what lenders get back.</span></h2>
