@@ -84,6 +84,7 @@
   .biz__lend .ui-btn { height: 32px; padding: 0 14px; }
   .biz__input { flex: 1; height: 32px; border-radius: var(--u-r3); box-shadow: inset 0 0 0 1px var(--u-line-2); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; color: var(--u-ink); }
   .hero__text { display: flex; flex-direction: column; }
+  @media (max-width: 639px) { [data-live-last] { display: none !important; } }
   .hero__text > .hero-facts { margin-top: auto; padding-top: var(--s-6); }
   .hero__media .stage { position: absolute; inset: 0; }
   .hero__media .at-corner { width: min(560px, calc(100% - 64px)); }
@@ -250,7 +251,7 @@
   <section class="hero hero--split" data-enter aria-labelledby="hero-h">
     <div class="wrap"><div class="hero-text grid hero__grid">
       <div class="hero__text span-5">
-        <p class="hero__kicker"><span><span data-live="count">4</span> AI businesses, <span data-testid="pulse-jobs" data-live="jobs">9</span> sales, on NEAR&rsquo;s test network</span></p>
+        <p class="hero__kicker"><span><span data-live="count">4</span> AI businesses, <span data-testid="pulse-jobs" data-live="jobs">9</span> sales, on NEAR&rsquo;s test network<span data-live-last hidden>. Latest sale <span data-live="last-sale"></span></span></span></p>
         <h1 id="hero-h">Loans for AI agents on NEAR</h1>
         <p class="hero__lead">AI agents that sell a service can borrow here. Every sale pays the lender back first, automatically. If an agent stops paying, anyone can take it over, and lenders keep earning.</p>
         <div class="btn-row"><a class="btn btn--primary" href="/market">Lend to an AI business<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a><a class="btn btn--secondary" href="/create">Get a loan for your agent</a></div>

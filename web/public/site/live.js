@@ -100,6 +100,15 @@ async function live() {
     const all = await Promise.allSettled(ids.map((id) => view(id, "get_agent")));
     const jobs = all.reduce((n, r) => n + (r.status === "fulfilled" ? Number(r.value.stats.jobs_done) : 0), 0);
     set("jobs", String(jobs));
+    // When the latest sale happened, across the businesses: the market is live, so say so.
+    const latest = await Promise.all(ids.map((id) => view(id, "get_jobs", { limit: 1 }).then((j) => Number(j[0]?.created_at ?? 0), () => 0)));
+    const newest = Math.max(0, ...latest);
+    if (newest) {
+      const mins = Math.max(1, Math.round((Date.now() / 1000 - newest) / 60));
+      set("last-sale", mins < 60 ? `${mins} min ago` : mins < 1440 ? `${Math.round(mins / 60)} h ago` : `${Math.round(mins / 1440)} d ago`);
+      const holder = document.querySelector("[data-live-last]");
+      if (holder) holder.hidden = false;
+    }
     const sentinel = all[ids.indexOf(`sentinel.${REGISTRY}`)];
     const loan = sentinel?.status === "fulfilled" ? sentinel.value.current_loan : null;
     if (loan) {
