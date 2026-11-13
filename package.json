@@ -1,0 +1,8 @@
+{
+  "name": "lien",
+  "private": true,
+  "description": "Root scripts only. The app lives in web/; nothing here needs installing.",
+  "scripts": {
+    "verify": "node scripts/verify.mjs"
+  }
+}

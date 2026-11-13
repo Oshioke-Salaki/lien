@@ -1,7 +1,8 @@
 // The landing page's two live parts, with no framework:
 // 1. the simulator, which runs the contract's own waterfall rule (web/src/lib/math.ts splitInflow);
 // 2. the figures read from NEAR testnet. Every figure has a real fallback in the HTML, so a slow
-//    or failed RPC leaves the page correct, only a little older.
+//    or failed RPC leaves the page correct, only a little older. The hero's business and sales
+//    counts grow, so they have no number fallback: until read, the hero says it in words.
 
 const BPS = 10_000n;
 const USD = 1_000_000n;
@@ -112,6 +113,12 @@ async function live() {
     const all = await Promise.allSettled(ids.map((id) => view(id, "get_agent")));
     const jobs = all.reduce((n, r) => n + (r.status === "fulfilled" ? Number(r.value.stats.jobs_done) : 0), 0);
     set("jobs", String(jobs));
+    // The counts are shown only once read: the same figures /api/market reports (businesses,
+    // checksSold), never a stale number baked into the HTML.
+    const counts = document.querySelector("[data-live-counts]");
+    const fallback = document.querySelector("[data-live-fallback]");
+    if (counts) counts.hidden = false;
+    if (fallback) fallback.hidden = true;
     // When the latest sale happened, across the businesses: the market is live, so say so.
     const latest = await Promise.all(ids.map((id) => view(id, "get_jobs", { limit: 1 }).then((j) => Number(j[0]?.created_at ?? 0), () => 0)));
     const newest = Math.max(0, ...latest);

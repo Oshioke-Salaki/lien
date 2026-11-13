@@ -5,7 +5,7 @@ import { ProofPanel } from "@/components/business/ProofPanel";
 import { PageHead, Panel, Skeleton } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
 import { deployment } from "@/lib/config";
-import { CLAIMS } from "@/lib/claims";
+import { ATTACKS, CLAIMS } from "@/lib/claims";
 import { getBusiness } from "@/lib/near/rpc";
 
 const SENTINEL = `sentinel.${deployment.registry}`;
@@ -34,6 +34,37 @@ export function ProofScreen() {
         title="Proof"
         lead="Every promise Lien makes, with the check your browser runs right now, the code and test behind it, and a real transaction where it happened. Nothing here asks you to trust us."
       />
+
+      <section aria-labelledby="rob-title" className="space-y-3" data-testid="try-to-rob-it">
+        <h2 id="rob-title" className="text-[22px] font-medium tracking-[-0.015em]">Try to rob it</h2>
+        <p className="max-w-[70ch] text-[15px] text-[var(--ink-2)]">
+          Three ways someone might take a business&rsquo;s money. Each is refused by the contract, with the test that proves it and a testnet transaction where one exists.
+        </p>
+        <ol className="grid gap-3 lg:grid-cols-3">
+          {ATTACKS.map((a) => (
+            <li key={a.attack}>
+              <Panel className="h-full">
+                <p className="text-[17px] font-medium">{a.attack}</p>
+                <p className="mt-2 text-[15px]"><span className="font-medium">Refused.</span> <span className="text-[var(--ink-2)]">{a.result}</span></p>
+                <div className="mt-3 space-y-2 text-[14px]">
+                  <p className="muted">Proven by</p>
+                  <ul className="space-y-1">
+                    {a.tests.map((t) => (
+                      <li key={t.name} className="break-words"><a className="link" href={t.href} target="_blank" rel="noreferrer"><code className="text-[12px]">{t.name}</code></a></li>
+                    ))}
+                  </ul>
+                  {a.evidence.length ? (
+                    <ul className="space-y-1">
+                      {a.evidence.map((e) => <li key={e.href}><a className="link" href={e.href} target="_blank" rel="noreferrer">{e.label}</a></li>)}
+                    </ul>
+                  ) : null}
+                  <p className="text-[13px] muted">{a.note}</p>
+                </div>
+              </Panel>
+            </li>
+          ))}
+        </ol>
+      </section>
 
       <section aria-labelledby="live-title" className="space-y-3">
         <h2 id="live-title" className="text-[22px] font-medium tracking-[-0.015em]">Checked live, on a real business</h2>
