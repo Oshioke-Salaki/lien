@@ -6,9 +6,10 @@ import { ConnectButtons, useTx } from "@/components/Tx";
 import { EmptyState, ErrorState, PageHead, Panel, Skeleton, StandingLabel } from "@/components/ui";
 import { REFRESH_EVENT } from "@/lib/events";
 import { remember, remembered } from "@/lib/mine";
-import { dateTime, money, share } from "@/lib/format";
-import { claim, transferNote, withdrawCredit } from "@/lib/near/actions";
-import { accountExists, getCredit, getLoans, getNote, isTestRun, listBusinesses } from "@/lib/near/rpc";
+import { dateTime, money, pct, share } from "@/lib/format";
+import { claim, withdrawCredit } from "@/lib/near/actions";
+import { ShareTransfer } from "@/components/business/ShareTransfer";
+import { getCredit, getLoans, getNote, isTestRun, listBusinesses } from "@/lib/near/rpc";
 import type { Business, LoanStatus, LoanView, NoteView } from "@/lib/near/types";
 import { standing } from "@/lib/status";
 import { useWallet } from "@/lib/wallet/WalletProvider";
@@ -31,7 +32,7 @@ async function readOne(business: Business, account: string) {
   }
 }
 
-type Progress = (data: Data, left: number) => void;
+type Progress = (data: Data, checked: number, total: number) => void;
 
 /**
  * Reads every business this account could hold something in, and reports as it goes:
@@ -62,25 +63,25 @@ async function load(account: string, progress: Progress): Promise<void> {
         if (r.value.positions.length || r.value.credit > 0n) remember(account, r.value.business.id);
       } else unread++;
     }
-    progress(snapshot(), Math.max(0, ordered.length - i - 4));
+    progress(snapshot(), Math.min(ordered.length, i + 4), ordered.length);
   }
-  if (ordered.length === 0) progress(snapshot(), 0);
+  if (ordered.length === 0) progress(snapshot(), 0, 0);
   if (ordered.length > 0 && read.length === 0) throw new Error("Your positions could not be read from the network.");
 }
 
 /** Positions, filled in batch by batch, re-read after every transaction and every 15 seconds. */
 function usePositions(account: string | null) {
-  const [state, setState] = useState<{ for: string | null; data?: Data; left: number; error?: string }>({ for: null, left: 0 });
+  const [state, setState] = useState<{ for: string | null; data?: Data; checked: number; total: number; error?: string }>({ for: null, checked: 0, total: 0 });
   const generation = useRef(0);
   const refresh = useCallback(async () => {
     if (!account) return;
     const mine = ++generation.current;
     try {
-      await load(account, (data, left) => {
-        if (mine === generation.current) setState({ for: account, data, left });
+      await load(account, (data, checked, total) => {
+        if (mine === generation.current) setState({ for: account, data, checked, total });
       });
     } catch (error) {
-      if (mine === generation.current) setState((s) => ({ ...s, for: account, left: 0, error: error instanceof Error ? error.message : String(error) }));
+      if (mine === generation.current) setState((s) => ({ ...s, for: account, checked: s.total, error: error instanceof Error ? error.message : String(error) }));
     }
   }, [account]);
   useEffect(() => {
@@ -90,8 +91,8 @@ function usePositions(account: string | null) {
     const timer = setInterval(() => { if (document.visibilityState === "visible") void refresh(); }, 15_000);
     return () => { window.removeEventListener(REFRESH_EVENT, now); clearInterval(timer); };
   }, [refresh]);
-  const current = state.for === account ? state : { data: undefined, left: 0, error: undefined };
-  return { data: current.data, left: current.left, error: current.error, refresh };
+  const current = state.for === account ? state : { data: undefined, checked: 0, total: 0, error: undefined };
+  return { data: current.data, checked: current.checked, total: current.total, error: current.error, refresh };
 }
 
 export function PortfolioScreen() {
@@ -146,7 +147,7 @@ export function PortfolioScreen() {
             </Panel>
           ) : null}
 
-          {live.left > 0 ? <p role="status" className="flex items-center gap-2 rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]" data-testid="positions-checking"><span className="spinner spinner-ink" aria-hidden />Still checking {live.left} more {live.left === 1 ? "business" : "businesses"} for anything of yours…</p> : null}
+          {live.checked < live.total ? <p role="status" className="flex items-center gap-2 rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]" data-testid="positions-checking"><span className="spinner spinner-ink" aria-hidden />Checked {live.checked} of {live.total} businesses for anything of yours…</p> : null}
           {data.unread > 0 ? <p role="status" className="rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]">{data.unread} {data.unread === 1 ? "business" : "businesses"} could not be read just now, so a position there may be missing. This page checks again every few seconds.</p> : null}
           {data.bids.length ? (
             <Panel title="Your bids" aside={`${data.bids.length}`}>
@@ -165,7 +166,7 @@ export function PortfolioScreen() {
 
           <Panel title="Money you lent" aside={`${data.positions.length} ${data.positions.length === 1 ? "loan" : "loans"}`}>
             {data.positions.length === 0 ? <EmptyState title="You have not lent yet" body="Lend to a business that is raising money. Your share of the loan appears here, with repayments from every sale ready to collect." action={{ href: "/market", label: "See what is raising" }} /> : (
-              <div className="-mx-[18px] sm:-mx-[22px] overflow-x-auto">
+              <div className="w-full overflow-x-auto">
                 <table className="table min-w-[680px]" data-testid="notes-table">
                   <thead><tr><th scope="col">Business</th><th scope="col">How it is doing</th><th scope="col" className="r">You lent</th><th scope="col" className="r">Share of the loan</th><th scope="col" className="r">Collected</th><th scope="col" className="r">Ready</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
                   <tbody>
@@ -178,13 +179,13 @@ export function PortfolioScreen() {
                           <td><Link className="font-medium hover:underline" href={`/b/${business.id}`}>{business.name}</Link><div className="text-[13px] muted">Loan {loan.id + 1}</div></td>
                           <td>{open ? <StandingLabel standing={standing(business)} /> : <span className="chip">{CLOSED[loan.status] ?? loan.status}</span>}</td>
                           <td className="r">{money(note.principal)}</td>
-                          <td className="r">{share(note.principal, loan.terms.principal)}%</td>
+                          <td className="r">{pct(share(note.principal, loan.terms.principal))}</td>
                           <td className="r">{money(note.claimed)}</td>
                           <td className="r">{money(ready)}</td>
                           <td className="text-right whitespace-nowrap"><button type="button" className={`btn btn-sm ${ready === 0n ? "btn-secondary" : "btn-primary"}`} disabled={busy || ready === 0n} onClick={async () => { await run(claim(business.id, loan.id), { requiredOn: business.id, done: `Collected ${money(ready)}` }); await live.refresh(); }}>Collect</button>{" "}<button type="button" className="btn btn-sm btn-secondary" aria-expanded={moving === `${business.id}:${loan.id}`} onClick={() => setMoving(moving === `${business.id}:${loan.id}` ? null : `${business.id}:${loan.id}`)}>Transfer</button></td>
                         </tr>
                         {moving === `${business.id}:${loan.id}` ? (
-                          <tr><td colSpan={7}><TransferNote business={business.id} loanId={loan.id} ready={ready} onDone={async () => { setMoving(null); await live.refresh(); }} /></td></tr>
+                          <tr><td colSpan={7}><ShareTransfer business={business.id} loanId={loan.id} lent={BigInt(note.principal)} ready={ready} onDone={async () => { setMoving(null); await live.refresh(); }} /></td></tr>
                         ) : null}
                         </Fragment>
                       );
@@ -212,35 +213,5 @@ export function PortfolioScreen() {
         </>
       )}
     </div>
-  );
-}
-
-/** Sells or moves a note: the whole position, including anything not yet collected, goes to the other account. */
-function TransferNote({ business, loanId, ready, onDone }: { business: string; loanId: number; ready: bigint; onDone: () => Promise<void> }) {
-  const { run, busy } = useTx();
-  const { account } = useWallet();
-  const [to, setTo] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const id = to.trim().toLowerCase();
-    setError(null);
-    if (!/^(?=.{2,64}$)(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/.test(id)) return setError("Write a NEAR account, like buyer.testnet.");
-    if (id === account) return setError("That is your own account.");
-    if (!(await accountExists(id).catch(() => true))) return setError("That account does not exist on this network.");
-    const result = await run(transferNote(business, loanId, id), { requiredOn: business, done: `Your share was sent to ${id}` });
-    if (result?.ok) await onDone();
-  };
-  return (
-    <form onSubmit={submit} className="grid gap-3 rounded-[12px] bg-[var(--surface-2)] p-4 sm:grid-cols-[1fr_auto] sm:items-end" data-testid="transfer-note">
-      <div className="grid gap-2">
-        <label htmlFor={`to-${business}-${loanId}`} className="text-[14px]">Send your share of this loan to</label>
-        <input id={`to-${business}-${loanId}`} className="input" value={to} onChange={(e) => setTo(e.target.value)} placeholder="buyer.testnet" autoComplete="off" spellCheck={false} aria-invalid={!!error} aria-describedby={`to-help-${business}-${loanId}`} />
-        <p id={`to-help-${business}-${loanId}`} className={`text-[14px] ${error ? "text-[var(--danger)]" : "muted"}`}>
-          {error ?? (ready > 0n ? `Collect the ${money(ready)} that is ready first: anything not collected moves with your share.` : "The whole position moves, with every future share of sales. Agree a price with the buyer first.")}
-        </p>
-      </div>
-      <button type="submit" className="btn btn-primary" disabled={busy || !to.trim()}>Send your share</button>
-    </form>
   );
 }

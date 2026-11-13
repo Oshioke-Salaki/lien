@@ -22,10 +22,10 @@ export function JobsPanel({ business: b }: { business: Business }) {
       ) : (
         <>
         <Concentration jobs={jobs} uniquePayers={b.stats.unique_payers} />
-        <div className="-mx-[18px] sm:-mx-[22px]">
-          <table className="table table-fixed">
+        <div className="w-full overflow-hidden">
+          <table className="table w-full table-fixed">
             <thead>
-              <tr><th scope="col">Checked</th><th scope="col" className="hidden w-[28%] xl:table-cell">Customer</th><th scope="col" className="w-[124px]">Result</th><th scope="col" className="r w-[80px]">Paid</th><th scope="col" className="r hidden w-[104px] sm:table-cell">When</th></tr>
+              <tr><th scope="col">Checked</th><th scope="col" className="hidden w-[24%] 2xl:table-cell">Customer</th><th scope="col" className="w-[124px]">Result</th><th scope="col" className="r w-[80px]">Paid</th><th scope="col" className="r hidden w-[150px] sm:table-cell">When (UTC)</th></tr>
             </thead>
             <tbody>
               {jobs.map((job) => {
@@ -50,10 +50,10 @@ function JobRow({ job, result, open, onToggle }: { job: Job; result: string; ope
         <td className="min-w-0">
           <button type="button" className="block max-w-full truncate text-left hover:underline" title={job.input} aria-expanded={open} onClick={(e) => { e.stopPropagation(); onToggle(); }}>{job.input || "(empty)"}</button>
         </td>
-        <td title={job.payer} className="hidden truncate xl:table-cell">{shortAccount(job.payer, 22)}</td>
+        <td title={job.payer} className="hidden truncate 2xl:table-cell">{shortAccount(job.payer, 22)}</td>
         <td className="truncate first-letter:uppercase">{result}</td>
         <td className="r whitespace-nowrap">{money(job.paid)}</td>
-        <td className="r hidden whitespace-nowrap sm:table-cell">{dateTime(job.created_at)}</td>
+        <td className="r hidden whitespace-nowrap sm:table-cell">{dateTime(job.created_at).replace(" UTC", "")}</td>
       </tr>
       {open ? (
         <tr><td colSpan={5} className="bg-[var(--surface-2)]">

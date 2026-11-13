@@ -30,9 +30,10 @@ function NavIcon({ d }: { d: string }) {
 }
 
 function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
-  const { account, kind, disconnect, ready } = useWallet();
+  const { account, kind, disconnect, ready, backup } = useWallet();
   const { run, busy } = useTx();
   const [confirming, setConfirming] = useState(false);
+  const [showBackup, setShowBackup] = useState(false);
   const balance = useLive(account ? () => tokenBalance(account) : null, `balance:${account}`, 8_000);
 
   if (!ready) return <div className="skeleton h-[132px]" />;
@@ -44,9 +45,10 @@ function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
       <div className="space-y-3 rounded-[14px] bg-[var(--surface)] p-4">
         <div>
           <p className="text-[15px] font-medium">Try it free</p>
-          <p className="mt-1 text-[14px] leading-snug text-[var(--ink-2)]">Get a free test account with $500 of play money, or connect a NEAR wallet.</p>
+          <p className="mt-1 text-[14px] leading-snug text-[var(--ink-2)]">Get a free test account with $500 of test dollars, or connect a NEAR wallet.</p>
         </div>
         <ConnectButtons compact />
+        <RestoreAccount />
       </div>
     );
   }
@@ -87,7 +89,8 @@ function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
       </div>
       {confirming ? (
         <div className="space-y-2 rounded-[10px] bg-[var(--surface-2)] p-3" role="alert">
-          <p className="text-[14px] leading-snug">This test account lives only in this browser. Signing out loses it and its test money for good.</p>
+          <p className="text-[14px] leading-snug">This test account lives only in this browser. Signing out loses it, its test money and anything it owns, unless you back it up first.</p>
+          <button type="button" className="link text-[14px]" onClick={() => { setConfirming(false); setShowBackup(true); }}>Back it up first</button>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn btn-secondary btn-sm" onClick={signOut} data-testid="confirm-sign-out">Sign out</button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConfirming(false)}>Keep it</button>
@@ -99,9 +102,50 @@ function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
             <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={topUp}>Get test funds</button>
           ) : null}
           <button type="button" className="btn btn-ghost btn-sm" onClick={signOut}>Sign out</button>
+          {kind === "guest" ? <button type="button" className="link text-[14px]" aria-expanded={showBackup} onClick={() => setShowBackup(!showBackup)}>{showBackup ? "Hide the backup" : "Back up this account"}</button> : null}
         </div>
       )}
+      {showBackup && kind === "guest" ? <BackupPanel text={backup() ?? ""} /> : null}
     </div>
+  );
+}
+
+/** The one line that holds a free test account, with a plain warning and a copy button. */
+function BackupPanel({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="space-y-2 rounded-[10px] bg-[var(--surface-2)] p-3" data-testid="backup">
+      <p className="text-[13px] leading-snug text-[var(--ink-2)]">Keep this line somewhere safe to use this test account in another browser. Anyone with it controls the account, but it only ever holds test money.</p>
+      <textarea readOnly value={text} rows={3} className="input w-full resize-none text-[12px] break-all" aria-label="Backup of this test account" onFocus={(e) => e.currentTarget.select()} />
+      <button type="button" className="btn btn-secondary btn-sm" onClick={async () => { try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2_000); } catch { /* the line can still be selected and copied by hand */ } }}>{copied ? "Copied" : "Copy the backup"}</button>
+    </div>
+  );
+}
+
+/** Brings back a free test account from its backup line, after checking it on the network. */
+function RestoreAccount() {
+  const { restore } = useWallet();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [state, setState] = useState<"idle" | "checking">("idle");
+  const [error, setError] = useState<string | null>(null);
+  if (!isTestnet) return null;
+  if (!open) return <button type="button" className="link text-[14px]" onClick={() => setOpen(true)}>Restore a test account</button>;
+  return (
+    <form className="space-y-2" onSubmit={async (e) => {
+      e.preventDefault();
+      setState("checking");
+      setError(null);
+      try { await restore(text); } catch (thrown) { setError(thrown instanceof Error ? thrown.message : "That backup could not be restored."); } finally { setState("idle"); }
+    }}>
+      <label className="block text-[13px]" htmlFor="restore-backup">Paste the backup line</label>
+      <textarea id="restore-backup" value={text} onChange={(e) => setText(e.target.value)} rows={3} className="input w-full resize-none text-[12px]" placeholder="lien-test-account:…" aria-invalid={!!error} />
+      {error ? <p role="alert" className="text-[13px] text-[var(--danger)]">{error}</p> : null}
+      <div className="flex gap-2">
+        <button type="submit" className="btn btn-secondary btn-sm" disabled={state === "checking" || !text.trim()}>{state === "checking" ? "Checking…" : "Restore"}</button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setOpen(false); setError(null); }}>Cancel</button>
+      </div>
+    </form>
   );
 }
 

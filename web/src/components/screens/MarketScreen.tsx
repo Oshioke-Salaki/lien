@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useSyncExternalStore } from "react";
-import { Bar, EmptyState, ErrorState, PageHead, Skeleton, StandingLabel, STANDING_TONE } from "@/components/ui";
+import { ActivityFeed } from "@/components/market/ActivityFeed";
+import { Bar, EmptyState, ErrorState, Info, PageHead, Skeleton, StandingLabel, STANDING_TONE } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
-import { money, percent, share, shortAccount } from "@/lib/format";
+import { money, moneyUp, pct, percent, share, shortAccount } from "@/lib/format";
 import { listBusinesses } from "@/lib/near/rpc";
 import type { Business } from "@/lib/near/types";
 import { isSample } from "@/lib/demo";
-import { isAlert, standing, type Standing } from "@/lib/status";
+import { auctionEnded, isAlert, standing, type Standing } from "@/lib/status";
 
 /** What needs a decision comes first, then what can be funded. */
 const ORDER: Record<Standing, number> = { foreclosable: 0, auction: 1, foreclosed: 2, behind: 3, funding: 4, current: 5, "no-loan": 6 };
@@ -30,10 +31,16 @@ const COLS = "lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1.6fr)_minm
 export function MarketScreen({ initial }: { initial?: Business[] }) {
   const live = useLive(listBusinesses, "market", 8_000, initial);
   const router = useRouter();
-  const rows = useMemo(
+  const all = useMemo(
     () => [...(live.data ?? [])].sort((a, b) => ORDER[standing(a)] - ORDER[standing(b)]),
     [live.data],
   );
+  // Featured: the team's samples and any business with real activity. Businesses a visitor
+  // started and never used are listed separately, folded, so they never crowd the market.
+  const featured = (b: Business) => isSample(b.id) || b.stats.unique_payers >= 2;
+  const rows = all.filter(featured);
+  const started = all.filter((b) => !featured(b));
+  const now = all.reduce((latest, b) => Math.max(latest, b.now), 0);
   const count = (s: Standing[]) => rows.filter((b) => s.includes(standing(b))).length;
   const raisingCount = count(["funding"]);
   const paying = count(["current"]);
@@ -58,11 +65,11 @@ export function MarketScreen({ initial }: { initial?: Business[] }) {
             {live.loaded
               ? rows.length === 0
                 ? "No businesses yet. Be the first to start one."
-                : `${rows.length} ${rows.length === 1 ? "business" : "businesses"}: ${finding}.`
+                : `${rows.length} featured ${rows.length === 1 ? "business" : "businesses"}: ${finding}.${started.length ? ` Plus ${started.length} started by visitors.` : ""}`
               : "Reading the chain…"}
           </p>
         }
-        action={<Link href="/create" className="btn btn-primary">Start a business</Link>}
+        action={<div className="flex items-center gap-4"><ReopenIntro /><Link href="/create" className="btn btn-primary">Start a business</Link></div>}
       />
 
       <HowItWorks />
@@ -73,12 +80,12 @@ export function MarketScreen({ initial }: { initial?: Business[] }) {
         <>
           <dl className="grid grid-cols-3 gap-2 sm:gap-3">
             {[
-              { label: "Lent out now", value: live.loaded ? money(lent) : null },
-              { label: "Repaid to lenders", value: live.loaded ? money(repaid) : null },
-              { label: "Checks sold", value: live.loaded ? sold.toLocaleString("en-US") : null },
+              { label: "Lent out now", tip: "Money lenders have in loans that have started, across the featured businesses.", value: live.loaded ? money(lent) : null },
+              { label: "Repaid to lenders", tip: "Money that has already reached lenders on these loans, from sales and payments.", value: live.loaded ? money(repaid) : null },
+              { label: "Checks sold", tip: "Safety checks these businesses have sold and delivered. Each sale repays their lenders first.", value: live.loaded ? sold.toLocaleString("en-US") : null },
             ].map((stat) => (
               <div key={stat.label} className="rounded-[16px] bg-[var(--surface)] p-3 sm:p-5">
-                <dt className="text-[13px] leading-snug muted sm:text-[14px]">{stat.label}</dt>
+                <dt className="text-[13px] leading-snug muted sm:text-[14px]">{stat.label}<Info label={stat.label} tip={stat.tip} /></dt>
                 <dd className="num mt-2 text-[18px] sm:text-[28px] leading-none font-medium tracking-[-0.02em]">{stat.value ?? <span className="skeleton inline-block h-6 w-full max-w-32 align-middle" />}</dd>
               </div>
             ))}
@@ -97,7 +104,21 @@ export function MarketScreen({ initial }: { initial?: Business[] }) {
                 {rows.map((b) => <MarketRow key={b.id} business={b} onOpen={() => router.push(`/b/${b.id}`)} />)}
               </ul>
             )}
+            {started.length ? (
+              <details className="group rounded-[16px] bg-[var(--surface)]" data-testid="started-by-visitors">
+                <summary className="flex min-h-[56px] cursor-pointer list-none items-center justify-between gap-3 px-5 text-[16px] font-medium [&::-webkit-details-marker]:hidden">
+                  Started by visitors ({started.length})
+                  <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <p className="px-5 pb-3 text-[14px] text-[var(--ink-2)]">Businesses people started while trying Lien, with no loan or sales yet.</p>
+                <ul className="space-y-2 px-2 pb-2">
+                  {started.map((b) => <MarketRow key={b.id} business={b} onOpen={() => router.push(`/b/${b.id}`)} />)}
+                </ul>
+              </details>
+            ) : null}
           </section>
+
+          {live.loaded && rows.length ? <ActivityFeed businesses={rows} now={now} /> : null}
 
           {live.loaded ? <TryIt rows={rows} /> : null}
           <p className="max-w-[72ch] text-[14px] muted">
@@ -167,11 +188,14 @@ function MarketRow({ business: b, onOpen }: { business: Business; onOpen: () => 
           <>
             <div className="mb-2 flex justify-between gap-3 text-[14px]">
               <span className="num">{raising ? `${money(loan.funded)} of ${money(loan.terms.principal)} raised` : `${money(loan.repaid)} of ${money(loan.terms.total_due)} paid back`}</span>
-              <span className="num muted">{progress}%</span>
+              <span className="num muted">{pct(progress)}</span>
             </div>
-            <Bar value={progress} tone={raising ? "var(--accent)" : STANDING_TONE[s]} label={raising ? `${progress}% raised` : `${progress}% repaid`} />
+            <Bar value={progress} tone={raising ? "var(--accent)" : STANDING_TONE[s]} label={raising ? `${pct(progress)} raised` : `${pct(progress)} repaid`} />
           </>
-        ) : <span className="text-[14px] muted">No loan. {b.stats.jobs_done} checks sold.</span>}
+        ) : <span className="text-[14px] muted">No loan. {b.stats.jobs_done} {b.stats.jobs_done === 1 ? "check" : "checks"} sold.</span>}
+        {loan?.status === "Foreclosed" && !auctionEnded(loan, b.now) && loan.min_next_bid && BigInt(loan.min_next_bid) < BigInt(b.ledger.opex) ? (
+          <p className="mt-2 text-[13px] text-[var(--ink-2)]" data-testid="bargain-row">Lowest bid {moneyUp(loan.min_next_bid)}, below the {money(b.ledger.opex)} of running money inside. Its terms allow it.</p>
+        ) : null}
       </div>
       <div className="text-[14px] lg:text-[15px]">
         <span className="muted lg:hidden">Lenders get </span>
@@ -201,6 +225,17 @@ const dismissIntro = () => {
   try { localStorage.setItem(INTRO_KEY, "1"); } catch { /* a private window keeps showing it */ }
   window.dispatchEvent(new Event(INTRO_EVENT));
 };
+
+const reopenIntro = () => {
+  try { localStorage.removeItem(INTRO_KEY); } catch { /* nothing to undo */ }
+  window.dispatchEvent(new Event(INTRO_EVENT));
+};
+
+/** Once "How Lien works" is hidden, a small link brings it back. */
+function ReopenIntro() {
+  const hidden = useSyncExternalStore(watchIntro, readIntro, () => false);
+  return hidden ? <button type="button" className="link text-[15px]" onClick={reopenIntro}>How it works</button> : null;
+}
 
 const STEPS = [
   { title: "An AI agent borrows", body: "It runs as a NEAR account that nobody holds the keys to, so no one can walk off with the loan." },

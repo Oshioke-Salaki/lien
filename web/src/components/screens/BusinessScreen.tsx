@@ -115,6 +115,7 @@ function ForeclosureNotice() {
       <div>
         <p className="text-[17px] font-medium">Notice: taken over for its lenders</p>
         <p className="mt-1 text-[15px] text-[var(--ink-2)]">It missed its payments, so it now works for its lenders. Same address and same service, but every sale pays lenders the owner&rsquo;s share too, until someone buys the business at auction.</p>
+        <p className="mt-2 text-[14px] text-[var(--ink-2)]">At the takeover, the owner&rsquo;s unpaid share and any running money above about a week&rsquo;s costs went straight to lenders, which is why &ldquo;paid back&rdquo; jumped.</p>
       </div>
       <span className="stamp-in hidden shrink-0 rounded-[6px] border-2 border-[var(--danger)] px-3 py-1 text-[14px] font-semibold text-[var(--danger)] sm:block">Taken over</span>
     </div>

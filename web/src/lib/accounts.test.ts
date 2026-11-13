@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasAccountName, isAccountId, labelProblem } from "./accounts";
+import { hasAccountName, isAccountId, isPayableAccount, labelProblem } from "./accounts";
 
 describe("hasAccountName", () => {
   it("finds an account, alone or in a sentence", () => {
@@ -28,5 +28,15 @@ describe("account ids and labels", () => {
     expect(labelProblem("Scout")).toMatch(/lowercase/);
     expect(labelProblem("sc out")).toMatch(/only letters/);
     expect(labelProblem("-scout")).toMatch(/Start and end/);
+  });
+});
+
+describe("isPayableAccount", () => {
+  it("accepts named and implicit accounts someone can receive money at", () => {
+    expect(isPayableAccount("vendor.testnet")).toBe(true);
+    expect(isPayableAccount("a".repeat(64).replace(/a/g, "f"))).toBe(true);
+  });
+  it("refuses bare words and anything that is not an account", () => {
+    for (const bad of ["bob", "Bob Smith", "not an account", "", "x.y"]) expect(isPayableAccount(bad)).toBe(false);
   });
 });

@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { useLive } from "@/hooks/useLive";
-import { CENT, money, moneyUp, parseAmount } from "@/lib/format";
+
 import { isRegistered, tokenBalance } from "@/lib/near/rpc";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 
@@ -11,22 +11,7 @@ export function useMyBalance() {
   return useLive(account ? async () => ((await isRegistered(account)) ? tokenBalance(account) : 0n) : null, `my-balance:${account}`, 8_000);
 }
 
-export type AmountCheck = { value: bigint | null; error: string | null };
-
-export function checkAmount(text: string, { min, max, balance }: { min?: bigint; max?: bigint; balance?: bigint }): AmountCheck {
-  if (text.trim() === "") return { value: null, error: null };
-  const clean = text.trim().replace(/,/g, "");
-  if (/^-/.test(clean)) return { value: null, error: "Enter a positive amount, like 12.50." };
-  if (/\.\d{3,}$/.test(clean)) return { value: null, error: "Use at most two decimal places, like 12.50." };
-  const value = parseAmount(text);
-  if (value === null) return { value: null, error: "Enter an amount in dollars, like 12.50." };
-  if (value === 0n) return { value: null, error: "Enter more than zero." };
-  if (value < CENT) return { value, error: "The smallest amount is $0.01." };
-  if (min !== undefined && value < min) return { value, error: `The minimum is ${moneyUp(min)}.` };
-  if (max !== undefined && value > max) return { value, error: `The maximum is ${money(max)}.` };
-  if (balance !== undefined && value > balance) return { value, error: `You hold ${money(balance)}.` };
-  return { value, error: null };
-}
+export { checkAmount, type AmountCheck } from "@/lib/amounts";
 
 /** An amount in dollars by default ("$" before the number, as on any banking app), or in another unit. */
 export function AmountField({ label, value, onChange, error, hint, testId, unit }: { label: string; value: string; onChange: (v: string) => void; error?: string | null; hint?: string; testId?: string; unit?: string }) {
@@ -77,7 +62,7 @@ export function DurationField({ label, secs, onChange, hint, testId }: { label: 
         <input
           id={id}
           data-testid={testId}
-          className="input num"
+          className="input num min-w-[64px] flex-1"
           inputMode="numeric"
           value={secs === 0 ? "0" : String(secs / unit.secs)}
           onChange={(e) => {
@@ -85,7 +70,7 @@ export function DurationField({ label, secs, onChange, hint, testId }: { label: 
             onChange(Number.isFinite(n) ? n * unit.secs : 0);
           }}
         />
-        <select aria-label={`${label} unit`} className="input w-auto" value={unit.secs} onChange={(e) => onChange((secs / unit.secs) * Number(e.target.value))}>
+        <select aria-label={`${label} unit`} className="input w-auto shrink-0 pr-8" value={unit.secs} onChange={(e) => onChange((secs / unit.secs) * Number(e.target.value))}>
           {UNITS.map((u) => <option key={u.secs} value={u.secs}>{u.label}</option>)}
         </select>
       </div>

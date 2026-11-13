@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { amount, centsUp, duration, fromNow, inputAmount, money, moneyExact, moneyUp, parseAmount, percent, share, shortAccount, smartAmount, toYocto, nearAmount } from "./format";
+import { amount, centsUp, dateTime, duration, fromNow, inputAmount, money, moneyExact, moneyUp, parseAmount, pct, percent, share, shortAccount, smartAmount, toYocto, nearAmount } from "./format";
 
 describe("amount", () => {
   it("formats base units", () => {
@@ -85,5 +85,22 @@ describe("money", () => {
     expect(inputAmount("15000000")).toBe("15");
     expect(inputAmount("12500000")).toBe("12.5");
     expect(inputAmount("1234567000000")).toBe("1234567");
+  });
+});
+
+describe("display rules a newcomer sees", () => {
+  it("shows percentages as whole numbers, with decimals only under 1%", () => {
+    expect(pct(74)).toBe("74%");
+    expect(pct(15.09)).toBe("15%");
+    expect(pct(0.37)).toBe("0.37%");
+    expect(pct(0)).toBe("0%");
+  });
+  it("shortens account names at a dot, never inside a word", () => {
+    expect(shortAccount("g134k3ya.guests.lien-13569.testnet", 24)).toBe("g134k3ya….testnet");
+    expect(shortAccount("bob.testnet")).toBe("bob.testnet");
+  });
+  it("prints times in UTC, the same on the server and in every browser", () => {
+    expect(dateTime(1_794_573_403)).toMatch(/UTC$/);
+    expect(dateTime(0)).toBe("1 Jan, 00:00 UTC");
   });
 });

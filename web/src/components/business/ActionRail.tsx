@@ -2,20 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { ConnectButtons, ConnectGate as Gate, useTx } from "@/components/Tx";
-import { Panel, Term } from "@/components/ui";
+import { Info, Panel, Term } from "@/components/ui";
 import { usePay } from "@/hooks/usePay";
 import { useLive } from "@/hooks/useLive";
 import { isTestnet } from "@/lib/config";
-import { CENT, centsUp, duration, fromNow, inputAmount, money, moneyUp, nearAmount, parseAmount, percent, share, toYocto } from "@/lib/format";
+import { CENT, centsUp, dateTime, duration, fromNow, inputAmount, money, moneyUp, nearAmount, parseAmount, pct, percent, share, toYocto } from "@/lib/format";
 import { hasAccountName } from "@/lib/accounts";
 import { GLOSSARY } from "@/lib/glossary";
 import * as tx from "@/lib/near/actions";
 import { getCredit, getJob, getLoans, getNote } from "@/lib/near/rpc";
-import type { Business, Job, LoanView, NoteView } from "@/lib/near/types";
+import type { Business, LoanView, NoteView } from "@/lib/near/types";
 import { auctionEnded, standing } from "@/lib/status";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { OfferForm } from "./OfferForm";
 import { ReportCard } from "./ReportCard";
+import { isFinal, loadChecks, saveChecks, type SavedCheck } from "@/lib/checks";
+import { parseReport } from "@/lib/report";
+import { ShareTransfer } from "./ShareTransfer";
 import { AmountField, checkAmount, TextField, useMyBalance } from "./fields";
 
 type Props = { business: Business; now: number; refresh: () => Promise<void>; featured?: boolean };
@@ -33,7 +36,7 @@ export function ActionRail({ business: b, now, refresh }: Props) {
     <aside className="space-y-4" aria-label="Actions">
       {!account && ready ? (
         <section className="panel p-5" aria-labelledby="take-part">
-          <h2 id="take-part" className="text-[18px] font-medium tracking-[-0.01em]">Try it with play money</h2>
+          <h2 id="take-part" className="text-[18px] font-medium tracking-[-0.01em]">Try it with test dollars</h2>
           <p className="mt-2 mb-4 text-[15px] leading-snug text-[var(--ink-2)]">Lend, buy a safety check or bid on a business. A free test account with $500 of <Term tip={GLOSSARY.testDollars}>test dollars</Term> is ready in about ten seconds, with nothing to install.</p>
           <ConnectButtons compact />
         </section>
@@ -81,7 +84,7 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
   return (
     <Panel featured={featured} title="Lend to this business" aside={`Closes ${fromNow(loan.funding_deadline, now)}`}>
       <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
-        It pays lenders back from every sale, {percent(loan.terms.lender_bps)} of each one, until they have {percent(interest)} more than they lent. Your money only moves once the whole loan is raised.
+        It pays lenders back from every sale, {percent(loan.terms.lender_bps)} of each one, until they have {percent(interest)} more than they lent. When you lend, your money leaves your balance and is held by the contract; it reaches the business only once the whole loan is raised. If the loan isn&rsquo;t fully raised by {dateTime(loan.funding_deadline)}, you can take it back.
       </p>
       <ConnectGate quiet reason="Connect to lend. You can read everything without one.">
         <form className="space-y-3" onSubmit={async (e) => {
@@ -95,9 +98,10 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
           <button type="button" className="link text-[14px]" onClick={() => { const most = balance.data !== undefined && balance.data < remaining ? balance.data : remaining; setText(inputAmount(most - (most % CENT))); }}>Lend the most I can</button>
           {value && !check.error ? (
             <dl className="dl rounded-[12px] bg-[var(--surface-2)] p-4" data-testid="lend-preview">
-              <dt><Term tip={GLOSSARY.share}>Your share</Term> of the full loan</dt><dd>{noteShare}%</dd>
+              <dt><Term tip={GLOSSARY.share}>Your share</Term> of the full loan</dt><dd>{pct(noteShare)}</dd>
               <dt>You get back in total</dt><dd>{money(returns)}</dd>
-              <dt>If it stops paying</dt><dd>Lenders can take it over</dd>
+              <dt>If it stops paying</dt><dd>Anyone can take it over</dd>
+              <dt>If it is then sold<Info label="sale floor" tip="After a takeover the business is auctioned. The price can't go below this floor, which the owner set in the terms. The sale pays lenders first." /></dt><dd>For at least {moneyUp((BigInt(loan.terms.total_due) * BigInt(loan.terms.auction_reserve_bps)) / 10_000n)}</dd>
             </dl>
           ) : null}
           <button type="submit" data-testid="lend-submit" className="btn btn-primary w-full" disabled={busy || !value || !!check.error}>{value && !check.error ? `Lend ${money(value)}` : "Enter an amount to lend"}</button>
@@ -109,7 +113,7 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
 
 function ForecloseCard({ business: b, now, refresh, featured }: Props) {
   const loan = b.current_loan!;
-  const { busy, run } = useTx();
+  const { busy, run, notify } = useTx();
   const ready = loan.foreclosable_at !== null && now >= loan.foreclosable_at;
   return (
     <Panel featured={featured} title={ready ? "Anyone can take over this business" : "This business is behind on payments"}>
@@ -119,10 +123,15 @@ function ForecloseCard({ business: b, now, refresh, featured }: Props) {
           : `Any payment now puts it back on track. If none comes, anyone can take it over ${fromNow(loan.foreclosable_at!, now)}.`}
       </p>
       <ConnectGate quiet reason="Connect to take it over. Anyone can.">
-        <button type="button" data-testid="foreclose" className="btn btn-warn w-full" disabled={busy || !ready} onClick={async () => { await run(tx.foreclose(b.id), { requiredOn: b.id, done: "You took over the business for its lenders" }); await refresh(); }}>
+        <button type="button" data-testid="foreclose" className="btn btn-warn w-full" disabled={busy || !ready} onClick={async () => {
+          const result = await run(tx.foreclose(b.id), { requiredOn: b.id, done: "You took over the business for its lenders" });
+          const seized = result?.events.find((e) => e.event === "foreclosed")?.data.seized;
+          if (result?.ok && seized && BigInt(String(seized)) > 0n) notify("Money moved to lenders", `${money(String(seized))} of the owner's share and spare running money went straight to lenders at takeover.`);
+          await refresh();
+        }}>
           {ready ? "Take over this business" : `Possible ${fromNow(loan.foreclosable_at!, now)}`}
         </button>
-        <p className="hint"><Term tip={GLOSSARY.takeOver}>What happens next?</Term></p>
+        <p className="hint">After the takeover it is put up for sale. The auction starts with the first bid, and the price pays lenders first.</p>
       </ConnectGate>
     </Panel>
   );
@@ -146,10 +155,16 @@ function AuctionCard({ business: b, now, refresh, featured }: Props) {
   return (
     <Panel featured={featured} title="Buy this business" aside={loan.auction.ends_at ? (ended ? "Auction over" : `Ends ${fromNow(loan.auction.ends_at, now)}`) : `${duration(loan.terms.auction_secs)} auction, starts with the first bid`}>
       <dl className="dl mb-3" data-testid="auction">
-        <dt>Still owed to lenders</dt><dd>{money(outstanding)}</dd>
+        <dt>Still owed to lenders<Info label="still owed" tip="What lenders are still owed. The sale price pays this first; anything above it goes to the old owner." /></dt><dd>{money(outstanding)}</dd>
         <dt>Highest bid</dt><dd>{high > 0n ? money(high) : <span className="muted">No bids yet</span>}</dd>
-        <dt>Money inside it</dt><dd>{money(inside)}</dd>
+        {!ended ? <><dt>Lowest bid accepted<Info label="lowest bid" tip="The first bid can't be below the floor set in the loan's terms; after that, each bid must beat the last." /></dt><dd>{moneyUp(minNext)}</dd></> : null}
+        <dt>Running money inside<Info label="running money" tip="Money the business keeps to pay for its work. The buyer gets it with the business." /></dt><dd>{money(inside)}</dd>
       </dl>
+      {!ended && minNext < inside ? (
+        <p className="mb-3 rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[14px] leading-snug" data-testid="bargain">
+          The lowest bid ({moneyUp(minNext)}) is below the {money(inside)} of running money the buyer gets. This floor was set in the loan&rsquo;s terms, and lenders accepted it when they lent. Bids above it go to lenders.
+        </p>
+      ) : null}
       {iWin && !ended ? (
         <p className="mb-3 rounded-[10px] bg-[var(--accent-tint)] px-4 py-3 text-[15px]" data-testid="winning">You are the highest bidder. If nobody bids more before the clock runs out, the business is yours.</p>
       ) : null}
@@ -199,76 +214,87 @@ function refundText(reason: string | undefined, price: bigint): { text: string; 
   }
 }
 
-const jobKey = (id: string) => `lien:job:${id}`;
-
 function BuyCard({ business: b, refresh, featured }: { business: Business; refresh: () => Promise<void>; featured?: boolean }) {
   const pay = usePay(b.id);
   const { busy } = useTx();
   const balance = useMyBalance();
   const [input, setInput] = useState("");
   const { account } = useWallet();
-  const [job, setJob] = useState<{ id: number; result: Job | null; input: string; reason?: string; mine?: { payer: string; input: string; since: number } } | null>(null);
-  const [slow, setSlow] = useState(false);
+  const [checks, setChecks] = useState<{ for: string; list: SavedCheck[] }>({ for: "", list: [] });
+  const [clock, setClock] = useState(0);
   const price = BigInt(b.service.price);
   const short = balance.data !== undefined && balance.data < price;
   const tankEmpty = BigInt(b.tank) < BigInt(b.service.compute_deposit);
   // Checked before any money moves: a check needs an account to look at.
   const named = hasAccountName(input);
   const inputError = input.trim() && !named ? "Type the account you want checked, like outlayer.testnet." : null;
+  const owner = `${b.id}:${account ?? ""}`;
+  const list = checks.for === owner ? checks.list : [];
 
-  // A check survives Back and refresh: the one in flight is kept for this business in this tab.
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem(jobKey(b.id));
-      if (saved && !job) setJob(JSON.parse(saved));
-    } catch { /* storage unavailable: the check still runs, it just is not remembered */ }
-    // Only on arrival.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [b.id]);
-  useEffect(() => {
-    try {
-      if (job) sessionStorage.setItem(jobKey(b.id), JSON.stringify(job));
-      else sessionStorage.removeItem(jobKey(b.id));
-    } catch { /* see above */ }
-  }, [job, b.id]);
+  // Every change is written to this browser at once, so nothing bought is ever lost.
+  const update = (change: (list: SavedCheck[]) => SavedCheck[]) =>
+    setChecks((current) => ({ for: owner, list: saveChecks(b.id, account, change(current.for === owner ? current.list : loadChecks(b.id, account))) }));
 
+  // On arrival (and after a refresh or Back), pick up the checks bought here before.
   useEffect(() => {
-    if (!job || job.result?.status === "Done" || job.result?.status === "Refunded") return;
+    const saved = loadChecks(b.id, account);
+    setChecks({ for: `${b.id}:${account ?? ""}`, list: saved });
+  }, [b.id, account]);
+
+  // "Bought 40s ago" keeps counting while a check runs.
+  const running = list.some((c) => !isFinal(c));
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => setClock(Math.floor(Date.now() / 1000)), 1_000);
+    return () => clearInterval(timer);
+  }, [running]);
+
+  // Follow every unfinished check to its result.
+  useEffect(() => {
+    if (!running) return;
     let alive = true;
     const timer = setInterval(async () => {
-      const latest = await getJob(b.id, job.id).catch(() => null);
-      if (!alive || !latest) return;
-      // The page's copy of the business can be a few seconds old, so the number it expected may
-      // belong to an earlier job: look at the next one until ours turns up.
-      if (job.mine && (latest.payer !== job.mine.payer || latest.input !== job.mine.input || Number(latest.created_at) < job.mine.since)) {
-        setJob({ ...job, id: job.id + 1, result: null });
-        return;
+      for (const check of list.filter((c) => !isFinal(c))) {
+        const latest = await getJob(b.id, check.id).catch(() => null);
+        if (!alive || !latest) continue;
+        // The page's copy of the business can be a few seconds old, so a number it expected may
+        // belong to an earlier job: look at the next one until ours turns up.
+        if (!check.confirmed && (latest.payer !== account || latest.input !== check.input || Number(latest.created_at) < check.since - 30)) {
+          update((all) => all.map((c) => (c === check || (c.id === check.id && c.since === check.since) ? { ...c, id: c.id + 1 } : c)));
+          continue;
+        }
+        if (latest.status === check.status) continue;
+        update((all) => all.map((c) => (c.id === check.id && c.since === check.since ? { ...c, confirmed: true, status: latest.status, report: latest.report } : c)));
+        if (latest.status !== "Pending") void refresh();
       }
-      if (latest.status === job.result?.status) return;
-      setJob({ ...job, result: latest });
-      if (latest.status !== "Pending") void refresh();
     }, 2_500);
-    const slowTimer = setTimeout(() => { if (alive) setSlow(true); }, 45_000);
-    return () => { alive = false; clearInterval(timer); clearTimeout(slowTimer); setSlow(false); };
-  }, [job, b.id, refresh]);
+    return () => { alive = false; clearInterval(timer); };
+    // `update` is rebuilt every render; the list it reads is the dependency that matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, list, b.id, account, refresh]);
 
   const submit = async (text: string) => {
     if (!text || !hasAccountName(text)) return;
-    // The transaction only settles once the secure computer answers, which can take minutes on
-    // testnet. The job's number is known now, so its progress shows from the first second.
-    setJob({ id: b.next_job_id, result: null, input: text, mine: { payer: account ?? "", input: text, since: Math.floor(Date.now() / 1000) - 30 } });
-    const result = await pay(price, { action: "job", input: text }, "Buy a safety check", "Check finished", "Paid. A secure computer is running the check now; this usually takes under a minute. You can keep using the page.");
+    const since = Math.floor(Date.now() / 1000);
+    // Saved before paying: if the page is refreshed mid-payment, the check is still followed.
+    update((all) => [{ id: b.next_job_id, input: text, since, confirmed: false, status: "Pending" }, ...all]);
+    const result = await pay(price, { action: "job", input: text }, "Buy a safety check", "Check paid for", "Paid. A secure computer is running the check now; this usually takes under a minute. You can keep using the page.");
     const started = result?.events.find((event) => event.event === "job_started");
     const refunded = result?.events.find((event) => event.event === "job_refunded");
     if (result?.ok && started) {
       const id = started.data.job_id as number;
       const reason = refunded?.data.job_id === id ? String(refunded.data.reason) : undefined;
-      setJob((current) => current ? { ...current, id, mine: undefined, result: current.id === id ? current.result : null, reason: reason ?? current.reason } : current);
-    } else if (!result?.ok) setJob(null);
+      update((all) => all.map((c) => (c.since === since && c.input === text ? { ...c, id, confirmed: true, ...(reason ? { reason, status: "Refunded" as const } : {}) } : c)));
+    } else if (!result?.ok) {
+      update((all) => all.filter((c) => !(c.since === since && c.input === text)));
+    }
     await Promise.all([refresh(), balance.refresh()]);
   };
 
-  const refund = job?.result?.status === "Refunded" ? refundText(job.reason, price) : null;
+  const current = list[0];
+  const earlier = list.slice(1);
+  const now = clock || Math.floor(Date.now() / 1000);
+  const refund = current?.status === "Refunded" ? refundText(current.reason, price) : null;
 
   return (
     <Panel featured={featured} title={`Buy a safety check, ${money(price)}`}>
@@ -289,16 +315,38 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
           <button type="submit" data-testid="job-submit" className="btn btn-primary w-full" disabled={busy || !input.trim() || !named || short || tankEmpty}>{!input.trim() ? "Type an account name first" : !named ? "Type an account name to check" : `Pay ${money(price)} and run the check`}</button>
         </form>
       </ConnectGate>
-      {job ? (
+      {current ? (
         <div className="inset appear mt-4" data-testid="job-result" aria-live="polite">
-          {!job.result || job.result.status === "Pending" ? (
-            <p className="flex items-start gap-2 text-[15px]"><span className="spinner spinner-ink mt-[3px] shrink-0" aria-hidden /> {slow ? "Still running. The test network's secure computers are slow right now, so this can take a few minutes. If it fails, your money comes back automatically." : "Running on the secure computer. This usually takes under a minute."}</p>
-          ) : job.result.status === "Done" ? <ReportCard raw={job.result.report} /> : (
+          {!isFinal(current) ? (
+            <p className="flex items-start gap-2 text-[15px]">
+              <span className="spinner spinner-ink mt-[3px] shrink-0" aria-hidden />
+              <span>
+                Your check of <span className="font-medium break-all">{current.input}</span> is running (bought {duration(Math.max(0, now - current.since))} ago).{" "}
+                {now - current.since > 45 ? "The test network's secure computers are slow right now, so this can take a few minutes. If it fails, your money comes back automatically." : "This usually takes under a minute."}
+              </span>
+            </p>
+          ) : current.status === "Done" ? <ReportCard raw={current.report ?? null} /> : (
             <div className="space-y-3">
               <p className="text-[15px]">{refund!.text}</p>
-              {refund!.retry ? <button type="button" className="btn btn-secondary btn-sm" disabled={busy || short} onClick={() => void submit(job.input)}>Try the same check again</button> : null}
+              {refund!.retry ? <button type="button" className="btn btn-secondary btn-sm" disabled={busy || short} onClick={() => void submit(current.input)}>Try the same check again</button> : null}
             </div>
           )}
+        </div>
+      ) : null}
+      {earlier.length ? (
+        <div className="mt-4" data-testid="recent-checks">
+          <p className="mb-2 text-[14px] muted">Your recent checks here</p>
+          <ul className="space-y-1">
+            {earlier.map((c) => {
+              const level = c.status === "Done" ? parseReport(c.report ?? null)?.level : undefined;
+              return (
+                <li key={`${c.since}:${c.id}`} className="flex items-center justify-between gap-3 rounded-[10px] bg-[var(--surface-2)] px-3 py-2 text-[14px]">
+                  <span className="min-w-0 truncate" title={c.input}>{c.input}</span>
+                  <span className="shrink-0 text-[var(--ink-2)]">{c.status === "Done" ? (level ? `${level[0]!.toUpperCase()}${level.slice(1)} risk` : "Done") : c.status === "Refunded" ? "Refunded" : "Running"}</span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       ) : null}
     </Panel>
@@ -325,7 +373,7 @@ function RepayCard({ business: b, refresh, isOperator }: { business: Business; r
         <form className="space-y-3" onSubmit={async (e) => {
           e.preventDefault();
           if (!check.value || check.error) return;
-          const result = await pay(check.value, { action: "repay" }, "Repay", "Payment received");
+          const result = await pay(check.value, { action: "repay" }, "Pay down the debt", "Payment received");
           if (result?.ok) setText("");
           await Promise.all([refresh(), balance.refresh()]);
         }}>
@@ -355,7 +403,6 @@ type Position = { loan: LoanView; note: NoteView };
 function PositionCard({ business: b, refresh }: { business: Business; refresh: () => Promise<void> }) {
   const { account } = useWallet();
   const { busy, run } = useTx();
-  const [to, setTo] = useState("");
   const positions = useLive(
     account
       ? async (): Promise<Position[]> => {
@@ -389,33 +436,25 @@ function PositionCard({ business: b, refresh }: { business: Business; refresh: (
           return (
             <div key={loan.id} className="space-y-2">
               <dl className="dl">
-                <dt>You lent{b.loan_count > 1 ? ` (loan ${loan.id + 1})` : ""}</dt><dd>{money(note.principal)}, {share(note.principal, loan.terms.principal)}% of the loan</dd>
+                <dt>You lent{b.loan_count > 1 ? ` (loan ${loan.id + 1})` : ""}</dt><dd>{money(note.principal)}, {pct(share(note.principal, loan.terms.principal))} of the loan</dd>
                 <dt>Collected so far</dt><dd>{money(note.claimed)}</dd>
                 <dt>Ready to collect</dt><dd data-testid="claimable">{money(claimable)}</dd>
               </dl>
               <button type="button" data-testid="claim" className="btn btn-primary w-full" disabled={busy || claimable === 0n} onClick={async () => {
                 await run(tx.claim(b.id, loan.id), { requiredOn: b.id, done: `Collected ${money(claimable)}` });
                 await Promise.all([positions.refresh(), credit.refresh(), refresh()]);
-              }}>{claimable === 0n ? "Nothing to collect yet: repayments arrive with each sale" : `Collect your repayments: ${money(claimable)}`}</button>
+              }}>{claimable === 0n ? "Nothing to collect yet" : `Collect ${money(claimable)}`}</button>
+              {claimable === 0n ? <p className="hint">Repayments arrive with each sale the business makes.</p> : null}
               {proposal && proposal.loan_id === loan.id && note.voted_proposal !== proposal.id ? (
                 <div className="callout">
-                  <p className="mb-2">The owner wants to change its program (new build <code>{proposal.service.wasm.hash.slice(0, 12)}…</code>, price {money(proposal.service.price)}). It needs lenders holding over half the loan to agree. Agreed so far: {share(proposal.approvals, loan.terms.principal)}%.</p>
+                  <p className="mb-2">The owner wants to change its program (new build <code>{proposal.service.wasm.hash.slice(0, 12)}…</code>, price {money(proposal.service.price)}). It needs lenders holding over half the loan to agree. Agreed so far: {pct(share(proposal.approvals, loan.terms.principal))}.</p>
                   <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={async () => { await run(tx.approveChange(b.id, proposal.id), { requiredOn: b.id, done: "Your approval is recorded" }); await Promise.all([positions.refresh(), refresh()]); }}>Approve the change</button>
                 </div>
               ) : null}
               {open ? (
                 <details className="text-[14px]">
                   <summary className="cursor-pointer py-2 text-[var(--ink-2)] hover:text-[var(--ink)]">Sell or give your share to someone else</summary>
-                  <form className="mt-2 space-y-2" onSubmit={async (e) => {
-                    e.preventDefault();
-                    if (!to.trim()) return;
-                    await run(tx.transferNote(b.id, loan.id, to.trim()), { requiredOn: b.id, done: "Your share of the loan moved" });
-                    setTo("");
-                    await positions.refresh();
-                  }}>
-                    <TextField label="Send it to account" value={to} onChange={setTo} hint="The whole share moves, with every future repayment. Agree a price with them first." />
-                    <button className="btn btn-secondary btn-sm" disabled={busy || !to.trim()}>Send your whole share</button>
-                  </form>
+                  <div className="mt-2"><ShareTransfer business={b.id} loanId={loan.id} lent={BigInt(note.principal)} ready={claimable} onDone={() => positions.refresh()} /></div>
                 </details>
               ) : null}
             </div>
@@ -498,7 +537,7 @@ function OperatorCard({ business: b, now, refresh }: Props) {
           <details>
             <summary className="cursor-pointer rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[15px] font-medium transition-colors hover:bg-[var(--surface-3)]">Ask lenders to approve a new program</summary>
             {b.proposal ? (
-              <p className="mt-3 text-[15px]">A change is waiting for lenders and has {share(b.proposal.approvals, loan.terms.principal)}% approval. It expires {fromNow(b.proposal.expires_at, now)}.</p>
+              <p className="mt-3 text-[15px]">A change is waiting for lenders and has {pct(share(b.proposal.approvals, loan.terms.principal))} approval. It expires {fromNow(b.proposal.expires_at, now)}.</p>
             ) : (
               <form className="mt-3 space-y-2" onSubmit={async (e) => {
                 e.preventDefault();

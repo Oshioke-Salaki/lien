@@ -27,6 +27,43 @@ export function forgetGuest() {
   }
 }
 
+const BACKUP_PREFIX = "lien-test-account";
+
+/** One line that holds a test account: paste it back with "Restore an account". */
+export const backupText = (guest: Guest) => `${BACKUP_PREFIX}:${guest.accountId}:${guest.privateKey}`;
+
+/**
+ * Reads a backup line and checks it against the network: the key must be a real key, and
+ * it must be one of the account's own keys, before anything is saved.
+ */
+export async function restoreGuest(text: string): Promise<Guest> {
+  const parts = text.trim().split(":");
+  if (parts.length !== 4 || parts[0] !== BACKUP_PREFIX || parts[2] !== "ed25519") {
+    throw new Error("That isn't a Lien backup. A backup starts with lien-test-account: and comes from Back up this account.");
+  }
+  const accountId = parts[1]!;
+  const privateKey = `${parts[2]}:${parts[3]}`;
+  const { KeyPair } = await import("near-api-js");
+  let publicKey: string;
+  try {
+    publicKey = KeyPair.fromString(privateKey as `ed25519:${string}`).getPublicKey().toString();
+  } catch {
+    throw new Error("The key in that backup is damaged. Copy the whole line again.");
+  }
+  const { accessKeys } = await import("../near/rpc");
+  const keys = await accessKeys(accountId).catch((error: unknown) => {
+    throw new Error(/UNKNOWN_ACCOUNT|does not exist/i.test(String(error)) ? `There is no account called ${accountId} any more.` : "We couldn't reach the network to check the backup. Try again in a moment.");
+  });
+  if (!keys.includes(publicKey)) throw new Error("That key doesn't control this account, so it can't be restored.");
+  const guest = { accountId, privateKey };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(guest));
+  } catch {
+    // Without storage the account lasts until the page is closed.
+  }
+  return guest;
+}
+
 export async function createGuest(): Promise<Guest> {
   const { KeyPair } = await import("near-api-js");
   const pair = KeyPair.fromRandom("ed25519");

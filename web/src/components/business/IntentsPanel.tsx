@@ -69,7 +69,12 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
   return (
     <Panel title="Pay this business from another blockchain">
       <div className="space-y-3" data-testid="intents">
-        <p className="text-[15px] leading-snug text-[var(--ink-2)]">A customer on another network, like Arbitrum or Base, can pay it in USDC. The money arrives at its own payment address and is split between lenders and the business like any other sale. NEAR Intents handles the conversion.</p>
+        {isTestnet ? (
+          <p className="rounded-[10px] bg-[var(--accent-tint)] px-4 py-3 text-[14px] leading-snug" data-testid="intents-preview-note">
+            Preview: these prices come live from NEAR Intents on the real network, to show how payment from another blockchain will work. On the test network nothing is sent and no real money moves.
+          </p>
+        ) : null}
+        <p className="text-[15px] leading-snug text-[var(--ink-2)]">On the real network, a customer on another blockchain, like Arbitrum or Base, can pay this business in its own currency. NEAR Intents converts it, the money arrives at the business&rsquo;s payment address, and it is split between lenders and the business like any other sale.</p>
         <p className="text-[14px] break-all"><span className="muted">Payment address: </span><code>{b.collector}</code></p>
 
         {pending > 0n ? (
@@ -87,9 +92,9 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
                 {routes.map((r) => <option key={r.assetId} value={r.assetId}>{r.label}</option>)}
               </select>
             </label>
-            <AmountField label="Business receives" unit="USDC" value={amountText} onChange={setAmountText} />
+            <AmountField label="Business receives" unit={isTestnet ? "dollars" : "USDC"} value={amountText} onChange={setAmountText} />
             <TextField label="Your address on that chain, for refunds" testId="intents-refund" value={refundTo} onChange={setRefundTo} placeholder="0x…" />
-            <button type="submit" className="btn btn-secondary w-full" data-testid="intents-quote" disabled={state === "loading" || !wanted || !refundTo.trim()}>{state === "loading" ? "Finding a route…" : "Get a live quote"}</button>
+            <button type="submit" className="btn btn-secondary w-full" data-testid="intents-quote" disabled={state === "loading" || !wanted || !refundTo.trim()}>{state === "loading" ? "Finding a route…" : isTestnet ? "See a live price (nothing is sent)" : "Get a live quote"}</button>
           </form>
         ) : <p className="text-[14px] muted">Routes could not be loaded just now.</p>}
 
@@ -101,7 +106,7 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
               <p className="mt-2 break-all">Send to: <code>{quote.depositAddress}</code></p>
             ) : null}
             {quote.preview ? (
-              <p className="mt-2 muted">This is a real mainnet price. Lien is on testnet here, so sending is switched off.</p>
+              <p className="mt-2 muted">This is a real price from the main network. Lien is on the test network here, so sending is switched off.</p>
             ) : null}
           </div>
         ) : null}

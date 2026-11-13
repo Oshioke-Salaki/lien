@@ -39,7 +39,7 @@ describe("readOutcome", () => {
   it("treats a top-level failure as final", () => {
     const r = readOutcome({ status: panic("only the operator can do this") });
     expect(r.ok).toBe(false);
-    expect(r.error).toBe("Only the operator can do this.");
+    expect(r.error).toBe("Only the business's owner can do this.");
   });
 
   it("reads Lien events and ignores others", () => {
@@ -71,6 +71,12 @@ describe("friendlyError", () => {
     expect(isFeeShortfall(fee)).toBe(true);
     expect(isFeeShortfall("LackBalanceForState")).toBe(true);
     expect(isFeeShortfall("The auction has no bids.")).toBe(false);
+  });
+  it("never shows raw JSON or Rust errors", () => {
+    expect(friendlyError('Failed to deserialize input from JSON. Error: invalid value: string "Bob Smith"')).toMatch(/valid account name/);
+    expect(friendlyError('{"ActionError":{"kind":{"FunctionCallError":"x"}}}')).not.toMatch(/[{}]/);
+    expect(friendlyError("HostError(GuestPanic)")).not.toMatch(/HostError/);
+    expect(friendlyError("the borrower is current or still inside the grace period")).toMatch(/can't be taken over yet/);
   });
   it("capitalises and ends contract messages", () => {
     expect(friendlyError("the auction has no bids")).toBe("The auction has no bids.");
