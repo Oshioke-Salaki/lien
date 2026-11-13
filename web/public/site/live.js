@@ -58,11 +58,11 @@ function simulator() {
     set('[data-sim="title"]', noticed ? "Notice of foreclosure" : cleared ? "Lien released" : "Record of lien");
     set('[data-sim="note"]', noticed
       ? "The address and the service stay exactly as they were. Only the owner changes."
-      : cleared ? "The debt cleared before payments stopped, so the operator keeps everything."
+      : cleared ? "The debt cleared before payments stopped, so the owner keeps everything."
       : "Current. Nobody holds a key to this business.");
     $('[data-sim="stamp"]', root).hidden = !noticed;
-    $('[data-sim="running"]', root).hidden = stopped;
-    $('[data-sim="stopped"]', root).hidden = !stopped;
+    $('[data-sim="running"]', root).hidden = noticed;
+    $('[data-sim="stopped"]', root).hidden = !noticed;
     stop.setAttribute("aria-pressed", String(stopped));
     stop.textContent = stopped ? "Start paying again" : "Stop the payments after 3 months";
   };
@@ -110,6 +110,7 @@ async function live() {
       const bar = document.querySelector('[data-live-bar="sentinel"]');
       if (bar) bar.style.setProperty("--k", String(Number(loan.repaid) / Number(loan.terms.total_due)));
     }
+    renderMarket(ids, all);
     const north = all[ids.indexOf(`sentinel-north.${REGISTRY}`)];
     const raise = north?.status === "fulfilled" ? north.value.current_loan : null;
     if (raise) {
@@ -119,6 +120,31 @@ async function live() {
       if (bar) bar.style.setProperty("--k", String(Number(raise.funded) / Number(raise.terms.principal)));
     }
   } catch { /* the HTML figures stand */ }
+}
+
+const SAMPLE = /^(sentinel|lookout|watchtower|beacon)/;
+const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ESC[c]);
+
+/** The market window shows the live sample businesses, each a link to its page. */
+function renderMarket(ids, all) {
+  const list = document.querySelector("[data-live-market]");
+  if (!list) return;
+  const rows = [];
+  ids.forEach((id, i) => {
+    const r = all[i];
+    if (r.status !== "fulfilled" || !SAMPLE.test(id)) return;
+    const a = r.value;
+    const loan = a.current_loan;
+    let state = "No loan", sub = "Sells safety checks", warn = false, rank = 5;
+    if (loan && loan.status === "Funding") { state = "Raising"; sub = `$${tusd(loan.funded)} of $${tusd(loan.terms.principal)} raised`; rank = 1; }
+    else if (loan && loan.status === "Active" && loan.foreclosable_at !== null && a.now >= loan.foreclosable_at) { state = "Can be taken over"; sub = `Missed payments, $${tusd(loan.outstanding)} owed`; warn = true; rank = 0; }
+    else if (loan && loan.status === "Active") { state = loan.is_behind ? "Behind" : "Paying on time"; sub = `$${tusd(loan.repaid)} of $${tusd(loan.terms.total_due)} paid back`; warn = loan.is_behind; rank = 3; }
+    else if (loan && loan.status === "Foreclosed") { state = "For sale"; sub = `Lowest bid $${tusd(loan.min_next_bid || "0")}`; warn = true; rank = 2; }
+    const sel = id.startsWith("sentinel-north.") ? ' class="is-sel"' : "";
+    rows.push({ rank, html: `<li${sel}><a href="/b/${esc(id)}"><span class="mk__who"><b>${esc(a.name)}</b><span>${esc(sub)}</span></span><span class="ui-chip${warn ? " is-warn" : ""}">${esc(state)}</span></a></li>` });
+  });
+  if (rows.length) list.innerHTML = rows.sort((x, y) => x.rank - y.rank).slice(0, 6).map((r) => r.html).join("");
 }
 
 simulator();

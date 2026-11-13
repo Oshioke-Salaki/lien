@@ -37,7 +37,9 @@ const terms = (o: Record<string, unknown>) => ({
   min_payment_per_window: (5n * USD).toString(),
   grace_secs: 300,
   auction_secs: 1_800,
-  auction_reserve_bps: 2_000,
+  // The lowest bid is the whole debt: above the running money a buyer receives, so a taken-over
+  // sample can never be bought for less than the cash inside it.
+  auction_reserve_bps: 10_000,
   ...o,
 });
 

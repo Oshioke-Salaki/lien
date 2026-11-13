@@ -97,11 +97,20 @@
   .mk__rows { list-style: none; margin: 0; padding: 8px; display: grid; align-content: start; gap: 2px; }
   .mk__rows li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-radius: var(--u-r3); }
   .mk__rows li.is-sel { background: var(--u-fill-2); }
+  .mk__rows a { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; color: inherit; text-decoration: none; }
+  .mk__rows li:has(a):hover { background: var(--u-fill); }
+  .mk__go { text-decoration: none; height: 36px; padding: 0 16px; display: inline-flex; align-items: center; }
+  .biz__hint { color: var(--u-muted); }
   .mk__who { display: grid; gap: 2px; min-width: 0; } .mk__who b { font-weight: 500; font-size: 14px; } .mk__who span { color: var(--u-muted); }
   .ui-chip.is-warn { color: #e0a96a; }
   .mk__foot { margin: 0; padding: 12px 16px; color: var(--u-muted); border-top: 1px solid var(--u-line); }
-  @media (max-width: 1023px) { .app.ui { grid-template-columns: 1fr; } .app__pane--list { display: none; } }
+  @media (max-width: 1023px) { .app.ui { grid-template-columns: 1fr; } .app.ui.fill { height: auto; } .app__pane--list { border-right: 0; border-bottom: 1px solid var(--u-line); } .mk__foot { display: none; } }
+  @media (max-width: 639px) { .app__pane--list { display: none; } }
   #how .panel { --p-h: 300px; }
+  @media (min-width: 640px) and (max-width: 1023px) {
+    #how .card { grid-column: 1 / -1; }
+    #how .panel { --p-h: 232px; }
+  }
   @media (max-width: 639px) { #how .panel { --p-h: 156px; } }
   /* the simulator: the record and its controls */
   .sim { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gutter); margin-top: var(--s-7); align-items: start; }
@@ -136,7 +145,8 @@
   .idea__code .k { color: #c9a45a; } .idea__code .c { color: #b3ada5; }
   @media (max-width: 1023px) { .idea__text, .idea__code { grid-column: 1 / -1; } #idea .idea { gap: var(--s-6) var(--gutter); } }
   @media (max-width: 639px) { .idea__code { padding: var(--s-4); } .idea__code pre { font-size: 12px; } }
-  .ui-checks .ui-check.is-done .ui-check__label { text-decoration: none; opacity: 1; }
+  .ui-checks .ui-check.is-done .ui-check__label { color: var(--u-ink); }
+  .ui-checks .ui-check.is-done .ui-check__label::after { display: none; }
   .claims { list-style: none; margin: var(--s-6) 0 0; padding: 0; display: grid; }
   .claims li { display: grid; gap: var(--s-1); padding: var(--s-4) 0; border-bottom: 1px solid var(--line); }
   .claims li > span { font-weight: 500; font-size: var(--t-lead); }
@@ -144,9 +154,9 @@
   .claims .link { justify-self: start; }
   #proof .panel { --p-h: 640px; }
   .cmp { width: 100%; margin-top: var(--s-7); border-collapse: collapse; font-variant-numeric: tabular-nums; }
-  .cmp th, .cmp td { text-align: left; padding: var(--s-4) var(--s-4) var(--s-4) 0; border-bottom: 1px solid var(--line); font-weight: 400; }
+  .cmp th, .cmp td { text-align: left; padding: var(--s-3) var(--s-4) var(--s-3) 0; border-bottom: 1px solid var(--line); font-weight: 400; }
   .cmp thead th { color: var(--muted); font-size: var(--t-small); padding-bottom: var(--s-3); }
-  .cmp tbody th { font-size: var(--t-lead); width: 40%; }
+  .cmp tbody th { font-size: var(--t-body); font-weight: 500; width: 40%; }
   .cmp .no { color: var(--muted); }
   .cmp .is-lien { color: var(--accent); font-weight: 500; }
   .cmp thead .is-lien { font-size: var(--t-lead); }
@@ -207,7 +217,7 @@
               <a href="/portfolio">Your positions<span>Notes, payouts and claims</span></a>
             </div>
             <div class="menu-col span-3">
-              <p class="t-label">Operators</p>
+              <p class="t-label">Borrowers</p>
               <a href="/create">Start a business<span>A keyless account in one step</span></a>
               <a href="/guide">Developer guide<span>Contracts, calls and the agent</span></a>
               <a href="/guide#mcp">MCP server<span>Any AI agent can lend and buy</span></a>
@@ -288,17 +298,17 @@
         <h2 id="market-h" class="span-5">One market for every loan</h2>
         <p class="span-6 start-7">Each row is an AI business that sells a service. Lend to one that is raising money, buy what it sells, or bid to buy one that stopped paying. <a class="link" href="/market">See the full market</a></p>
       </div>
-      <div class="ui app fill" role="img" aria-label="The Lien market: four businesses with their loan states, and Sentinel North open, raising $50" data-ui-pause-host>
+      <div class="ui app fill" data-ui-pause-host>
         <div class="app__pane app__pane--list">
           <div class="mk">
             <div class="mk__bar"><span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Lien <i>/</i> <b>Market</b></span></div>
-            <ul class="mk__rows">
+            <ul class="mk__rows" data-live-market>
               <li class="is-sel"><span class="mk__who"><b>Sentinel North</b><span>Raising $50 at 10% interest</span></span><span class="ui-chip">Raising</span></li>
               <li><span class="mk__who"><b>Sentinel</b><span>Borrowed $100, repaying from sales</span></span><span class="ui-chip">On time</span></li>
               <li><span class="mk__who"><b>Sentinel Late</b><span>Missed its payments</span></span><span class="ui-chip is-warn">Behind</span></li>
               <li><span class="mk__who"><b>Sentinel Sale</b><span>Taken over, for sale</span></span><span class="ui-chip is-warn">Taken over</span></li>
             </ul>
-            <p class="mk__foot">Read from v1.lien-13569.testnet</p>
+            <p class="mk__foot">Live from the NEAR test network</p>
           </div>
         </div>
         <div class="app__pane app__pane--open">
@@ -312,7 +322,7 @@
             <div class="biz__row"><span>Paid back in total</span><b>$55.00</b></div>
             <div class="biz__row"><span>Lenders own</span><b>Their share of the loan</b></div>
             <div class="biz__row"><span>If it stops paying</span><b>Anyone can take it over</b></div>
-            <div class="biz__lend"><span class="biz__input"><span>$25</span><span>test dollars</span></span><span class="ui-btn ui-btn--accent">Lend $25</span></div>
+            <div class="biz__lend"><a class="ui-btn ui-btn--accent mk__go" href="/b/sentinel-north.v1.lien-13569.testnet">Lend to Sentinel North</a><span class="biz__hint">A free test account with $500 is ready in seconds</span></div>
           </div>
         </div>
       </div>
@@ -330,7 +340,7 @@
             <h3>Every sale repays the loan first</h3>
             <p>The split is fixed before anyone lends. Sentinel sends 30% of every sale straight to its lenders.</p>
             <div class="panel" data-fx="painterly-landscape" data-fx-seed="11" data-fx-palette='{"bg":"#a3b0b6","accent":"#c49a6c"}' data-fx-params='{"blur":1,"brush":0.35,"slope":0,"hillY":0.3,"horizon":0.62,"speed":0}'>
-              <div class="dg" data-diagram data-icon-base="/site/assets/icons/"><script type="application/json">{"layout":"lanes","size":"card","alt":"A $0.25 sale reaches Sentinel's contract, which pays 0.075 to lenders, 0.05 to the operator and keeps 0.125 as working capital, all at once.","input":{"label":"Sale","icon":"ui:receipt","sub":"$0.25"},"core":{"label":"Sentinel","icon":"ui:shield-check"},"lanes":[{"label":"Lenders","icon":"ui:coins","done":true,"sub":"$0.075"},{"label":"Operator","icon":"ui:user","done":true,"sub":"$0.05"},{"label":"Business","icon":"ui:wallet","done":true,"sub":"$0.125"}]}</script></div>
+              <div class="dg" data-diagram data-icon-base="/site/assets/icons/"><script type="application/json">{"layout":"lanes","size":"card","alt":"A $0.25 sale reaches Sentinel's contract, which pays $0.075 to lenders, $0.05 to the owner and keeps $0.125 for running costs, all at once.","input":{"label":"Sale","icon":"ui:receipt","sub":"$0.25"},"core":{"label":"Sentinel","icon":"ui:shield-check"},"lanes":[{"label":"Lenders","icon":"ui:coins","done":true,"sub":"$0.075"},{"label":"Owner","icon":"ui:user","done":true,"sub":"$0.05"},{"label":"Business","icon":"ui:wallet","done":true,"sub":"$0.125"}]}</script></div>
             </div>
           </article>
           <article class="card card--row card--open span-6 m-nolift">
@@ -338,18 +348,18 @@
             <p>Borrowed money pays for the services it needs, up to a daily limit. Its owner can't withdraw it.</p>
             <div class="panel" data-fx="painterly-landscape" data-fx-seed="23" data-fx-palette='{"bg":"#d9ccb7","surface":"#e9e0d2","ink":"#2a2622","accent":"#a8794a"}' data-fx-params='{"speed":0}'>
               <div class="stage stage--fade-b"><div class="at-corner" style="--ax:32px;--ay:40px">
-                <div class="ui ui-panel ui-toggles" data-ui="toggles" data-ui-still>
+                <div class="ui ui-panel ui-toggles" data-ui-still>
                   <div class="ui-head">
                     <svg class="ui-icon ui-toggles__ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 13 4v3.6c0 3-2.1 5.4-5 6.6-2.9-1.2-5-3.6-5-6.6V4z"/><path d="m5.8 8 1.6 1.6 3-3.2"/></svg>
                     <div class="ui-title">What Sentinel may spend on</div>
                     <span class="ui-spacer"></span>
-                    <div class="ui-meta" data-tg-count>2 of 4 on</div>
+                    <div class="ui-meta">Fixed for the loan</div>
                   </div>
                   <ul class="ui-toggles__list">
-                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Pay outlayer.testnet</span><span class="ui-tg__sub">Enclave compute for each check</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Pay outlayer.testnet"><i></i></button></li>
-                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Up to $5 a day</span><span class="ui-tg__sub">Above that, the spend is refused</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Up to $5 a day"><i></i></button></li>
-                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Operator withdrawals</span><span class="ui-tg__sub">Off for the life of the loan</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="Operator withdrawals"><i></i></button></li>
-                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Votes that widen the policy</span><span class="ui-tg__sub">Refused: lenders can only narrow it</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="Votes that widen the policy"><i></i></button></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Pay outlayer.testnet</span><span class="ui-tg__sub">Enclave compute for each check</span></span><span class="ui-chip">Allowed</span></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Up to $5 a day</span><span class="ui-tg__sub">Above that, the spend is refused</span></span><span class="ui-chip">Allowed</span></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Owner withdrawals</span><span class="ui-tg__sub">Off for the life of the loan</span></span><span class="ui-chip is-warn">Refused</span></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Votes that widen the policy</span><span class="ui-tg__sub">Refused: lenders can only narrow it</span></span><span class="ui-chip is-warn">Refused</span></li>
                   </ul>
                 </div>
               </div></div>
@@ -363,15 +373,15 @@
           <p>Its work runs on a sealed computer (Intel TDX, through OutLayer) that proves exactly which code ran.</p>
           <div class="panel" data-fx="painterly-landscape" data-fx-seed="37" data-fx-palette='{"bg":"#c6d3df","surface":"#d6e0e9","ink":"#25303a","accent":"#3f6a92"}' data-fx-params='{"speed":0}'>
             <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:340px;--ay:40px">
-              <div class="ui ui-panel ui-checks" data-ui="checklist" data-ui-loop>
-                <div class="ui-checks__head"><div class="ui-title">Sentinel, checked live</div><span class="ui-spacer"></span><div class="ui-meta" data-checks-count>2 of 5</div></div>
-                <div class="ui-checks__bar"><i data-checks-bar style="--k:0.4"></i></div>
+              <div class="ui ui-panel ui-checks" data-ui="checklist" data-ui-still>
+                <div class="ui-checks__head"><div class="ui-title">Sentinel, checked live</div><span class="ui-spacer"></span><div class="ui-meta" data-checks-count>5 of 5 proven</div></div>
+                <div class="ui-checks__bar"><i data-checks-bar style="--k:1"></i></div>
                 <ul class="ui-checks__list">
                   <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Zero access keys on the account</span></li>
                   <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Runs the published Lien contract</span></li>
-                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Build bytes hash to 9fd9a7…0e9f</span></li>
-                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Books match the token balance</span></li>
-                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">TDX quote names the pinned build</span></li>
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Build bytes hash to 9fd9a7…0e9f</span></li>
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Books match the token balance</span></li>
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">TDX quote names the pinned build</span></li>
                 </ul>
               </div>
             </div></div>
@@ -384,7 +394,7 @@
             <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:380px;--ax:32px;--ay:calc(100% - 180px);--ay-sm:calc(100% - 180px)">
               <div class="ui ui-notify" data-ui="notify" data-ui-still>
                 <ul class="ui-notify__list" data-notify-list>
-                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Sentinel Late foreclosed<time>now</time></span><span class="ui-note__body">Its operator's share now goes to lenders</span></span><span class="ui-btn ui-btn--sm ui-note__btn">Bid</span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Sentinel Late taken over<time>now</time></span><span class="ui-note__body">Its owner's share now goes to lenders</span></span><span class="ui-btn ui-btn--sm ui-note__btn">Bid</span></li>
                   <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Grace period over<time>1m</time></span><span class="ui-note__body">$10.00 due, 0.08 paid</span></span></li>
                   <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Check sold for $0.25<time>3m</time></span><span class="ui-note__body">Still serving customers</span></span></li>
                 </ul>
@@ -428,7 +438,7 @@
     </div>
   </section>
 
-  <section class="section" id="compare" aria-labelledby="compare-h">
+  <section class="section" id="compare" style="--hm: 2" aria-labelledby="compare-h">
     <div class="wrap">
       <div class="grid">
         <h2 id="compare-h" class="span-6">How Lien compares with other agent loans</h2>
@@ -443,6 +453,9 @@
           <tr><th scope="row">Borrower holds no keys</th><td class="no">No</td><td class="yes">Vault only</td><td class="yes">Yes</td><td class="yes is-lien">Yes</td></tr>
           <tr><th scope="row">Code pinned and proved in an enclave</th><td class="no">No</td><td class="yes">Inference only</td><td class="no">No</td><td class="yes is-lien">Yes</td></tr>
           <tr><th scope="row">Anyone can foreclose, no admin</th><td class="no">No</td><td class="yes">Lender only</td><td class="no">No</td><td class="yes is-lien">Yes</td></tr>
+          <tr><th scope="row">Live on mainnet today</th><td class="no">No</td><td class="yes">Yes</td><td class="no">No</td><td class="no is-lien">Not yet</td></tr>
+          <tr><th scope="row">Lenders compete on the price</th><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no is-lien">No, fixed terms</td></tr>
+          <tr><th scope="row">Lends to people as well as agents</th><td class="no">No</td><td class="no">No</td><td class="yes">Yes</td><td class="no is-lien">No, AI only</td></tr>
           <tr><th scope="row">Keeps paying lenders after default</th><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="yes is-lien">Yes</td></tr>
         </tbody>
       </table>
@@ -471,7 +484,7 @@
               <dt>Lent</dt><dd>$1,000</dd>
               <dt>Owed in total</dt><dd>$1,100</dd>
               <dt>Lenders get each month</dt><dd data-testid="monthly-lender">$240</dd>
-              <dt>Operator gets</dt><dd data-sim="operator">$160</dd>
+              <dt>Owner gets</dt><dd data-sim="operator">$160</dd>
               <dt>Stays in the business</dt><dd data-sim="opex">$400</dd>
               <dt>Paid off in</dt><dd data-testid="payoff">5 months</dd>
             </dl>
@@ -481,7 +494,7 @@
               <dt>Sale price</dt><dd data-sim="price">$500</dd>
               <dt>Lenders recover</dt><dd data-testid="recovered">$1,100</dd>
               <dt>Lenders lose</dt><dd data-sim="shortfall">$0</dd>
-              <dt>Former operator gets</dt><dd data-sim="surplus">$120</dd>
+              <dt>Former owner gets</dt><dd data-sim="surplus">$120</dd>
             </dl>
             <p class="notice__note" data-sim="note">Current. Nobody holds a key to this business.</p>
           </div>
@@ -506,13 +519,13 @@
         <div class="span-6 start-7">
           <div class="panel" data-fx="painterly-landscape" data-fx-seed="53" data-fx-palette='{"bg":"#d9ccb7","surface":"#e9e0d2","ink":"#2a2622","accent":"#a8794a"}' data-fx-params='{"speed":0}'><div class="stage stage--fade-b"><div class="at-corner" style="--ax:48px;--ay:56px;width:min(460px, calc(100% - 48px))">
             <div class="ui ui-panel ui-toggles" role="img" aria-label="The proofs panel on a Lien business: five checks, each verified">
-              <div class="ui-head"><div class="ui-title">Check it yourself</div><span class="ui-spacer"></span><div class="ui-meta">5 of 5 verified</div></div>
+              <div class="ui-head"><div class="ui-title">Why you can trust it</div><span class="ui-spacer"></span><div class="ui-meta">5 of 5 proven</div></div>
               <ul class="ui-toggles__list">
-                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Nobody holds its keys</span><span class="ui-tg__sub">Zero access keys on the account</span></span><span class="ui-chip">Verified</span></li>
-                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">It runs the published contract</span><span class="ui-tg__sub">Code hash matches v1.lien-13569</span></span><span class="ui-chip">Verified</span></li>
-                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">The pinned build is public</span><span class="ui-tg__sub">FastFS bytes hash to the pinned value</span></span><span class="ui-chip">Verified</span></li>
-                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Its books match its balance</span><span class="ui-tg__sub">Holds $116.15, owes 116.15</span></span><span class="ui-chip">Verified</span></li>
-                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Work ran in a secure enclave</span><span class="ui-tg__sub">TDX quote for the pinned build</span></span><span class="ui-chip">Verified</span></li>
+                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Nobody holds its keys</span><span class="ui-tg__sub">Zero access keys on the account</span></span><span class="ui-chip">Proven</span></li>
+                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">It runs the published contract</span><span class="ui-tg__sub">Code hash matches v1.lien-13569</span></span><span class="ui-chip">Proven</span></li>
+                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">The pinned build is public</span><span class="ui-tg__sub">FastFS bytes hash to the pinned value</span></span><span class="ui-chip">Proven</span></li>
+                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Its books match its balance</span><span class="ui-tg__sub">Holds exactly what it owes, to the cent</span></span><span class="ui-chip">Proven</span></li>
+                <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Work ran in a secure enclave</span><span class="ui-tg__sub">TDX quote for the pinned build</span></span><span class="ui-chip">Proven</span></li>
               </ul>
             </div>
           </div></div></div>
@@ -532,7 +545,7 @@
               <dt>Borrowed</dt><dd>$100.00</dd>
               <dt>Interest, fixed</dt><dd>$10.00</dd>
               <dt>Lenders get</dt><dd>30% of every sale</dd>
-              <dt>Operator gets</dt><dd>20% of every sale</dd>
+              <dt>Owner gets</dt><dd>20% of every sale</dd>
               <dt>Minimum payment</dt><dd>$5.00 every 14 days</dd>
               <dt>Term</dt><dd>90 days</dd>
               <dt>Grace before foreclosure</dt><dd>3 days</dd>
@@ -541,8 +554,8 @@
           </div>
         </div>
         <div class="faq span-6 start-7">
-          <div class="faq__item"><h3>What stops the operator taking the loan?</h3><p>The business account has no keys, so nobody can withdraw from it. Borrowed money can only pay approved suppliers, up to a daily limit, and its code is frozen until the loan is repaid.</p></div>
-          <div class="faq__item"><h3>What do lenders own if a business defaults?</h3><p>A business that keeps selling. After foreclosure the operator's share goes to lenders too, until someone buys the business at auction. The price pays lenders first.</p></div>
+          <div class="faq__item"><h3>What stops the owner taking the loan?</h3><p>The business account has no keys, so nobody can withdraw from it. Borrowed money can only pay approved suppliers, up to a daily limit, and its code is frozen until the loan is repaid.</p></div>
+          <div class="faq__item"><h3>What do lenders own if a business defaults?</h3><p>A business that keeps selling. After foreclosure the owner's share goes to lenders too, until someone buys the business at auction. The price pays lenders first.</p></div>
           <div class="faq__item"><h3>Does a Lien business depend on trusting Intel?</h3><p>Partly, yes. The quote proves which build ran on which hardware. It does not protect against a broken chip, and the security notes say so.</p></div>
           <div class="faq__item"><h3>How is a Lien loan different from an order advance?</h3><p>An order advance can never be bigger than the order. Lien lends against the whole business, so it can fund growth, and a default hands lenders something that still earns.</p></div>
           <div class="faq__item faq__item--phone"><h3>Is a Lien loan live with real money?</h3><p>Not yet. It runs on NEAR testnet with test dollars, and the contracts are unaudited.</p></div>
