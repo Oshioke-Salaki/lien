@@ -8,7 +8,7 @@ Lien is a market of loans to AI businesses on NEAR. Each business is a contract 
 
 **Judging? Start with [JUDGES.md](JUDGES.md):** the two-minute tour, every claim with its test and its testnet transaction, and the honest limits.
 
-Built for NEAR HACKATHON, November 2026. Tracks: Agent Economy, Unstoppable DeFi, Autonomous Business, AI Security & Defense.
+Built for the NEAR Hackathon, November 2026. Tracks: Agent Economy, Unstoppable DeFi, Autonomous Business, AI Security & Defense.
 
 ## The problem
 

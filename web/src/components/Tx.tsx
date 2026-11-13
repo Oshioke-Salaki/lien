@@ -14,6 +14,9 @@ export type Prepared = { summary: string; prepare: () => Promise<TxRequest> };
 type Notice = { id: number; tone: "pending" | "done" | "error"; title: string; text: string; hash?: string; faucet?: boolean; summary?: string; settled?: boolean };
 
 const NEAR_FAUCET = "https://near-faucet.io/";
+/** How long a confirmation stays up. Errors stay longer, so there is time to read them. */
+const DONE_MS = 4_000;
+const ERROR_MS = 12_000;
 
 type TxContextValue = {
   /**
@@ -50,7 +53,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
     const finish = (notice: Omit<Notice, "id">) => {
       // A notice already settled by its outcome keeps saying so when the transaction confirms.
       setNotices((all) => all.map((n) => (n.id === id ? (n.settled && notice.tone === "done" ? { ...n, hash: notice.hash ?? n.hash } : { id, ...notice }) : n)));
-      if (notice.tone === "done") setTimeout(() => dismiss(id), 6_000);
+      setTimeout(() => dismiss(id), notice.tone === "error" ? ERROR_MS : DONE_MS);
     };
     const update = (text: string) => setNotices((all) => all.map((n) => (n.id === id ? { ...n, text } : n)));
     // Once signed, the hash is known: the notice links it, so a slow confirmation is never a mystery.
@@ -86,7 +89,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
       const { summary, title, text, tone } = (event as CustomEvent<SettleDetail>).detail;
       setNotices((all) => all.map((n) => {
         if (n.tone !== "pending" || n.summary !== summary) return n;
-        setTimeout(() => dismiss(n.id), 6_000);
+        setTimeout(() => dismiss(n.id), DONE_MS);
         return { ...n, tone, title, text, settled: true };
       }));
     };
@@ -97,13 +100,15 @@ export function TxProvider({ children }: { children: ReactNode }) {
   const notify = useCallback((title: string, text: string) => {
     const id = ++counter.current;
     setNotices((all) => [...all.slice(-2), { id, tone: "done", title, text }]);
-    setTimeout(() => dismiss(id), 6_000);
+    setTimeout(() => dismiss(id), DONE_MS);
   }, [dismiss]);
 
   return (
     <TxContext.Provider value={{ run, busy, notify }}>
       {children}
-      <div aria-live="polite" className="pointer-events-none fixed right-3 bottom-[max(12px,env(safe-area-inset-bottom))] left-3 z-50 flex flex-col items-end gap-2 sm:right-4 sm:bottom-4 sm:left-auto sm:w-[360px]">
+      {/* Kept clear of the action buttons: under the top bar on phones and tablets (the actions sit
+          lower down), bottom-left beside the sidebar on desktop (the actions are on the right). */}
+      <div aria-live="polite" className="pointer-events-none fixed top-[calc(64px+env(safe-area-inset-top))] right-3 left-3 z-50 flex flex-col items-end gap-2 sm:right-4 sm:left-auto sm:w-[360px] lg:top-auto lg:right-auto lg:bottom-4 lg:left-[280px] lg:items-start">
         {notices.map((notice) => (
           <div key={notice.id} role={notice.tone === "error" ? "alert" : "status"} data-tone={notice.tone} className="notice pointer-events-auto w-full">
             <NoticeIcon tone={notice.tone} />

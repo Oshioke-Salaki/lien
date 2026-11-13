@@ -2,7 +2,7 @@
 
 import { Panel } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
-import { dateTime, money } from "@/lib/format";
+import { dateTime, money, repaidMoney } from "@/lib/format";
 import { getLoans } from "@/lib/near/rpc";
 import type { Business, LoanStatus } from "@/lib/near/types";
 
@@ -24,7 +24,7 @@ export function HistoryPanel({ business: b }: { business: Business }) {
                 <td>{loan.id + 1}</td>
                 <td className="truncate">{WORD[loan.status]}</td>
                 <td className="r">{money(loan.terms.principal)}</td>
-                <td className="r">{loan.status === "Funding" || loan.status === "Cancelled" ? <span className="muted">-</span> : `${money(loan.repaid)} of ${money(loan.terms.total_due)}`}</td>
+                <td className="r">{loan.status === "Funding" || loan.status === "Cancelled" ? <span className="muted">-</span> : `${repaidMoney(loan.terms.total_due, loan.repaid)} of ${money(loan.terms.total_due)}`}</td>
                 <td className="r hidden whitespace-nowrap sm:table-cell">{loan.closed_at ? dateTime(loan.closed_at) : <span className="muted">-</span>}</td>
               </tr>
             ))}

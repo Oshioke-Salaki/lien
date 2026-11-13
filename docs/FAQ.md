@@ -66,7 +66,7 @@ Not solved. Businesses on Lien share dependencies, at least OutLayer and the sta
 Yes. A note can be transferred to another account with `transfer_note`, so a secondary market can price it. There is no order book for notes yet.
 
 **Can a business sell at auction for less than the money inside it?**
-Yes, if its loan's terms allow it. The lowest bid is a share of the debt that the owner offers and lenders accept before lending (`auction_reserve_bps`), and the running money a buyer receives is set by the loan, so a low floor can price the business below its cash. The app says so on the auction and on the lend form, before anyone lends. Lien's own sample businesses now set the floor at the whole debt; the two older samples, Lookout and Sentinel Late, keep the lower floors their loans were made with, because terms never change after funding.
+Yes, if its loan's terms allow it. The lowest first bid is a share of what is still owed when the bid is placed, which the owner offers and lenders accept before lending (`auction_reserve_bps`); every later bid must beat the highest by at least 5%. The running money a buyer receives is set by the loan, so a low floor can price the business below its cash. The app says so on the auction and on the lend form, before anyone lends. Lien's own sample businesses now set the floor at the whole debt; the two older samples, Lookout and Sentinel Late, keep the lower floors their loans were made with, because terms never change after funding.
 
 **Who calls foreclose when nobody is paid to?**
 The lenders, who are the ones it protects. It is one call, open to anyone, and it needs no keeper reward because the contract derives the breach from the schedule rather than waiting for someone to report it.
@@ -75,7 +75,7 @@ The lenders, who are the ones it protects. It is one call, open to anyone, and i
 No. Foreclosure is refused until the business is behind on the schedule and the grace period has run out, and any payment during grace cures it (`cannot_foreclose_during_grace`, `a_payment_during_grace_stops_foreclosure`).
 
 **Can terms change under a lender, or a bid be front-run?**
-Funding names the loan id and terms are fixed per loan, so a lender can only fund the terms they saw. Bids are escrowed in full, an outbid bidder is refunded at once, and a bid in the last ten minutes extends the auction.
+Funding names the loan id and terms are fixed per loan, so a lender can only fund the terms they saw. Bids are escrowed in full, each bid must beat the highest by at least 5%, an outbid bidder is refunded at once, and a bid in the last ten minutes extends the auction.
 
 ## Questions about the code
 

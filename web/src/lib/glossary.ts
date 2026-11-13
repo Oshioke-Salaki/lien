@@ -12,5 +12,5 @@ export const GLOSSARY = {
   redeem: "Paying off the whole debt before the auction ends gives the business back to its owner.",
   check: "A safety report on a NEAR account, like a background check before you pay someone. It looks for risks such as an owner who can change the code or empty the account.",
   sealedComputer: "A secure computer (Intel TDX) that proves exactly which program it ran, so nobody can swap the code.",
-  auction: "Anyone can bid, from the lowest first bid set in this loan's terms. The highest bid when the clock runs out buys the business, and the money pays lenders first.",
+  auction: "Anyone can bid. The first bid must be at least the floor in this loan's terms, a share of what is still owed; each later bid must beat the highest by at least 5%. The highest bid when the clock runs out buys the business, and the money pays lenders first.",
 } as const;

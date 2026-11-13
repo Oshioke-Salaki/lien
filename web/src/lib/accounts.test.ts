@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkInputProblem, hasAccountName, isAccountId, isPayableAccount, labelProblem } from "./accounts";
+import { checkInputProblem, hasAccountName, isAccountId, isPayableAccount, labelProblem, targetProblem } from "./accounts";
 
 describe("hasAccountName", () => {
   it("finds an account, alone or in a sentence", () => {
@@ -16,6 +16,17 @@ describe("hasAccountName", () => {
     for (const bad of ["hello world", "there is no account in this sentence", "a".repeat(300), "<script>", "testnet", ".testnet", ""]) {
       expect(hasAccountName(bad)).toBe(false);
     }
+  });
+});
+
+describe("targetProblem", () => {
+  it("refuses capitals, malformed names and mainnet names on the test network", () => {
+    expect(targetProblem("Outlayer.testnet", true)).toMatch(/lowercase: try outlayer\.testnet/);
+    expect(targetProblem("wrap.near", true)).toMatch(/mainnet name/);
+    expect(targetProblem("wrap.near", false)).toBeNull();
+    expect(targetProblem("bad..name.testnet", true)).toMatch(/not a valid NEAR account name/);
+    expect(targetProblem("outlayer.testnet", true)).toBeNull();
+    expect(targetProblem("is outlayer.testnet safe?", true)).toBeNull();
   });
 });
 

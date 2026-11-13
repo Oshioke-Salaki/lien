@@ -1,7 +1,7 @@
 "use client";
 
 import { Info, Panel, Term } from "@/components/ui";
-import { dateTime, duration, fromNow, money, moneyExact, owedMoney, pct, percent, repaidMoney, share } from "@/lib/format";
+import { dateTime, duration, fromNow, money, moneyExact, moneyUp, owedMoney, pct, percent, repaidMoney, share } from "@/lib/format";
 import { GLOSSARY } from "@/lib/glossary";
 import { useLive } from "@/hooks/useLive";
 import { getLoans } from "@/lib/near/rpc";
@@ -130,7 +130,7 @@ function LastLoan({ id, count }: { id: string; count: number }) {
   return (
     <p className="mt-3 text-[15px] text-[var(--ink-2)]" data-testid="recovered">
       {last.status === "Repaid" ? "It paid its last loan back in full: " : "Its last loan ended in a takeover and sale: "}
-      lenders recovered {money(last.repaid)} of {money(last.terms.total_due)}.
+      lenders recovered {repaidMoney(last.terms.total_due, last.repaid)} of {money(last.terms.total_due)}.
     </p>
   );
 }
@@ -189,7 +189,7 @@ export function TermsPanel({ business: b }: { business: Business }) {
         <dt>Length of the loan</dt><dd>{duration(t.term_secs)}</dd>
         <dt><Term tip={GLOSSARY.grace}>Extra time</Term> before a takeover</dt><dd>{duration(t.grace_secs)}</dd>
         <dt><Term tip={GLOSSARY.auction}>Auction</Term> length</dt><dd>{duration(t.auction_secs)}</dd>
-        <dt>Lowest first bid<Info label="lowest first bid" tip="If the business is taken over, its auction can't start below this. The owner set it in the loan's terms and lenders accepted it when they lent." /></dt><dd>{percent(t.auction_reserve_bps)} of the debt{loan.status === "Funding" || loan.status === "Active" ? `, about ${money((BigInt(loan.outstanding) * BigInt(t.auction_reserve_bps)) / 10_000n)} today` : ""}</dd>
+        <dt>Lowest first bid<Info label="lowest first bid" tip="If the business is taken over, its auction can't start below this. The owner set it in the loan's terms and lenders accepted it when they lent." /></dt><dd>{percent(t.auction_reserve_bps)} of the debt{loan.status === "Funding" || loan.status === "Active" ? `, about ${moneyUp((BigInt(loan.outstanding) * BigInt(t.auction_reserve_bps)) / 10_000n)} today` : ""}</dd>
       </dl>
     </Panel>
   );

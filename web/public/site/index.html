@@ -486,7 +486,7 @@
               <dt>Lent</dt><dd>$1,000</dd>
               <dt>Owed in total</dt><dd>$1,100</dd>
               <dt>Lenders get each month</dt><dd data-testid="monthly-lender">$240</dd>
-              <dt>Owner gets</dt><dd data-sim="operator">$160</dd>
+              <dt>Owner gets each month</dt><dd data-sim="operator">$160</dd>
               <dt>Kept for running costs</dt><dd data-sim="opex">$400</dd>
               <dt>Paid off in</dt><dd data-testid="payoff">5 months</dd>
             </dl>
@@ -551,13 +551,13 @@
               <dt>Minimum payment</dt><dd>$5.00 every 14 days</dd>
               <dt>Term</dt><dd>90 days</dd>
               <dt>Grace before foreclosure</dt><dd>3 days</dd>
-              <dt>Auction</dt><dd>7 days, from half the debt</dd>
+              <dt>Auction</dt><dd>7 days, from half the debt still owed</dd>
             </dl>
           </div>
         </div>
         <div class="faq span-6 start-7">
           <div class="faq__item"><h3>What stops the owner taking the loan?</h3><p>The business account has no keys, so nobody can withdraw from it. Borrowed money can only pay approved suppliers, up to a daily limit, and its code is frozen until the loan is repaid.</p></div>
-          <div class="faq__item"><h3>What do lenders own if a business defaults?</h3><p>A business that keeps selling. After foreclosure the owner's share goes to lenders too, until someone buys the business at auction. The price pays lenders first.</p></div>
+          <div class="faq__item"><h3>What do lenders own if a business defaults?</h3><p>A business that keeps selling. After foreclosure the owner's share goes to lenders too, until someone buys the business at auction. The first bid must be at least the share of the remaining debt set in the loan's terms, each later bid must beat the highest by 5%, and the price pays lenders first.</p></div>
           <div class="faq__item"><h3>Does a Lien business depend on trusting Intel?</h3><p>Partly, yes. The quote proves which build ran on which hardware. It does not protect against a broken chip, and the security notes say so.</p></div>
           <div class="faq__item"><h3>How is a Lien loan different from an order advance?</h3><p>An order advance can never be bigger than the order. Lien lends against the whole business, so it can fund growth, and a default hands lenders something that still earns.</p></div>
           <div class="faq__item faq__item--phone"><h3>Is a Lien loan live with real money?</h3><p>Not yet. It runs on NEAR testnet with test dollars, and the contracts are unaudited.</p></div>
@@ -584,11 +584,11 @@
         </div>
         <div class="span-2 footer__col"><h3>Lend</h3><ul><li><a href="/market">Market</a></li><li><a href="/portfolio">Positions</a></li></ul></div>
         <div class="span-2 footer__col"><h3>Build</h3><ul><li><a href="/create">Start a business</a></li><li><a href="/guide">Guide</a></li></ul></div>
-        <div class="span-2 footer__col"><h3>Proof</h3><ul><li><a href="https://github.com/Oshioke-Salaki/lien/blob/main/docs/evidence/testnet-e2e.md">Evidence</a></li><li><a href="https://github.com/Oshioke-Salaki/lien/blob/main/docs/SECURITY.md">Security</a></li></ul></div>
+        <div class="span-2 footer__col"><h3><a href="/proof">Proof</a></h3><ul><li><a href="/proof">Every claim, checked live</a></li><li><a href="https://github.com/Oshioke-Salaki/lien/blob/main/docs/evidence/testnet-e2e.md">Evidence</a></li><li><a href="https://github.com/Oshioke-Salaki/lien/blob/main/docs/SECURITY.md">Security</a></li></ul></div>
         <div class="span-2 footer__col"><h3>Code</h3><ul><li><a href="https://github.com/Oshioke-Salaki/lien">GitHub</a></li><li><a href="/llms.txt">llms.txt</a></li></ul></div>
       </div>
       <div class="footer__legal">
-        <span>&copy; 2026 Lien &nbsp; Built for NEAR HACKATHON. Testnet, unaudited.</span>
+        <span>&copy; 2026 Lien &nbsp; Built for the NEAR Hackathon. Testnet, unaudited.</span>
         <div class="socials"></div>
       </div>
     </div>
