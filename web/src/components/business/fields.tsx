@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { useLive } from "@/hooks/useLive";
-import { money, parseAmount } from "@/lib/format";
+import { CENT, money, moneyUp, parseAmount } from "@/lib/format";
 import { isRegistered, tokenBalance } from "@/lib/near/rpc";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 
@@ -15,10 +15,14 @@ export type AmountCheck = { value: bigint | null; error: string | null };
 
 export function checkAmount(text: string, { min, max, balance }: { min?: bigint; max?: bigint; balance?: bigint }): AmountCheck {
   if (text.trim() === "") return { value: null, error: null };
+  const clean = text.trim().replace(/,/g, "");
+  if (/^-/.test(clean)) return { value: null, error: "Enter a positive amount, like 12.50." };
+  if (/\.\d{3,}$/.test(clean)) return { value: null, error: "Use at most two decimal places, like 12.50." };
   const value = parseAmount(text);
-  if (value === null) return { value: null, error: "Enter an amount, like 12.50." };
+  if (value === null) return { value: null, error: "Enter an amount in dollars, like 12.50." };
   if (value === 0n) return { value: null, error: "Enter more than zero." };
-  if (min !== undefined && value < min) return { value, error: `The minimum is ${money(min)}.` };
+  if (value < CENT) return { value, error: "The smallest amount is $0.01." };
+  if (min !== undefined && value < min) return { value, error: `The minimum is ${moneyUp(min)}.` };
   if (max !== undefined && value > max) return { value, error: `The maximum is ${money(max)}.` };
   if (balance !== undefined && value > balance) return { value, error: `You hold ${money(balance)}.` };
   return { value, error: null };

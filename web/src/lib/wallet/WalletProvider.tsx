@@ -23,7 +23,7 @@ type WalletState = {
    * Signs and sends. `requiredOn` names the contract that must not have failed:
    * a token transfer reports success even if its receiver refused the money.
    */
-  send: (request: TxRequest, requiredOn?: string, onStatus?: (text: string) => void) => Promise<TxResult>;
+  send: (request: TxRequest, requiredOn?: string, onStatus?: (text: string) => void, onHash?: (hash: string) => void) => Promise<TxResult>;
 };
 
 const WalletContext = createContext<WalletState | null>(null);
@@ -86,12 +86,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     };
   }, [getConnector]);
 
-  const send = useCallback<WalletState["send"]>(async (request, requiredOn, onStatus) => {
+  const send = useCallback<WalletState["send"]>(async (request, requiredOn, onStatus, onHash) => {
     const current = guest.current;
     if (current) {
       // A free account that has spent its NEAR on fees gets a little more from the
       // sponsor, and the action is tried once more, instead of ending on an error.
-      const attempt = async () => readOutcome(await sendAsGuest(current, request), requiredOn);
+      const attempt = async () => readOutcome(await sendAsGuest(current, request, onHash), requiredOn);
       let result: TxResult | null = null;
       let thrown: unknown = null;
       try { result = await attempt(); } catch (error) { thrown = error; }

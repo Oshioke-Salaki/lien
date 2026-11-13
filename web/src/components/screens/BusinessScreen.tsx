@@ -11,6 +11,8 @@ import { AccountLink, ErrorState, Skeleton, StandingLabel, Term } from "@/compon
 import { useChainNow, useLive } from "@/hooks/useLive";
 import { GLOSSARY } from "@/lib/glossary";
 import { getBusiness, listBusinessIds } from "@/lib/near/rpc";
+import { describe, isSample, SAMPLE_NOTE } from "@/lib/demo";
+import type { Business } from "@/lib/near/types";
 import { standing } from "@/lib/status";
 
 function Crumb({ name }: { name: string }) {
@@ -23,8 +25,8 @@ function Crumb({ name }: { name: string }) {
   );
 }
 
-export function BusinessScreen({ id }: { id: string }) {
-  const live = useLive(() => getBusiness(id), `business:${id}`, 4_000);
+export function BusinessScreen({ id, initial }: { id: string; initial?: Business }) {
+  const live = useLive(() => getBusiness(id), `business:${id}`, 4_000, initial);
   const registry = useLive(listBusinessIds, "registry-ids", 0);
   const now = useChainNow(live.data?.now);
 
@@ -70,7 +72,8 @@ export function BusinessScreen({ id }: { id: string }) {
           <h1 className="text-[clamp(30px,3.4vw,40px)] leading-[1.05] font-medium tracking-[-0.025em]">{b.name}</h1>
           <StandingLabel standing={standing(b)} />
         </div>
-        {b.description ? <p className="max-w-[64ch] text-[17px] leading-snug text-[var(--ink-2)]">{b.description}</p> : null}
+        {b.description ? <p className="max-w-[64ch] text-[17px] leading-snug text-[var(--ink-2)]">{describe(b.id, b.description)}</p> : null}
+        {isSample(b.id) ? <p className="inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-3 py-1 text-[13px] text-[var(--ink-2)]" data-testid="sample-note"><span aria-hidden className="h-[6px] w-[6px] rounded-full bg-[var(--accent)]" />{SAMPLE_NOTE}</p> : null}
         <p className="flex flex-wrap gap-x-2 gap-y-1 text-[14px] muted">
           <span>An AI business at <AccountLink id={b.id} max={44} /></span>
           <span aria-hidden>·</span>
@@ -90,7 +93,14 @@ export function BusinessScreen({ id }: { id: string }) {
             <JobsPanel business={b} />
             <TermsPanel business={b} />
             <HistoryPanel business={b} />
-            <IntentsPanel business={b} refresh={live.refresh} />
+            {/* For people paying from other blockchains: folded away so it never confronts a newcomer. */}
+            <details className="group rounded-[16px] bg-[var(--surface)]" data-testid="intents-disclosure">
+              <summary className="flex min-h-[56px] cursor-pointer list-none items-center justify-between gap-3 px-5 text-[16px] font-medium [&::-webkit-details-marker]:hidden">
+                Pay from another blockchain
+                <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-180">▾</span>
+              </summary>
+              <div className="px-1 pb-1"><IntentsPanel business={b} refresh={live.refresh} /></div>
+            </details>
           </div>
         </div>
         <div className="order-2 lg:order-none"><ActionRail business={b} now={now} refresh={live.refresh} /></div>
@@ -103,10 +113,10 @@ function ForeclosureNotice() {
   return (
     <div className="flex items-center justify-between gap-4 overflow-hidden rounded-[16px] bg-[rgb(255_122_110_/_0.1)] px-5 py-4 shadow-[inset_0_0_0_1px_rgb(255_122_110_/_0.35)]" data-testid="foreclosure-notice" role="status">
       <div>
-        <p className="text-[17px] font-medium">Notice of foreclosure: taken over for its lenders</p>
+        <p className="text-[17px] font-medium">Notice: taken over for its lenders</p>
         <p className="mt-1 text-[15px] text-[var(--ink-2)]">It missed its payments, so it now works for its lenders. Same address and same service, but every sale pays lenders the owner&rsquo;s share too, until someone buys the business at auction.</p>
       </div>
-      <span className="stamp-in hidden shrink-0 rounded-[6px] border-2 border-[var(--danger)] px-3 py-1 text-[14px] font-semibold text-[var(--danger)] sm:block">Foreclosed</span>
+      <span className="stamp-in hidden shrink-0 rounded-[6px] border-2 border-[var(--danger)] px-3 py-1 text-[14px] font-semibold text-[var(--danger)] sm:block">Taken over</span>
     </div>
   );
 }

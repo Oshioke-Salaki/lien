@@ -55,13 +55,13 @@ test("one loan, from creation to foreclosure and redemption, through the app", a
   await page.getByTestId("job-submit").click();
   await expect(page.getByTestId("job-result").getByTestId("report")).toContainText("outlayer.testnet", { timeout: 240_000 });
 
-  // A bad input refunds, and says so.
+  // A bad input is stopped before any money moves, and says why.
   await page.getByTestId("job-input").fill("there is no account in this sentence");
-  await page.getByTestId("job-submit").click();
-  await expect(page.getByTestId("job-result")).toContainText("refunded in full", { timeout: 240_000 });
+  await expect(page.getByTestId("job-submit")).toBeDisabled();
+  await expect(page.getByText(/Type the account you want checked/)).toBeVisible();
 
   // Lenders can collect what the sale paid.
-  await expect(page.getByTestId("claimable")).toContainText(/0\.(075|125)/, { timeout: 30_000 });
+  await expect(page.getByTestId("claimable")).toContainText(/0\.(075|08|125|13)/, { timeout: 30_000 });
   await page.getByTestId("claim").click();
   await expect(page.getByTestId("claimable")).toContainText("0.00");
 

@@ -119,6 +119,7 @@ test.describe("a business", () => {
 
   test("the live NEAR Intents route returns a real price", async ({ page }) => {
     await page.goto(`/b/${SENTINEL}`);
+    await page.getByTestId("intents-disclosure").locator("summary").click();
     await page.getByTestId("intents-refund").fill("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
     await page.getByTestId("intents-origin").selectOption({ label: "USDC on Base" });
     await page.getByTestId("intents-quote").click();
@@ -128,6 +129,7 @@ test.describe("a business", () => {
 
   test("a bad refund address gets a clear message", async ({ page }) => {
     await page.goto(`/b/${SENTINEL}`);
+    await page.getByTestId("intents-disclosure").locator("summary").click();
     await page.getByTestId("intents-refund").fill("nonsense");
     await page.getByTestId("intents-origin").selectOption({ label: "USDC on Base" });
     await page.getByTestId("intents-quote").click();

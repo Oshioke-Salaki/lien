@@ -1,7 +1,7 @@
 "use client";
 
 import { Panel, Term } from "@/components/ui";
-import { dateTime, duration, fromNow, money, percent, share } from "@/lib/format";
+import { dateTime, duration, fromNow, money, moneyExact, percent, share } from "@/lib/format";
 import { GLOSSARY } from "@/lib/glossary";
 import { splitInflow } from "@/lib/math";
 import type { Business, LoanView } from "@/lib/near/types";
@@ -52,7 +52,14 @@ function headline(b: Business, now: number): string {
   const s = standing({ ...b, now });
   switch (s) {
     case "funding": return `Raising money from lenders until ${dateTime(loan.funding_deadline)}. Nobody's money moves until the full amount is raised.`;
-    case "current": return loan.breach_at ? `Paying on time. The next payment is due ${fromNow(loan.breach_at, now)}.` : "Paying on time.";
+    case "current": {
+      if (!loan.breach_at) return "Paying on time.";
+      const minimum = `the minimum is ${money(loan.terms.min_payment_per_window)} every ${duration(loan.terms.window_secs)}`;
+      // Sales can cover several payment windows at once; say so rather than leave the gap unexplained.
+      return loan.breach_at - now > loan.terms.window_secs
+        ? `Paying on time, and paid ahead: the next payment is due ${fromNow(loan.breach_at, now)} (${minimum}).`
+        : `Paying on time. The next payment is due ${fromNow(loan.breach_at, now)} (${minimum}).`;
+    }
     case "behind": return `Behind on payments. A payment now puts it back on track; if none comes, anyone can take it over ${fromNow(loan.foreclosable_at!, now)}.`;
     case "foreclosable": return "Missed its payments, and its extra time is up. Anyone can take it over now.";
     case "foreclosed": return "Taken over for its lenders. It keeps selling, and its owner's share of each sale now goes to lenders until it is sold.";
@@ -130,7 +137,7 @@ export function WaterfallPanel({ business: b, now }: { business: Business; now: 
   const aside = trapped ? "The owner's share goes to lenders now" : raising ? "Once the loan starts" : !loan ? "No loan, so nothing goes to lenders" : undefined;
   return (
     <Panel title={`Where each ${money(price)} sale goes`} aside={aside}>
-      <div className="flex h-9 gap-[3px] overflow-hidden rounded-[8px]" role="img" aria-label={parts.map((p) => `${p.key} ${money(p.value)}`).join(", ")}>
+      <div className="flex h-9 gap-[3px] overflow-hidden rounded-[8px]" role="img" aria-label={parts.map((p) => `${p.key} ${moneyExact(p.value)}`).join(", ")}>
         {parts.filter((p) => p.value > 0n).map((p) => (
           <div key={p.key} className="transition-[flex-grow] duration-700" style={{ flexGrow: Number(p.value), background: p.color }} />
         ))}
@@ -139,7 +146,7 @@ export function WaterfallPanel({ business: b, now }: { business: Business; now: 
         {parts.map((p) => (
           <div key={p.key} className="flex items-baseline justify-between gap-3 sm:block">
             <dt className="flex items-center gap-2 muted"><span aria-hidden className="h-[10px] w-[10px] shrink-0 rounded-[3px]" style={{ background: p.color }} />{p.key}</dt>
-            <dd className="num text-[18px] font-medium sm:mt-1">{money(p.value)}</dd>
+            <dd className="num text-[18px] font-medium sm:mt-1">{moneyExact(p.value)}</dd>
           </div>
         ))}
       </dl>

@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { ConnectButtons, useTx } from "@/components/Tx";
 import { EmptyState, ErrorState, PageHead, Panel, Skeleton, StandingLabel } from "@/components/ui";
-import { useLive } from "@/hooks/useLive";
+import { REFRESH_EVENT } from "@/lib/events";
+import { remember, remembered } from "@/lib/mine";
 import { dateTime, money, share } from "@/lib/format";
 import { claim, transferNote, withdrawCredit } from "@/lib/near/actions";
-import { accountExists, getCredit, getLoans, getNote, listBusinesses } from "@/lib/near/rpc";
+import { accountExists, getCredit, getLoans, getNote, isTestRun, listBusinesses } from "@/lib/near/rpc";
 import type { Business, LoanStatus, LoanView, NoteView } from "@/lib/near/types";
 import { standing } from "@/lib/status";
 import { useWallet } from "@/lib/wallet/WalletProvider";
@@ -30,36 +31,74 @@ async function readOne(business: Business, account: string) {
   }
 }
 
-async function load(account: string): Promise<Data> {
-  // Every business is checked, test ones too, since a position can sit in any of them.
-  // Small batches keep public RPC nodes from refusing a burst, and one unreadable
-  // business never hides all the others.
+type Progress = (data: Data, left: number) => void;
+
+/**
+ * Reads every business this account could hold something in, and reports as it goes:
+ * the ones it has dealt with first (remembered in this browser), then the real
+ * businesses, then test ones. A page with some positions beats a page of skeletons.
+ */
+async function load(account: string, progress: Progress): Promise<void> {
   const businesses = await listBusinesses({ includeTests: true });
+  const mine = new Set(remembered(account));
+  const rank = (b: Business) => (mine.has(b.id) || b.operator === account ? 0 : isTestRun(b.id) ? 2 : 1);
+  const ordered = [...businesses].sort((a, b) => rank(a) - rank(b));
   const read: Awaited<ReturnType<typeof readOne>>[] = [];
   let unread = 0;
-  for (let i = 0; i < businesses.length; i += 4) {
-    const batch = await Promise.allSettled(businesses.slice(i, i + 4).map((b) => readOne(b, account)));
-    for (const r of batch) {
-      if (r.status === "fulfilled") read.push(r.value);
-      else unread++;
-    }
-  }
-  if (businesses.length > 0 && read.length === 0) throw new Error("Your positions could not be read from the network.");
-  return {
+  const snapshot = (): Data => ({
     positions: read.flatMap((p) => p.positions),
     credits: read.filter((p) => p.credit > 0n).map((p) => ({ business: p.business, amount: p.credit })),
     operated: businesses.filter((b) => b.operator === account),
     // Auctions this account is winning right now.
     bids: businesses.filter((b) => b.current_loan?.status === "Foreclosed" && b.current_loan.auction.high_bidder === account),
     unread,
-  };
+  });
+  // Small batches keep public RPC nodes from refusing a burst; one unreadable business never hides the rest.
+  for (let i = 0; i < ordered.length; i += 4) {
+    const batch = await Promise.allSettled(ordered.slice(i, i + 4).map((b) => readOne(b, account)));
+    for (const r of batch) {
+      if (r.status === "fulfilled") {
+        read.push(r.value);
+        if (r.value.positions.length || r.value.credit > 0n) remember(account, r.value.business.id);
+      } else unread++;
+    }
+    progress(snapshot(), Math.max(0, ordered.length - i - 4));
+  }
+  if (ordered.length === 0) progress(snapshot(), 0);
+  if (ordered.length > 0 && read.length === 0) throw new Error("Your positions could not be read from the network.");
+}
+
+/** Positions, filled in batch by batch, re-read after every transaction and every 15 seconds. */
+function usePositions(account: string | null) {
+  const [state, setState] = useState<{ for: string | null; data?: Data; left: number; error?: string }>({ for: null, left: 0 });
+  const generation = useRef(0);
+  const refresh = useCallback(async () => {
+    if (!account) return;
+    const mine = ++generation.current;
+    try {
+      await load(account, (data, left) => {
+        if (mine === generation.current) setState({ for: account, data, left });
+      });
+    } catch (error) {
+      if (mine === generation.current) setState((s) => ({ ...s, for: account, left: 0, error: error instanceof Error ? error.message : String(error) }));
+    }
+  }, [account]);
+  useEffect(() => {
+    void refresh();
+    const now = () => void refresh();
+    window.addEventListener(REFRESH_EVENT, now);
+    const timer = setInterval(() => { if (document.visibilityState === "visible") void refresh(); }, 15_000);
+    return () => { window.removeEventListener(REFRESH_EVENT, now); clearInterval(timer); };
+  }, [refresh]);
+  const current = state.for === account ? state : { data: undefined, left: 0, error: undefined };
+  return { data: current.data, left: current.left, error: current.error, refresh };
 }
 
 export function PortfolioScreen() {
   const { account, ready } = useWallet();
   const { run, busy } = useTx();
   const [moving, setMoving] = useState<string | null>(null);
-  const live = useLive(account ? () => load(account) : null, `portfolio:${account}`, 12_000);
+  const live = usePositions(account);
 
   if (ready && !account) {
     return (
@@ -107,6 +146,7 @@ export function PortfolioScreen() {
             </Panel>
           ) : null}
 
+          {live.left > 0 ? <p role="status" className="flex items-center gap-2 rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]" data-testid="positions-checking"><span className="spinner spinner-ink" aria-hidden />Still checking {live.left} more {live.left === 1 ? "business" : "businesses"} for anything of yours…</p> : null}
           {data.unread > 0 ? <p role="status" className="rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]">{data.unread} {data.unread === 1 ? "business" : "businesses"} could not be read just now, so a position there may be missing. This page checks again every few seconds.</p> : null}
           {data.bids.length ? (
             <Panel title="Your bids" aside={`${data.bids.length}`}>

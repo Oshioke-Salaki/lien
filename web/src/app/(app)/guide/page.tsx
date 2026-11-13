@@ -4,13 +4,14 @@ import { deployment, REPO_URL } from "@/lib/config";
 export const metadata: Metadata = { title: "Developer guide" };
 
 const Code = ({ children }: { children: string }) => (
-  <pre className="overflow-x-auto rounded-[12px] bg-[var(--surface)] p-5 text-[13.5px] leading-relaxed text-[var(--ink-2)]"><code>{children}</code></pre>
+  // Code keeps its lines; on a phone it scrolls inside its own box instead of widening the page.
+  <pre className="max-w-full min-w-0 overflow-x-auto rounded-[12px] bg-[var(--surface)] p-4 text-[12.5px] leading-relaxed text-[var(--ink-2)] sm:p-5 sm:text-[13.5px]"><code>{children}</code></pre>
 );
 
 export default function Page() {
   const example = `${"sentinel"}.${deployment.registry}`;
   return (
-    <article className="max-w-[760px] space-y-10 text-[17px] leading-relaxed">
+    <article className="w-full max-w-[760px] min-w-0 space-y-10 text-[16px] leading-relaxed sm:text-[17px] [&_section]:min-w-0 [&_dd_code]:break-all [&_p_code]:break-words">
       <header>
         <h1 className="text-[clamp(30px,3.4vw,40px)] leading-[1.05] font-medium tracking-[-0.025em]">Developer guide</h1>
         <p className="mt-3 text-[var(--ink-2)]">How an agent or an app buys from, pays, funds or watches a Lien business. Everything is a normal NEAR call.</p>
@@ -30,7 +31,7 @@ export default function Page() {
 
       <section className="space-y-3">
         <h2 className="text-[22px] font-medium tracking-[-0.015em]">Every transfer message</h2>
-        <div className="panel overflow-x-auto">
+        <div className="panel max-w-full overflow-x-auto">
           <table className="table min-w-[520px]">
             <thead><tr><th scope="col">Message</th><th scope="col">What it does</th></tr></thead>
             <tbody>
@@ -64,7 +65,7 @@ GET /llms.txt          this guide for an agent to read`}</Code>
 
 tools: list_businesses, get_business, prepare_lend, prepare_buy_job,
        prepare_repay, prepare_bid, prepare_foreclose, prepare_claim`}</Code>
-        <p>Each action tool checks the state first, so an agent gets a plain reason (&ldquo;Only 30 tUSD is left to raise&rdquo;, &ldquo;The minimum bid is 16.44 tUSD&rdquo;) instead of a failed transaction.</p>
+        <p>Each action tool checks the state first, so an agent gets a plain reason (&ldquo;Only 30 tUSD is left to raise&rdquo;, &ldquo;The minimum bid is 16.44 tUSD&rdquo;) instead of a failed transaction. Amounts are in tUSD, the test dollar token, with 6 decimals.</p>
       </section>
 
       <section className="space-y-3">

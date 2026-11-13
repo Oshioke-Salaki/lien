@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { Bar, EmptyState, ErrorState, PageHead, Skeleton, StandingLabel, STANDING_TONE } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
 import { money, percent, share, shortAccount } from "@/lib/format";
 import { listBusinesses } from "@/lib/near/rpc";
 import type { Business } from "@/lib/near/types";
+import { isSample } from "@/lib/demo";
 import { isAlert, standing, type Standing } from "@/lib/status";
 
 /** What needs a decision comes first, then what can be funded. */
@@ -26,8 +27,8 @@ function nextStep(s: Standing) {
 
 const COLS = "lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1.6fr)_minmax(0,1fr)_auto]";
 
-export function MarketScreen() {
-  const live = useLive(listBusinesses, "market", 8_000);
+export function MarketScreen({ initial }: { initial?: Business[] }) {
+  const live = useLive(listBusinesses, "market", 8_000, initial);
   const router = useRouter();
   const rows = useMemo(
     () => [...(live.data ?? [])].sort((a, b) => ORDER[standing(a)] - ORDER[standing(b)]),
@@ -37,6 +38,13 @@ export function MarketScreen() {
   const raisingCount = count(["funding"]);
   const paying = count(["current"]);
   const alerts = rows.filter((b) => isAlert(standing(b))).length;
+  const noLoan = count(["no-loan"]);
+  const finding = [
+    `${raisingCount} raising`,
+    `${paying} paying on time`,
+    `${alerts} ${alerts === 1 ? "needs" : "need"} attention`,
+    ...(noLoan ? [`${noLoan} with no loan`] : []),
+  ].join(", ");
   const lent = rows.reduce((sum, b) => sum + (b.current_loan && b.current_loan.status !== "Funding" ? BigInt(b.current_loan.funded) : 0n), 0n);
   const repaid = rows.reduce((sum, b) => sum + (b.current_loan ? BigInt(b.current_loan.repaid) : 0n), 0n);
   const sold = rows.reduce((sum, b) => sum + b.stats.jobs_done, 0);
@@ -50,7 +58,7 @@ export function MarketScreen() {
             {live.loaded
               ? rows.length === 0
                 ? "No businesses yet. Be the first to start one."
-                : `${raisingCount} raising, ${paying} paying on time, ${alerts} ${alerts === 1 ? "needs" : "need"} attention.`
+                : `${rows.length} ${rows.length === 1 ? "business" : "businesses"}: ${finding}.`
               : "Reading the chain…"}
           </p>
         }
@@ -63,15 +71,15 @@ export function MarketScreen() {
         <ErrorState message="The network could not be reached, so the market cannot be shown right now." onRetry={() => void live.refresh()} />
       ) : (
         <>
-          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <dl className="grid grid-cols-3 gap-2 sm:gap-3">
             {[
-              { label: "Lent to businesses now", value: live.loaded ? money(lent) : null },
-              { label: "Paid back to lenders so far", value: live.loaded ? money(repaid) : null },
-              { label: "Safety checks these businesses sold", value: live.loaded ? sold.toLocaleString("en-US") : null },
+              { label: "Lent out now", value: live.loaded ? money(lent) : null },
+              { label: "Repaid to lenders", value: live.loaded ? money(repaid) : null },
+              { label: "Checks sold", value: live.loaded ? sold.toLocaleString("en-US") : null },
             ].map((stat) => (
-              <div key={stat.label} className="rounded-[16px] bg-[var(--surface)] p-5">
-                <dt className="text-[14px] muted">{stat.label}</dt>
-                <dd className="num mt-2 text-[28px] leading-none font-medium tracking-[-0.02em]">{stat.value ?? <span className="skeleton inline-block h-7 w-32 align-middle" />}</dd>
+              <div key={stat.label} className="rounded-[16px] bg-[var(--surface)] p-3 sm:p-5">
+                <dt className="text-[13px] leading-snug muted sm:text-[14px]">{stat.label}</dt>
+                <dd className="num mt-2 text-[18px] sm:text-[28px] leading-none font-medium tracking-[-0.02em]">{stat.value ?? <span className="skeleton inline-block h-6 w-full max-w-32 align-middle" />}</dd>
               </div>
             ))}
           </dl>
@@ -151,7 +159,7 @@ function MarketRow({ business: b, onOpen }: { business: Business; onOpen: () => 
     >
       <div className="min-w-0">
         <Link className="text-[17px] font-medium hover:underline" href={`/b/${b.id}`} onClick={(e) => e.stopPropagation()}>{b.name}</Link>
-        <div className="truncate text-[13px] muted" title={b.id}>{shortAccount(b.id, 36)}</div>
+        <div className="truncate text-[13px] muted" title={b.id}>{isSample(b.id) ? "Sample business by the Lien team" : shortAccount(b.id, 36)}</div>
       </div>
       <div className="justify-self-end lg:justify-self-start"><StandingLabel standing={s} /></div>
       <div className="col-span-2 min-w-0 lg:col-span-1">
@@ -203,17 +211,20 @@ const STEPS = [
 /** Lien in three plain steps, for anyone who arrives here first. Hidden once dismissed. */
 function HowItWorks() {
   const hidden = useSyncExternalStore(watchIntro, readIntro, () => false);
+  // On a phone the three steps fold into one line, so the businesses start on the first screen.
+  const [open, setOpen] = useState(false);
   if (hidden) return null;
   return (
-    <section aria-labelledby="how-title" data-testid="how-it-works" className="rounded-[16px] bg-[var(--surface)] p-5 sm:p-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 id="how-title" className="text-[20px] font-medium tracking-[-0.01em]">How Lien works</h2>
-        <div className="flex items-center gap-4 text-[15px]">
-          <Link href="/#try" className="link">See it in a simulator</Link>
+    <section aria-labelledby="how-title" data-testid="how-it-works" className="rounded-[16px] bg-[var(--surface)] p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="how-title" className="text-[18px] font-medium tracking-[-0.01em] sm:text-[20px]">How Lien works</h2>
+        <button type="button" className="link text-[15px] sm:hidden" aria-expanded={open} aria-controls="how-steps" onClick={() => setOpen(!open)}>{open ? "Hide the steps" : "Show the three steps"}</button>
+        <div className="hidden items-center gap-4 text-[15px] sm:flex">
+          <a href="/#try" className="link">See it in a simulator</a>
           <button type="button" className="link muted" onClick={dismissIntro}>Got it, hide this</button>
         </div>
       </div>
-      <ol className="mt-5 grid gap-4 sm:grid-cols-3">
+      <ol id="how-steps" className={`mt-4 gap-4 sm:mt-5 sm:grid sm:grid-cols-3 ${open ? "grid" : "hidden"}`}>
         {STEPS.map((step, i) => (
           <li key={step.title} className="flex gap-3">
             <span aria-hidden className="grid h-7 w-7 flex-none place-items-center rounded-full bg-[var(--accent)] text-[14px] font-medium text-[#0c0a08]">{i + 1}</span>
@@ -223,6 +234,10 @@ function HowItWorks() {
             </div>
           </li>
         ))}
+        <li className="flex items-center gap-4 text-[15px] sm:hidden">
+          <a href="/#try" className="link">See it in a simulator</a>
+          <button type="button" className="link muted" onClick={dismissIntro}>Got it, hide this</button>
+        </li>
       </ol>
     </section>
   );
