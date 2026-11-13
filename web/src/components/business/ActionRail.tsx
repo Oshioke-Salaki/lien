@@ -172,7 +172,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
   const balance = useMyBalance();
   const [input, setInput] = useState("");
   const { account } = useWallet();
-  const [job, setJob] = useState<{ id: number; result: Job | null; mine?: { payer: string; input: string } } | null>(null);
+  const [job, setJob] = useState<{ id: number; result: Job | null; mine?: { payer: string; input: string; since: number } } | null>(null);
   const [slow, setSlow] = useState(false);
   const price = BigInt(b.service.price);
   const short = balance.data !== undefined && balance.data < price;
@@ -185,7 +185,12 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
       const latest = await getJob(b.id, job.id).catch(() => null);
       if (!alive || !latest) return;
       // Someone else bought the job with this number first: wait for our transaction to name ours.
-      if (job.mine && (latest.payer !== job.mine.payer || latest.input !== job.mine.input)) return;
+      // The page's copy of the business can be a few seconds old, so the number it expected may
+      // belong to an earlier job: look at the next one until ours turns up.
+      if (job.mine && (latest.payer !== job.mine.payer || latest.input !== job.mine.input || Number(latest.created_at) < job.mine.since)) {
+        setJob({ id: job.id + 1, result: null, mine: job.mine });
+        return;
+      }
       if (latest.status === job.result?.status) return;
       setJob({ id: job.id, result: latest, mine: job.mine });
       if (latest.status !== "Pending") void refresh();
@@ -205,7 +210,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
           if (!input.trim()) return;
           // The transaction only settles once the enclave answers, which can take minutes on
           // testnet. The job's number is known now, so its progress shows from the first second.
-          setJob({ id: b.next_job_id, result: null, mine: { payer: account ?? "", input: input.trim() } });
+          setJob({ id: b.next_job_id, result: null, mine: { payer: account ?? "", input: input.trim(), since: Math.floor(Date.now() / 1000) - 30 } });
           const result = await pay(price, { action: "job", input: input.trim() }, "Buy a check", "Check delivered", "Paid. The check runs in a secure enclave, which can take a minute or two on testnet. You can keep using the page.");
           const started = result?.events.find((event) => event.event === "job_started");
           if (result?.ok && started) setJob((current) => current?.id === started.data.job_id ? current : { id: started.data.job_id as number, result: null });

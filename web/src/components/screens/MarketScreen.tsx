@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { Bar, EmptyState, ErrorState, PageHead, Skeleton, StandingLabel, STANDING_TONE } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
 import { percent, share, shortAccount, smartAmount, symbol } from "@/lib/format";
@@ -56,6 +56,8 @@ export function MarketScreen() {
         }
         action={<Link href="/create" className="btn btn-primary">Start a business</Link>}
       />
+
+      <HowItWorks />
 
       {live.error && !live.data ? (
         <ErrorState message="The network could not be reached, so the market cannot be shown right now." onRetry={() => void live.refresh()} />
@@ -171,5 +173,57 @@ function MarketRow({ business: b, onOpen }: { business: Business; onOpen: () => 
         <Link className={`btn btn-sm min-w-[112px] ${s === "funding" || isAlert(s) ? "btn-primary" : "btn-secondary"}`} href={`/b/${b.id}`} onClick={(e) => e.stopPropagation()}>{nextStep(s)}</Link>
       </div>
     </li>
+  );
+}
+
+const INTRO_KEY = "lien:intro-dismissed";
+const INTRO_EVENT = "lien:intro";
+const readIntro = () => {
+  try { return localStorage.getItem(INTRO_KEY) === "1"; } catch { return false; }
+};
+const watchIntro = (changed: () => void) => {
+  window.addEventListener("storage", changed);
+  window.addEventListener(INTRO_EVENT, changed);
+  return () => {
+    window.removeEventListener("storage", changed);
+    window.removeEventListener(INTRO_EVENT, changed);
+  };
+};
+const dismissIntro = () => {
+  try { localStorage.setItem(INTRO_KEY, "1"); } catch { /* a private window keeps showing it */ }
+  window.dispatchEvent(new Event(INTRO_EVENT));
+};
+
+const STEPS = [
+  { title: "An AI agent borrows", body: "It runs as a NEAR account that nobody holds the keys to, so no one can walk off with the loan." },
+  { title: "Every sale repays lenders first", body: "A fixed share of each sale goes to the lenders before the owner sees anything." },
+  { title: "Stop paying, lose the business", body: "Anyone can foreclose a late agent. It keeps working for lenders until it is sold." },
+];
+
+/** Lien in three plain steps, for anyone who arrives here first. Hidden once dismissed. */
+function HowItWorks() {
+  const hidden = useSyncExternalStore(watchIntro, readIntro, () => false);
+  if (hidden) return null;
+  return (
+    <section aria-labelledby="how-title" data-testid="how-it-works" className="rounded-[16px] bg-[var(--surface)] p-5 sm:p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 id="how-title" className="text-[20px] font-medium tracking-[-0.01em]">How Lien works</h2>
+        <div className="flex items-center gap-4 text-[15px]">
+          <Link href="/#try" className="link">See it in a simulator</Link>
+          <button type="button" className="link muted" onClick={dismissIntro}>Got it, hide this</button>
+        </div>
+      </div>
+      <ol className="mt-5 grid gap-4 sm:grid-cols-3">
+        {STEPS.map((step, i) => (
+          <li key={step.title} className="flex gap-3">
+            <span aria-hidden className="grid h-7 w-7 flex-none place-items-center rounded-full bg-[var(--accent)] text-[14px] font-medium text-[#0c0a08]">{i + 1}</span>
+            <div>
+              <p className="font-medium">{step.title}</p>
+              <p className="mt-1 text-[15px] leading-snug text-[var(--ink-2)]">{step.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }

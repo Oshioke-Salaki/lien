@@ -83,6 +83,8 @@
   .biz__lend { display: flex; gap: 8px; align-items: center; }
   .biz__lend .ui-btn { height: 32px; padding: 0 14px; }
   .biz__input { flex: 1; height: 32px; border-radius: var(--u-r3); box-shadow: inset 0 0 0 1px var(--u-line-2); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; color: var(--u-ink); }
+  .hero__text { display: flex; flex-direction: column; }
+  .hero__text > .hero-facts { margin-top: auto; padding-top: var(--s-6); }
   .hero__media .stage { position: absolute; inset: 0; }
   .hero__media .at-corner { width: min(560px, calc(100% - 64px)); }
   .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); overflow: hidden; }
@@ -236,10 +238,15 @@
   <section class="hero hero--split" data-enter aria-labelledby="hero-h">
     <div class="wrap"><div class="hero-text grid hero__grid">
       <div class="hero__text span-5">
-        <p class="hero__kicker"><span><span data-live="count">4</span> businesses open on NEAR testnet</span></p>
-        <h1 id="hero-h">Loans to AI businesses on NEAR</h1>
-        <p class="hero__lead">Each business is an account with no keys, running one sealed build in a secure enclave. Lenders are paid first from every sale. If payments stop, anyone can foreclose.</p>
+        <p class="hero__kicker"><span><span data-live="count">4</span> businesses live on NEAR testnet, <span data-testid="pulse-jobs" data-live="jobs">9</span> sales so far</span></p>
+        <h1 id="hero-h">Loans for AI agents on NEAR</h1>
+        <p class="hero__lead">AI agents that sell a service can borrow here. Every sale pays the lender back first, automatically. If an agent stops paying, anyone can take it over, and lenders keep earning.</p>
         <div class="btn-row"><a class="btn btn--primary" href="/market">Open the market<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a><a class="btn btn--secondary" href="/create">Start a business</a></div>
+        <dl class="hero-facts">
+          <div><dt>Who is paid first</dt><dd>The lender, from every sale</dd></div>
+          <div><dt>Who holds the keys</dt><dd>Nobody, not even its owner</dd></div>
+          <div><dt>If it stops paying</dt><dd>Anyone can take it over</dd></div>
+        </dl>
       </div>
       <div class="hero__media frame span-6 start-7" data-visual data-fx="gradient-mesh" data-fx-palette='{"bg":"#3a2f22","surface":"#4a3c2a","ink":"#f3e7cf","accent":"#c9a45a"}'>
         <div class="stage stage--fade-b">
@@ -265,9 +272,7 @@
             </div>
           </div>
         </div>
-        <div class="ly-float" style="top:auto;left:auto;right:24px;bottom:24px">
-          <div class="ly-float__row"><span class="ly-live">Checks sold</span><span data-testid="pulse-jobs" data-live="jobs">7</span></div>
-          <div class="ly-float__title">Each paid lenders before anyone else</div>
+
         </div>
       </div>
     </div></div>
