@@ -4,6 +4,7 @@ members = [
   "contracts/agent",
   "contracts/collector",
   "contracts/registry",
+  "contracts/xvault",
   "contracts/mocks/token",
   "contracts/mocks/outlayer",
   "tests/integration",

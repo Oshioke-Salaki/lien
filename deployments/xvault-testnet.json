@@ -1,0 +1,18 @@
+{
+  "vault": "sentinel-x.v1.lien-13569.testnet",
+  "business": "sentinel.v1.lien-13569.testnet",
+  "mpc": "v1.signer-prod.testnet",
+  "path": "evm-1",
+  "settlementOwner": "lien-13569.testnet",
+  "settlementPath": "lien-settlement-1",
+  "settlement": "0x0fba8f9b420ca7ee6ad51a81a8ebf2ecdfe670d0",
+  "createTx": "BnePWEP4dsThAg4zw2GD9XbE26kGkxa1Nmha9xF2XX73",
+  "codeBytes": 130177,
+  "refuseTx": "8iSsZzTiWLeHLYy8nezqSvicz98C4f2JraBd9b6cLrtV",
+  "signTx": "unu5o2Jaub6VqzTZVTpXrfBWifTwMMAShbL1oUSJ3c8",
+  "payload": "0x4fa883909d6b1b7a598037c44ce50033dd43797c35aaa2fbacda81b6daaeaacb",
+  "signedTx": "0x02f87283014a3480830f42408402faf080825208940fba8f9b420ca7ee6ad51a81a8ebf2ecdfe670d08609184e72a00080c001a084189a59e0f715079e6f5cab7053f6283f73ac402ce017c2ef9a340488c45e54a016ac08b438c82e15787c82e587e9e5518dc406b28693d90ec685e1ffe71edabc",
+  "amountWei": "10000000000000",
+  "evmNonce": 0,
+  "maxFeePerGas": "50000000"
+}

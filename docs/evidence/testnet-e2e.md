@@ -101,3 +101,19 @@ On 13 November 2026 the sample business Beacon (`beacon-repaid-7978.v1.lien-1356
 - **Repaid in full by the owner** ([tx](https://testnet.nearblocks.io/txns/EdvDryN9ZhFGMjCkLQNB5EH4V3i7fD6HTXcD4M42d66B))
 - **Collected by the lender** ([tx](https://testnet.nearblocks.io/txns/8ALsEeH4kHGEJbD8SzPmx7LNKzizNJ6BAJmc9drkanuT))
   - ok: the loan closed as Repaid, $22 of $22
+
+## Chain Signatures: revenue on Base Sepolia that can only go one way
+
+On 14 November 2026 a keyless vault was created for Sentinel: `sentinel-x.v1.lien-13569.testnet`, running `contracts/xvault` (130,177 bytes). Through the MPC signer `v1.signer-prod.testnet` it controls the EVM address [`0x700441434653017a1faa40107382cff2b6248546`](https://sepolia.basescan.org/address/0x700441434653017a1faa40107382cff2b6248546) (predecessor `sentinel-x.v1.lien-13569.testnet`, path `evm-1`). The contract builds the EIP-1559 transaction itself and signs only a native-ETH transfer on Base Sepolia (chain id 84532) to one settlement address fixed at init: [`0x0fba8f9b420ca7ee6ad51a81a8ebf2ecdfe670d0`](https://sepolia.basescan.org/address/0x0fba8f9b420ca7ee6ad51a81a8ebf2ecdfe670d0). That address is itself a Chain Signatures address, of the Lien team account `lien-13569.testnet` on path `lien-settlement-1`. It stands in for the route that would carry the money into Sentinel's inbox. `ops/src/xvault.ts` recorded the run in [deployments/xvault-testnet.json](../../deployments/xvault-testnet.json).
+
+- **Vault created, funded, deployed and initialised in one transaction, with no access key ever added** ([tx](https://testnet.nearblocks.io/txns/BnePWEP4dsThAg4zw2GD9XbE26kGkxa1Nmha9xF2XX73))
+  - ok: `sentinel-x.v1.lien-13569.testnet` has zero access keys
+  - ok: both EVM addresses, derived off chain (root key from `public_key`, then `sha3_256("near-mpc-recovery v0.1.0 epsilon derivation:" + predecessor + "," + path)`), equal the signer's own `derived_public_key`
+- **A transfer to another address (`0x…dead`) is refused on NEAR** ([tx](https://testnet.nearblocks.io/txns/8iSsZzTiWLeHLYy8nezqSvicz98C4f2JraBd9b6cLrtV))
+  - ok: "refused: 0x000000000000000000000000000000000000dead is not the allowed recipient 0x0fba8f9b420ca7ee6ad51a81a8ebf2ecdfe670d0"; nothing reached the signer
+- **The vault had the MPC signer sign 0.00001 ETH to the settlement address, nonce 0** ([tx](https://testnet.nearblocks.io/txns/unu5o2Jaub6VqzTZVTpXrfBWifTwMMAShbL1oUSJ3c8))
+  - ok: the contract's unsigned transaction is byte for byte the one the script builds independently; payload `0x4fa883909d6b1b7a598037c44ce50033dd43797c35aaa2fbacda81b6daaeaacb`
+  - ok: the MPC signature recovers to the vault address `0x7004…8546` (checked by the script with noble, and again by ethers v6 parsing the signed transaction)
+  - **not yet on Base Sepolia:** the vault holds no Base Sepolia ETH, so the node refused the broadcast ("insufficient funds for gas * price + value: have 0 want 11050000000000"). The signed transaction is saved in `deployments/xvault-testnet.json`; once the vault address is funded, `cd ops && npx tsx src/xvault.ts broadcast` sends it.
+
+What this shows: a keyless NEAR account holds funds on another chain and can move them only to one fixed address, enforced by its own contract before the MPC network signs. What it does not show: money arriving in the waterfall. The settlement address is held by the Lien team, and moving the money from there into Sentinel's NEAR inbox is not automated.
