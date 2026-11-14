@@ -37,6 +37,9 @@ export type Policy = {
   collect: boolean;
   /** Foreclose a loan it holds once the grace period has run out. */
   foreclose_when_late: boolean;
+  /** When the only shortfalls are the lenders' share or the return, publish a counter-offer
+   *  on chain: a 1-unit token transfer to the operator whose memo carries the terms. */
+  counter_offers?: boolean;
 };
 
 export const UNITS = 1_000_000n;
@@ -89,9 +92,12 @@ export function warnAcceptable(check: Pick<Check, "verdict" | "flags">, policy: 
   return check.flags.every((f) => policy.accept_warn_flags.includes(f));
 }
 
+/** Terms the agent would lend on, for a borrower whose offer fell short only on price. */
+export type Counter = { principal: bigint; lender_bps: number; total_due: bigint; will_fund: bigint; reasons: string[] };
+
 export type Decision =
   | { decision: "lend"; amount: bigint; reasons: string[] }
-  | { decision: "decline"; reasons: string[] }
+  | { decision: "decline"; reasons: string[]; counter?: Counter }
   | { decision: "skip"; reasons: string[] };
 
 /**
@@ -112,9 +118,12 @@ export function evaluate(b: BusinessView, policy: Policy, ctx: { exposure: bigin
   }
 
   const principal = BigInt(b.terms.principal), due = BigInt(b.terms.total_due), funded = BigInt(b.terms.funded);
-  if (b.terms.lender_bps < policy.min_lender_bps) reasons.push(`lenders get ${b.terms.lender_bps / 100}% of sales; policy needs at least ${policy.min_lender_bps / 100}%`);
+  // Price shortfalls can be negotiated; every other reason is a plain decline.
+  const priced: string[] = [];
+  if (b.terms.lender_bps < policy.min_lender_bps) priced.push(`lenders get ${b.terms.lender_bps / 100}% of sales; policy needs at least ${policy.min_lender_bps / 100}%`);
   const returnBps = Number(((due - principal) * 10_000n) / principal);
-  if (returnBps < policy.min_return_bps) reasons.push(`returns ${returnBps / 100}% over principal; policy needs at least ${policy.min_return_bps / 100}%`);
+  if (returnBps < policy.min_return_bps) priced.push(`returns ${returnBps / 100}% over principal; policy needs at least ${policy.min_return_bps / 100}%`);
+  reasons.push(...priced);
 
   const record = b.repayment_record;
   if (record.foreclosed > policy.max_past_defaults) reasons.push(`${record.foreclosed} past loan(s) ended in foreclosure; policy allows ${policy.max_past_defaults}`);
@@ -135,7 +144,19 @@ export function evaluate(b: BusinessView, policy: Policy, ctx: { exposure: bigin
   if (amount <= 0n || (amount < minNote && amount !== room)) {
     reasons.push(`the most it may lend here (${fmt(amount > 0n ? amount : 0n)} tUSD: max per loan ${policy.max_per_loan}, ${policy.max_share_of_loan_bps / 100}% of ${fmt(principal)}, ${fmt(room)} left to raise, ${fmt(budgetRoom > 0n ? budgetRoom : 0n)} of budget left) is below the 2% minimum note`);
   }
-  if (reasons.length) return { decision: "decline", reasons };
+  if (reasons.length) {
+    if (priced.length === 0 || priced.length !== reasons.length) return { decision: "decline", reasons };
+    // Only the price falls short: name the least the policy accepts.
+    const minDue = principal + (principal * BigInt(policy.min_return_bps) + 9_999n) / 10_000n;
+    const counter: Counter = {
+      principal,
+      lender_bps: Math.max(b.terms.lender_bps, policy.min_lender_bps),
+      total_due: due > minDue ? due : minDue,
+      will_fund: amount,
+      reasons: priced,
+    };
+    return { decision: "decline", reasons, counter };
+  }
   return {
     decision: "lend",
     amount,
