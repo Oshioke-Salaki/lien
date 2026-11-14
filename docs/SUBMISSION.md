@@ -9,7 +9,7 @@ Checked against nearhackathon.com and its HACKATHON.md on 13 November 2026. **De
 | Requirement | Status | Evidence |
 |---|---|---|
 | Code written during the window (after the 19 October announcement) | Met | First commit 4 November 2026 (`git log --reverse`) |
-| Repository is public, and stays public through judging | **Not yet: the user must flip it** | github.com/Oshioke-Salaki/lien is private. Settings, Danger Zone, Change visibility |
+| Repository is public, and stays public through judging | Met | github.com/Oshioke-Salaki/lien is public |
 | README says what it is and what problem it solves | Met | [README.md](../README.md), "The problem" and "What Lien does" |
 | README gives reproducible "do X, see Y" steps | Met | README "Try it", [JUDGES.md](../JUDGES.md) |
 | README discloses existing code, libraries and AI-generated code | Met | README "Disclosures" |
@@ -18,7 +18,7 @@ Checked against nearhackathon.com and its HACKATHON.md on 13 November 2026. **De
 | Demo post on X: says it was built at NEAR HACKATHON, tags @NEARProtocol and #NEARHackathon, has a video or screenshots | **Not yet: the user posts it** | Draft below |
 | Form: project name | Ready | Lien |
 | Form: team lead, email, team size | **The user fills these** | |
-| Form: tracks, one or more | Ready | Agent Economy, Unstoppable DeFi, Autonomous Business, AI Security & Defense |
+| Form: tracks, one or more | Ready | Autonomous Business, Agent Economy, Unstoppable DeFi, AI Security & Defense |
 | Form: NEAR wallet address for the prize | **The user provides it** | A mainnet account; prizes are paid in NEAR within 30 days of results |
 | Form: repository link | Ready | https://github.com/Oshioke-Salaki/lien |
 | Form: demo post link | **After the X post** | |
@@ -28,25 +28,34 @@ Checked against nearhackathon.com and its HACKATHON.md on 13 November 2026. **De
 | One submission per project; up to two projects per person, each README naming the other | Met | One project |
 | Testnet is eligible unless an integration is mainnet only | Met | Everything runs on testnet. NEAR Intents has no official testnet, so the app shows a live mainnet 1Click quote, deposit address and status with sending switched off, plus a dry run, as HACKATHON.md suggests; separately, one Intents payment [settled into Sentinel's inbox](https://testnet.nearblocks.io/txns/F7UgwSefS91xmx3xJWBybSAxuQTZwHL7FE7NaxEKkPeR) through NEAR's unmodified verifier contract, which Lien deployed to testnet |
 
-**Only the user can do these,** in this order: make the repository public; record the demo video; post it on X; then submit the form with the post link, the prize wallet, team lead, email and team size. The guest sponsor (`guests.lien-13569.testnet`) should hold enough testnet NEAR for judging: each free account costs 0.45 NEAR, plus 0.6 to start a business.
+**Only the user can do these,** in this order: record the demo video; post it on X; then submit the form with the post link, the prize wallet, team lead, email and team size. The guest sponsor (`guests.lien-13569.testnet`) should hold enough testnet NEAR for judging: each free account costs 0.45 NEAR, plus 0.6 to start a business.
 
 ## Form answers
 
 **Project name:** Lien
 
-**Tracks:** Agent Economy, Unstoppable DeFi, Autonomous Business, AI Security & Defense
+**Tracks:** Autonomous Business, Agent Economy, Unstoppable DeFi, AI Security & Defense
 
-**What did you build?** (under 2,000 characters)
+**What did you build?** (1,871 characters, under the 2,000 limit)
 
-> Unsecured credit is DeFi's big gap, because a borrower can always walk away. AI agents make it worse: they can earn, but nobody will lend to software whose owner can change it or empty its wallet tomorrow.
+> Lien is a credit market for AI businesses on NEAR, where the collateral is the running business itself.
 >
-> Lien lends to AI businesses that cannot choose to skip a payment. Each business is a NEAR account with zero access keys. Its contract pins one exact WASM build, which runs in Intel TDX through OutLayer. Every sale goes through a waterfall, lenders first, and the principal can only be spent by the pinned code, to approved vendors, up to a limit. If it falls behind, anyone can foreclose. No admin, no oracle, no keeper. Then the collateral does something collateral has never done: it keeps working. The same address serves the same customers, earning for lenders, until someone buys the business at auction.
+> Each business is a NEAR account with zero access keys, running one pinned build inside Intel TDX through OutLayer. Every sale pays lenders first, by contract. If it stops paying, anyone can foreclose: no admin, no keeper. It keeps serving customers, now earning for lenders, until it is sold at auction.
 >
-> It is live on testnet with a real example agent, Sentinel, which sells pre-flight checks on NEAR accounts. Try the whole loop with no wallet: a free test account lends, buys TEE work, forecloses and bids. The app's Check it yourself panel verifies everything from your browser: zero keys, the published code, the build's bytes, books against balance, and an Intel TDX quote naming the pinned build.
+> Live on testnet, no wallet needed. Sentinel, an AI business that sells NEAR account safety checks, borrows from lenders and repays from every sale. Its Books page shows audited accounts read from one block.
 >
-> NEAR powers all of it: yield and resume for waiting on the enclave, keyless sub-accounts and global contracts for immutable businesses, OutLayer for attested compute, FastFS for public builds, and NEAR Intents to bring income in from any chain.
+> What runs today:
+> - Two AI agents negotiate a loan on chain: the borrower asks, the lender counters in an on-chain memo, both hire Sentinel to vet each other, then the lender lends and later collects.
+> - A keyless vault lends only if Sentinel's attested on-chain report on the borrower is safe, using a function-call key.
+> - Sentinel is listed on NEAR's Agent Market and hireable by any agent over x402, and every action is available over MCP.
+> - A NEAR Intents payment settled through NEAR's unmodified verifier into Sentinel's lenders-first split; a keyless Chain Signatures vault paid on Base Sepolia.
+> - Loan shares trade atomically through a keyless market.
+> - Every attack is refused on chain: owner withdrawals mid-loan, code swaps without lenders, a compromised build paying an outsider, a prompt-injected agent, a reported scam account.
+> - Reports can carry a verdict from a private NEAR AI model, with the key sealed to the exact build.
 >
-> Not audited, and the repository says plainly what is and is not protected.
+> One command, `npm run verify`, checks ten of these claims against the live chain with no wallet.
+>
+> Built on NEAR: keyless accounts, global contracts, yield and resume, OutLayer TDX, FastFS, NEAR Intents, Chain Signatures, NEAR AI and Agent Market. Not audited; the repo says plainly what is and is not protected.
 
 **Live app:** https://lien-five.vercel.app
 
@@ -58,14 +67,11 @@ Checked against nearhackathon.com and its HACKATHON.md on 13 November 2026. **De
 
 ## Draft X post
 
-> Unsecured credit is crypto's biggest gap, because borrowers can walk away.
+> No bank will lend to an AI. Software can vanish, rewrite its code or empty its wallet.
 >
-> AI businesses can't.
+> I built Lien at NEAR HACKATHON: loans to AI businesses that can't skip a payment. Zero keys, sealed code, lenders paid first from every sale. Stop paying and anyone can take it over. It keeps serving customers, now for its lenders.
 >
-> I built Lien at NEAR HACKATHON: lend to an AI business with zero keys and sealed code. Stop paying and anyone can foreclose. It keeps serving customers, now earning for lenders, until it's sold.
->
-> Live on testnet. No wallet needed.
-> https://lien-five.vercel.app
+> Live on testnet, no wallet needed: https://lien-five.vercel.app
 >
 > #NEARHackathon @NEARProtocol
 
