@@ -10,12 +10,23 @@ Lien is a market of loans to AI businesses on NEAR. Each business is a contract 
 
 **Sixty seconds, no wallet:**
 
-1. `npm run verify` at the repo root: seven checks read live from the chain, all ✅.
+1. `npm run verify` at the repo root: eight checks read live from the chain, all ✅.
 2. Open [the market](https://lien-five.vercel.app/market) and click **Get a free test account** ($500 of test money, about ten seconds).
 3. Open [Sentinel](https://lien-five.vercel.app/b/sentinel.v1.lien-13569.testnet), buy a safety check, and watch 30% of the sale reach its lenders.
 4. Open its [Books](https://lien-five.vercel.app/b/sentinel.v1.lien-13569.testnet/books): every dollar accounted for, read from one block.
 5. Take over a late business in the market (a staged demo on a 5-minute clock), then see it keep serving customers for its lenders.
 6. See every attack refused on chain on [/proof](https://lien-five.vercel.app/proof).
+
+**The Agent Economy brief, point by point** (the brief's "general contractor" that hires, counters once, pays and keeps receipts):
+
+| The brief asks for | In Lien |
+|---|---|
+| Agents that earn | Sentinel sells checks to people, to agents over [MCP](https://lien-five.vercel.app/guide), and on [NEAR's Agent Market](https://market.near.ai/a/lien-sentinel) for $0.25 per call (x402) |
+| Agents that hire other agents | The lender agent hires Sentinel to vet a borrower before lending; the borrower agent hires Sentinel to vet the lender before accepting its counter (jobs 37, 38, 40, read back by `npm run verify`) |
+| Negotiation, one counter | The borrower asks 12% of sales; the lender [counters at 20% in an on-chain memo](https://testnet.nearblocks.io/txns/4MkZdYAro3DbfCvKT2636zRBFvezaeh3DUkisWsVqNXh); the borrower [re-offers on those terms](https://testnet.nearblocks.io/txns/2DCfuvNj3dG4ACpURZ9eXimsmkJEs4e6s8hJCEjHdBVg); the lender [lends](https://testnet.nearblocks.io/txns/7qDQCSKpENKupo3rgr9VQ3zSt72iw56BkpavSVLNTXAa) |
+| A budget the agent cannot exceed | The lending vault enforces per-loan, per-share and total caps on chain, and the agent holds only a function-call key ([refusals](docs/evidence/testnet-e2e.md)) |
+| Receipts for every task | The [receipts table](JUDGES.md): what was bought, from whom, at what price, the check's verdict and the transaction |
+| Try it yourself | `cd agents/lender && npm i && LIEN_MCP=https://lien-five.vercel.app/api/mcp npm run lender -- --dry-run`: it plans a Sentinel hire and a loan, and declines a business whose description tries to instruct it |
 
 **The Autonomous Business brief, point by point:**
 
@@ -72,13 +83,13 @@ Then open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally
 
 | Do this | You should see |
 |---|---|
-| Run `npm run verify` at the repository root | Seven ✅ lines, read from testnet: Sentinel and its inbox hold zero access keys, it runs the published contract (code hash from `deployments/testnet.json`), its pinned build re-hashes byte for byte from FastFS, the tokens it holds cover its ledger, its latest Intel TDX quote names the pinned build, three robberies during a loan were refused on chain (read back now), and a compromised build's payment outside the spend policy was blocked on chain |
+| Run `npm run verify` at the repository root | Eight ✅ lines, read from testnet: Sentinel and its inbox hold zero access keys, it runs the published contract (code hash from `deployments/testnet.json`), its pinned build re-hashes byte for byte from FastFS, the tokens it holds cover its ledger, its latest Intel TDX quote names the pinned build, three robberies during a loan were refused on chain (read back now), a compromised build's payment outside the spend policy was blocked on chain, and two agents' negotiation and their Sentinel hires are read back from the chain |
 | Open `/market` | Real businesses read from testnet, the ones needing attention first |
 | Click **Get a free test account** | An account with 500.00 tUSD in the sidebar, in about 10 seconds |
 | Open **Sentinel**, read **Check it yourself** | Five checks turn to Verified, run by your browser: zero keys, published contract, the build's bytes re-hashed, books match balance, and an Intel TDX quote naming the pinned build |
 | Buy a check on `outlayer.testnet` | About 15 seconds later, a risk report. The waterfall bar shows where your payment went |
 | Buy a check on `hello` | A refund, because there is no account in it to check |
-| Lend to **Sentinel North** | The raised amount moves, and **Your position** shows your note |
+| Lend to the business that is raising (**Harbor** today; the market's **Lend** button shows which) | The raised amount moves, and **Your positions** shows your note |
 | In the market, open a business marked **Can be taken over** and press **Take over this business** (the market always keeps one: sample businesses on a fast demo clock are restocked by a GitHub Actions job scheduled about every three hours, whose runs can be delayed) | A notice of foreclosure. Buy a check from it: it still works, and the operator's share now goes to lenders |
 | Open a business marked **For sale** and place a bid (an open auction is always kept available; its clock starts with the first bid) | Your bid stands, and the highest bid takes the business when the auction ends |
 | Start your own at `/create`, then choose **Short demo clocks** | Your own keyless business, and a full foreclosure in about ten minutes |

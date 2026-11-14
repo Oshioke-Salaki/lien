@@ -162,6 +162,47 @@ await check("A compromised build's payment outside the spend policy was blocked 
   return { ok: blocked >= 1, detail: `${rec.business}: spends_blocked = ${blocked} (read now from the chain); the build ${rec.compromised_build.hash.slice(0, 12)}… tried to pay ${rec.compromised_build.pays}\n   ${rec.transactions.buy_check?.link ?? ""}` };
 });
 
+await check("Two agents negotiated a loan and hired Sentinel, all on chain (read back now)", async () => {
+  const LENDER = "lien-lender-645368.testnet", BORROWER = "lien-borrower-648257.testnet";
+  const txStatus = async (hash, sender) => {
+    for (const url of RPCS) {
+      try {
+        const r = await fetchWithTimeout(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: "verify", method: "tx", params: { tx_hash: hash, sender_account_id: sender, wait_until: "NONE" } }) });
+        const b = await r.json();
+        if (b.result?.status) return b.result;
+      } catch {}
+    }
+    return null;
+  };
+  const steps = [
+    ["the borrower's opening ask", "F1qjrqerMc2tWQLkdUpkyn8Jdp211SjjohF9dq2Gm8HE", BORROWER],
+    ["the lender's counter, terms in an on-chain memo", "4MkZdYAro3DbfCvKT2636zRBFvezaeh3DUkisWsVqNXh", LENDER],
+    ["the borrower's re-offer on those terms", "2DCfuvNj3dG4ACpURZ9eXimsmkJEs4e6s8hJCEjHdBVg", BORROWER],
+    ["the lender agent's loan", "7qDQCSKpENKupo3rgr9VQ3zSt72iw56BkpavSVLNTXAa", LENDER],
+  ];
+  const lines = []; let ok = true;
+  for (const [what, hash, sender] of steps) {
+    const res = await txStatus(hash, sender);
+    const good = Boolean(res && res.status.SuccessValue !== undefined);
+    let memo = "";
+    if (good && what.includes("counter")) {
+      const args = res.transaction.actions?.[0]?.FunctionCall?.args;
+      try { memo = JSON.parse(Buffer.from(args, "base64").toString()).memo ?? ""; } catch {}
+      if (!memo) ok = false;
+    }
+    ok = ok && good;
+    lines.push(`${good ? "ok" : "MISSING"}: ${what}${memo ? ` (memo: ${memo.slice(0, 60)}${memo.length > 60 ? "…" : ""})` : ""} ${EXPLORER}/txns/${hash}`);
+  }
+  for (const id of [37, 38, 40]) {
+    const job = await view(business, "get_job", { job_id: id });
+    const report = job?.report ? JSON.parse(job.report) : null;
+    const good = job?.status === "Done" && report && report.level !== "high" && [LENDER, BORROWER].includes(job.payer);
+    ok = ok && good;
+    lines.push(`${good ? "ok" : "MISSING"}: Sentinel job ${id}, hired by ${job?.payer ?? "?"} to check ${report?.target ?? "?"}: ${job?.status ?? "?"}, ${report?.level ?? "?"} risk`);
+  }
+  return { ok, detail: lines.join("\n   ") };
+});
+
 const passed = results.filter(Boolean).length;
 console.log(`\n${passed}/${results.length} checks passed.`);
 process.exit(passed === results.length ? 0 : 1);
