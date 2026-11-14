@@ -6,7 +6,19 @@ Lien is a market of loans to AI businesses on NEAR. Each business is a contract 
 
 **Live on testnet: [lien-five.vercel.app](https://lien-five.vercel.app)** · no wallet needed.
 
-**Judging? Start with [JUDGES.md](JUDGES.md):** the two-minute tour, every claim with its test and its testnet transaction, and the honest limits.
+**Judging? Start with [JUDGES.md](JUDGES.md):** the two-minute tour, every claim with its test and its testnet transaction, and the honest limits. One command checks the core claims against the live chain, with no wallet: `npm run verify`.
+
+**The Autonomous Business brief, point by point:**
+
+| The brief asks for | In Lien |
+|---|---|
+| A business an AI runs | Sentinel, a contract account with **zero keys**, sells safety checks; each one runs its pinned build in an Intel TDX enclave and can carry a [NEAR AI verdict](docs/evidence/testnet-e2e.md#near-ai-a-business-that-pays-for-its-own-private-model) |
+| Treasury | The business's own ledger: owed to lenders, owner's share, running money and refunds, checked equal to its balance by `npm run verify` |
+| Sales | Paid jobs in test dollars, from any account, any agent (MCP) or another chain (NEAR Intents) |
+| Procurement | It pays its data vendor only within a spend policy fixed before anyone lends (per-payment and daily caps, approved vendors only) |
+| Revenue sharing | `split_inflow`: every sale pays lenders first, then the owner, then running costs |
+| Cross-chain payments | NEAR Intents deposit and status flow into its inbox; a keyless Chain Signatures vault [paid on Base Sepolia](https://sepolia.basescan.org/tx/0x15b1b31a4cf9591b486d0c60806fb263588e8286bd9796bfebd2481b92780bd0) |
+| Humans only set the constraints | Terms, split and spend policy are fixed before the loan; during it nobody can withdraw, and the code changes only if lenders holding over half approve. If it stops paying, anyone can take it over |
 
 ## Try to rob it
 
@@ -67,7 +79,7 @@ A full run on the live network, with every transaction linked, is in [docs/evide
 
 ## How Lien compares
 
-These are good projects, and Incorpr is further along: it is live on mainnet, and Lien is on testnet only.
+The closest project is Incorpr, which lets a keyless AI company be pledged for a loan and is further along: it is live on mainnet, and Lien is on testnet only. Lien goes further on the loan itself: up to 50 lenders share one loan, every sale pays them first by contract, anyone (not a keeper or the lender) can foreclose, the foreclosed business keeps earning for lenders and is then auctioned, and an autonomous agent can do the lending.
 
 | Project | What it does |
 |---|---|
@@ -209,7 +221,7 @@ deployments           Addresses of each deployment
 
 ## Disclosures
 
-- **Written during the hackathon.** The first commit is from 4 November 2026; nothing predates the build window.
+- **Written during the hackathon.** The first commit is from 4 November 2026; nothing predates the build window. The history shows the shape of the work honestly: the first working version (contracts, tests, app and docs) was built with an AI coding assistant in one long session on 4 November and committed in eight steps, and most later work (fixes from user testing, the agents, the attacks, Chain Signatures, NEAR AI and the Intents flow) landed on 13 and 14 November.
 - **Libraries:** near-sdk (Rust contracts), cargo-near, near-workspaces (sandbox tests), proptest, near-api-js, @hot-labs/near-connect (wallets), Next.js, React, Tailwind CSS, Vitest and Playwright. OutLayer, FastFS, NEAR Intents 1Click and NEAR AI Cloud are used as services.
 - **Design kit:** the landing page is built on the MIT-licensed [taste-skill](https://github.com/Leonxlnx/taste-skill) design system, whose CSS, scripts and fragments are vendored under `web/public/site/assets`.
 - **AI-generated code:** much of the code, tests and documents were written with an AI coding assistant, then run, tested and reviewed by the author. Every claim in this repository is backed by a test or a linked transaction.
