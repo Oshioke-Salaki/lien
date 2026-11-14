@@ -16,20 +16,36 @@
 //      loan inside the vault's limits, and asks the vault to lend.
 // Every step is one JSON line in logs/vault.jsonl.
 //
+// With --vault2 it lends through lendvault v2 (contracts/lendvault2) instead, as
+// agent2.lien-vault-48296.testnet, whose only key is a function-call key for
+// hire_check, lend, claim and foreclose on lendvault2.lien-vault-48296.testnet.
+// Before lending it has the vault buy a Sentinel check on the business's operator
+// (hire_check: the vault pays from its own balance), waits for the attested verdict,
+// and passes the job id to lend. The vault reads that job on chain and refuses unless
+// it is Done, paid by the vault, on the operator, run by Sentinel's pinned build, less
+// than max_check_age_secs old and not high risk (nor medium, unless allow_warn).
+// A recent passing check the vault already bought is reused rather than bought again.
+// Steps are logged to logs/vault2.jsonl.
+//
 //   npx tsx src/vault.ts                       one pass
 //   npx tsx src/vault.ts --business <id> --amount 3 --dry-run
+//   npx tsx src/vault.ts --vault2 --business <id> --amount 1
+//   npx tsx src/vault.ts --vault2 --business <id> --amount 1 --check-job <id>   lend on that job; the vault judges it
 //
-// Set up with `cd ops && npx tsx src/lendvault.ts deploy && npx tsx src/lendvault.ts fund`.
+// Set up with `cd ops && npx tsx src/lendvault.ts deploy && npx tsx src/lendvault.ts fund`
+// (v2: `npx tsx src/lendvault2.ts deploy && npx tsx src/lendvault2.ts fund`).
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Account, FailoverRpcProvider, JsonRpcProvider, actions, teraToGas, type KeyPairString } from "near-api-js";
+import { checkRefusal, refusalMessage, reusableCheck, type SentinelJob, type Vault2Policy } from "./verdict";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const AGENT = process.env.VAULT_AGENT ?? "agent.lien-vault-48296.testnet";
-const VAULT = process.env.VAULT_ID ?? "lendvault.lien-vault-48296.testnet";
+const V2 = process.argv.includes("--vault2");
+const AGENT = process.env.VAULT_AGENT ?? (V2 ? "agent2.lien-vault-48296.testnet" : "agent.lien-vault-48296.testnet");
+const VAULT = process.env.VAULT_ID ?? (V2 ? "lendvault2.lien-vault-48296.testnet" : "lendvault.lien-vault-48296.testnet");
 const KEY_PATH = join(homedir(), ".near-credentials", "testnet", "lien-lender", AGENT, `${VAULT}.json`);
 const RPCS = (process.env.LENDER_RPC ?? "https://rpc.testnet.fastnear.com,https://testnet-rpc.intea.rs,https://near-testnet.drpc.org").split(",");
 const DRY = process.argv.includes("--dry-run");
@@ -44,14 +60,14 @@ const provider = new FailoverRpcProvider(RPCS.map((url) => new JsonRpcProvider({
 const view = <T>(contractId: string, method: string, args: object = {}) =>
   provider.callFunction({ contractId, method, args: args as Record<string, unknown> }) as Promise<T>;
 
-type Policy = { token: string; registry: string; beneficiary: string; agent: string; max_per_loan: string; max_share_bps: number; total_budget: string };
+type Policy = { token: string; registry: string; beneficiary: string; agent: string; max_per_loan: string; max_share_bps: number; total_budget: string } & Partial<Vault2Policy>;
 type Totals = { lent: string; in_flight: string; budget_left: string };
 type Position = { business: string; loan_id: number; principal: string; in_flight: string; claimed: string };
 type Loan = { id: number; status: string; terms: { principal: string }; funded: string; funding_deadline: number };
-type Business = { name: string; description: string; current_loan: Loan | null; now: number };
+type Business = { name: string; description: string; operator: string; current_loan: Loan | null; now: number };
 
 const run = new Date().toISOString();
-const logPath = join(ROOT, "logs", "vault.jsonl");
+const logPath = join(ROOT, "logs", V2 ? "vault2.jsonl" : "vault.jsonl");
 function log(entry: Record<string, unknown>) {
   mkdirSync(dirname(logPath), { recursive: true });
   const line = JSON.stringify({ at: new Date().toISOString(), run, agent: AGENT, vault: VAULT, ...entry });
@@ -85,6 +101,7 @@ const fmt = (u: bigint) => `${Number(u) / 1e6} tUSD`;
 
 const policy = await view<Policy>(VAULT, "get_policy");
 if (policy.agent !== AGENT) throw new Error(`the vault's agent is ${policy.agent}, not ${AGENT}`);
+if (V2 && !policy.sentinel) throw new Error(`${VAULT} is not a v2 vault (its policy names no Sentinel)`);
 const totals = await view<Totals>(VAULT, "get_totals");
 const positions = await view<Position[]>(VAULT, "get_positions", { limit: 100 });
 const balance = big(await view<string>(policy.token, "ft_balance_of", { account_id: VAULT }));
@@ -130,7 +147,13 @@ for (const id of candidates) {
   }
   const decision = { business: id, loan_id: loan.id, amount: amount.toString(), shown: fmt(amount), principal: principal.toString(), funded: loan.funded };
   if (DRY) {
-    log({ kind: "lend", ...decision, sent: false });
+    log({ kind: "lend", ...decision, ...(V2 ? { operator: b.operator, check: "would have the vault hire Sentinel on the operator first" } : {}), sent: false });
+  } else if (V2) {
+    const jobId = await vettedJob(id, b);
+    if (jobId !== null) {
+      const out = await callVault("lend", { business: id, amount: amount.toString(), check_job_id: jobId }, 300);
+      log({ kind: "lend", ...decision, check_job_id: jobId, operator: b.operator, ok: out.ok, accepted: out.value, ...(out.ok ? {} : { refused: refusalMessage(out.failure) }), tx: out.tx, explorer: `https://testnet.nearblocks.io/txns/${out.tx}` });
+    }
   } else {
     const out = await callVault("lend", { business: id, amount: amount.toString() }, 300);
     log({ kind: "lend", ...decision, ok: out.ok, accepted: out.value, failure: out.failure, tx: out.tx, explorer: `https://testnet.nearblocks.io/txns/${out.tx}` });
@@ -139,3 +162,46 @@ for (const id of candidates) {
   break;
 }
 if (!lent) log({ kind: "idle", why: "no business is raising inside the policy" });
+
+/**
+ * v2 only. The Sentinel job to pass to lend: the one given with --check-job (the vault
+ * judges it), a recent passing check the vault already bought on the operator, or a new
+ * one bought with hire_check. Returns null, logged, when the agent declines to lend.
+ */
+async function vettedJob(business: string, b: Business): Promise<number | null> {
+  const p = policy as Policy & Vault2Policy;
+  const given = opt("--check-job");
+  if (given !== undefined) {
+    log({ kind: "check", business, operator: b.operator, job_id: Number(given), source: "--check-job; the vault judges it" });
+    return Number(given);
+  }
+  const sentinel = await view<{ service: { wasm: { hash: string } } }>(p.sentinel, "get_agent");
+  const facts = { vault: VAULT, operator: b.operator, pinnedHash: sentinel.service.wasm.hash, now: b.now };
+  const recorded = await view<Array<{ job_id: number; target: string }>>(VAULT, "get_checks", { limit: 100 });
+  const mine = await Promise.all(recorded.filter((c) => c.target === b.operator).map((c) => view<SentinelJob | null>(p.sentinel, "get_job", { job_id: c.job_id })));
+  const reuse = reusableCheck(mine.filter((j): j is SentinelJob => j !== null), p, facts);
+  if (reuse) {
+    log({ kind: "check", business, operator: b.operator, job_id: reuse.id, source: "reused: a passing check the vault bought recently" });
+    return reuse.id;
+  }
+  const hired = await callVault("hire_check", { target: b.operator }, 300);
+  const jobId = hired.value as number | null | undefined;
+  log({ kind: "hire", business, operator: b.operator, agent_hired: p.sentinel, paid_by: VAULT, ok: hired.ok, job_id: jobId, ...(hired.ok ? {} : { refused: refusalMessage(hired.failure) }), tx: hired.tx, explorer: `https://testnet.nearblocks.io/txns/${hired.tx}` });
+  if (!hired.ok || jobId === null || jobId === undefined) {
+    log({ kind: "decline", business, why: "the check could not be bought" });
+    return null;
+  }
+  let job: SentinelJob | null = null;
+  for (let i = 0; i < 40; i++) {
+    job = await view<SentinelJob | null>(p.sentinel, "get_job", { job_id: jobId });
+    if (job && job.status !== "Pending") break;
+    await new Promise((r) => setTimeout(r, 6_000));
+  }
+  const why = checkRefusal(job, p, { ...facts, now: Math.floor(Date.now() / 1000) });
+  log({ kind: "verdict", business, operator: b.operator, job_id: jobId, status: job?.status, report: job?.report ? JSON.parse(job.report) : null, vault_would_accept: why === null, ...(why ? { why } : {}) });
+  if (why) {
+    log({ kind: "decline", business, why: `the vault would refuse: ${why}` });
+    return null;
+  }
+  return jobId;
+}
