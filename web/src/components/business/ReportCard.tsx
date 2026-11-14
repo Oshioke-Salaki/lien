@@ -92,7 +92,7 @@ function AiVerdict({ report, ai }: { report: Report; ai?: AiContext }) {
       <div className="rounded-[12px] p-3 shadow-[inset_0_0_0_1px_var(--line)]" data-testid="ai-verdict">
         <p className="text-[13px] font-medium tracking-[0.02em] text-[var(--accent)]">AI verdict</p>
         <p className="mt-1 text-[15px] leading-snug">{report.verdict}</p>
-        <p className="mt-2 text-[13px] muted">Written by a private model on NEAR AI Cloud from the facts above. The score and the BLOCK, WARN or ALLOW come from the fixed rules, not from the AI.</p>
+        <p className="mt-2 text-[13px] muted">From a private model on NEAR AI Cloud. The verdict above comes from fixed rules.</p>
       </div>
     );
   }

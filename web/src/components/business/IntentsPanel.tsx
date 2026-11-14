@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTx } from "@/components/Tx";
-import { Panel } from "@/components/ui";
+import { Info, Panel } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
 import { isTestnet, txUrl } from "@/lib/config";
 import { money } from "@/lib/format";
@@ -101,14 +101,14 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
       <div className="space-y-3" data-testid="intents">
         {isTestnet ? (
           <p className="rounded-[10px] bg-[var(--accent-tint)] px-4 py-3 text-[14px] leading-snug" data-testid="intents-preview-note">
-            Lien runs on NEAR&rsquo;s test network. These quotes, deposit addresses and statuses come live from NEAR Intents on the real networks, but sending is switched off here: <b>do not send real money to any address shown</b>. It would not reach this test business.
+            <b>Live NEAR Intents prices. Do not send real money here.</b>{" "}<Info label="Why" tip="Lien runs on NEAR's test network. These quotes, deposit addresses and statuses come live from NEAR Intents on the real networks, but sending is switched off: money sent to an address shown here would not reach this test business." />
           </p>
         ) : null}
-        <p className="text-[15px] leading-snug text-[var(--ink-2)]">A customer on another blockchain, like Arbitrum or Base, pays in its own currency. NEAR Intents (1Click) gives a deposit address on that chain, converts the payment to USDC on NEAR, and delivers it to the business&rsquo;s payment address, where it is split between lenders and the business like any other sale. If it cannot complete, the money goes back to the customer&rsquo;s refund address. Nobody holds it in between.</p>
+        <p className="text-[15px] leading-snug text-[var(--ink-2)]">Customers on Base, Arbitrum and more pay in their own coin; it lands here as USDC and is split like any sale.{" "}<Info label="How it works" tip="NEAR Intents (1Click) gives a deposit address on the customer's chain, converts the payment to USDC on NEAR, and delivers it to the business's payment address, where it is split between lenders and the business like any other sale. If it cannot complete, the money goes back to the customer's refund address. Nobody holds it in between." /></p>
         <p className="text-[14px] break-all"><span className="muted">Payment address: </span><code>{b.collector}</code></p>
         {isTestnet && b.collector === SETTLED.inbox ? (
           <p className="text-[13px] muted leading-snug" data-testid="intents-settled">
-            On testnet, one NEAR Intents payment has settled here: a signed withdrawal, relayed by another account through NEAR&rsquo;s own Intents verifier, <a className="underline" href={txUrl(SETTLED.execute)} target="_blank" rel="noreferrer">paid this address</a>, and it was <a className="underline" href={txUrl(SETTLED.forward)} target="_blank" rel="noreferrer">forwarded to lenders first</a>. No 1Click swap was involved.
+            Settled on testnet through NEAR&rsquo;s Intents verifier: <a className="underline" href={txUrl(SETTLED.execute)} target="_blank" rel="noreferrer">paid here</a>, then <a className="underline" href={txUrl(SETTLED.forward)} target="_blank" rel="noreferrer">split, lenders first</a>.{" "}<Info label="Details" tip="A signed withdrawal intent, relayed by another account through NEAR's unmodified Intents verifier, paid this address; it was then forwarded into the waterfall. No 1Click swap was involved." />
           </p>
         ) : null}
 
@@ -139,7 +139,7 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
             />
             <label className="flex items-start gap-3 text-[14px] leading-snug" data-testid="intents-dry-toggle">
               <input type="checkbox" className="mt-[3px]" checked={dryRun} onChange={(e) => { setDryRun(e.target.checked); reset(); }} />
-              <span><b>Preview the full flow (nothing is sent)</b> <span className="muted">Get a price only, with no deposit address, then step through every status a payment can reach, including refunds and failures.</span></span>
+              <span><b>Preview the full flow (nothing is sent)</b> <span className="muted">A price, then every status a payment can reach.</span></span>
             </label>
             <button type="submit" className="btn btn-secondary w-full" data-testid="intents-quote" disabled={state === "loading" || !canQuote}>
               {state === "loading" ? "Finding a route…" : dryRun ? "Preview the payment" : isTestnet ? "Get a real quote and deposit address (nothing is sent)" : "Get a quote and deposit address"}
@@ -164,11 +164,11 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
                 <p className="text-[14px] muted">If anything goes wrong, the money goes back to <code className="break-all">{quote.refundTo}</code>.</p>
               </>
             ) : (
-              <p className="text-[14px] muted">This is a preview: NEAR Intents gave a price only and created no deposit address, so there is nowhere to send money. Below, step through what the customer would see.</p>
+              <p className="text-[14px] muted">Preview: a price only; NEAR Intents created no deposit address.</p>
             )}
             {quote.sendingOff ? (
               <p className="rounded-[10px] px-3 py-2 text-[14px] leading-snug" style={{ background: "color-mix(in srgb, var(--warn) 18%, transparent)" }} data-testid="intents-sending-off">
-                <b>Do not send anything.</b> This is a real price{quote.depositAddress ? " and a real deposit address" : ""} from the main network. Lien is on the test network here, so sending is switched off: on the main network this payment would be credited to the name <code className="break-all">{quote.recipient}</code> inside NEAR Intents, which no one can withdraw to this test business.
+                <b>Do not send anything.</b> Real {quote.depositAddress ? "price and address" : "price"} from the main network; sending is off on testnet.{" "}<Info label="Why" tip={`On the main network this payment would be credited to the name ${quote.recipient} inside NEAR Intents, which no one can withdraw to this test business.`} />
               </p>
             ) : null}
             {quote.depositAddress ? (
