@@ -203,6 +203,51 @@ await check("Two agents negotiated a loan and hired Sentinel, all on chain (read
   return { ok, detail: lines.join("\n   ") };
 });
 
+await check("A NEAR Intents payment settled into the inbox through NEAR's unmodified verifier (read back now)", async () => {
+  const rec = JSON.parse(readFileSync(join(ROOT, "docs/evidence/intents-settlement-testnet.json"), "utf8"));
+  const dep = JSON.parse(readFileSync(join(ROOT, "deployments/intents-testnet.json"), "utf8"));
+  const txResult = async (hash, sender) => {
+    for (const url of RPCS) {
+      try {
+        const r = await fetchWithTimeout(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: "verify", method: "tx", params: { tx_hash: hash, sender_account_id: sender, wait_until: "NONE" } }) });
+        const b = await r.json();
+        if (b.result?.status) return b.result;
+      } catch {}
+    }
+    return null;
+  };
+  const events = (res) =>
+    (res?.receipts_outcome ?? []).flatMap((r) => r.outcome.logs).filter((l) => l.startsWith("EVENT_JSON:")).map((l) => JSON.parse(l.slice(11)));
+  const lines = [];
+  const [acct, keys] = await Promise.all([
+    query({ request_type: "view_account", account_id: rec.verifier }),
+    query({ request_type: "view_access_key_list", account_id: rec.verifier }),
+  ]);
+  const codeOk = acct.code_hash === dep.source.codeHash && keys.keys.length === 0;
+  lines.push(`${codeOk ? "ok" : "MISMATCH"}: ${rec.verifier} runs ${acct.code_hash} (${dep.source.repo} ${dep.source.tag}, the code at ${dep.source.mainnetAccount}), ${keys.keys.length} access keys`);
+
+  const exec = await txResult(rec.transactions.execute.tx, rec.relayer);
+  const ev = events(exec);
+  const withdrew = ev.some((e) => e.standard === "dip4" && e.event === "ft_withdraw" && e.data.some((x) => x.account_id === rec.payer && x.receiver_id === rec.inbox && x.amount === rec.amount));
+  const paid = ev.some((e) => e.standard === "nep141" && e.event === "ft_transfer" && e.data.some((x) => x.old_owner_id === rec.verifier && x.new_owner_id === rec.inbox && x.amount === rec.amount));
+  const execOk = Boolean(exec && exec.status.SuccessValue !== undefined && exec.transaction.signer_id === rec.relayer && withdrew && paid);
+  lines.push(`${execOk ? "ok" : "MISSING"}: ${rec.relayer} relayed ${rec.payer}'s signed ft_withdraw; the verifier paid ${Number(rec.amount) / 1e6} ${deployment.tokenSymbol} to ${rec.inbox} ${EXPLORER}/txns/${rec.transactions.execute.tx}`);
+
+  const fwd = await txResult(rec.transactions.forward.tx, rec.relayer);
+  const revenue = events(fwd).find((e) => e.standard === "lien" && e.event === "revenue");
+  const fwdOk = Boolean(fwd && fwd.status.SuccessValue !== undefined && revenue && revenue.data.amount === rec.amount);
+  lines.push(`${fwdOk ? "ok" : "MISSING"}: the inbox forwarded it into the split${revenue ? ` (lenders ${Number(revenue.data.lender) / 1e6}, operator ${Number(revenue.data.operator) / 1e6}, opex ${Number(revenue.data.opex) / 1e6})` : ""} ${EXPLORER}/txns/${rec.transactions.forward.tx}`);
+
+  let refusedOk = rec.refused.length > 0;
+  for (const r of rec.refused) {
+    const res = await txResult(r.tx, r.by);
+    const good = Boolean(res?.status?.Failure) && JSON.stringify(res.status.Failure).includes(r.reason);
+    refusedOk = refusedOk && good;
+    lines.push(`${good ? "refused" : "NOT CONFIRMED"}: ${r.what} ("${r.reason}") ${EXPLORER}/txns/${r.tx}`);
+  }
+  return { ok: codeOk && execOk && fwdOk && refusedOk, detail: lines.join("\n   ") };
+});
+
 const passed = results.filter(Boolean).length;
 console.log(`\n${passed}/${results.length} checks passed.`);
 process.exit(passed === results.length ? 0 : 1);

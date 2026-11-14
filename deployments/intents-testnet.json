@@ -1,0 +1,39 @@
+{
+  "network": "testnet",
+  "what": "NEAR's Intents verifier (the defuse contract behind intents.near), deployed unmodified to a keyless testnet account. Intents has no official testnet deployment.",
+  "verifier": "verifier.lien-intents-27984.testnet",
+  "source": {
+    "repo": "https://github.com/near/intents",
+    "tag": "defuse/v0.4.5",
+    "commit": "16d04f6ec4401263f8914638710260da50bb46b0",
+    "mainnetAccount": "intents.near",
+    "codeHash": "BtA1BEFNS619KkvXFsgcpQ21Tb5yMm32aaUkn7xNothk",
+    "sha256": "a1afab98916d9f213746544dcf8e4e6bdb22c0be6bc5dfbd8ea8814c9922b547",
+    "wasmBytes": 1297551,
+    "wasmFrom": "view_code on mainnet intents.near"
+  },
+  "codeHashOnChain": "BtA1BEFNS619KkvXFsgcpQ21Tb5yMm32aaUkn7xNothk",
+  "accessKeys": 0,
+  "init": {
+    "method": "new",
+    "args": {
+      "config": {
+        "wnear_id": "wrap.testnet",
+        "fees": {
+          "fee": 0,
+          "fee_collector": "verifier.lien-intents-27984.testnet"
+        },
+        "roles": {
+          "super_admins": [],
+          "admins": {},
+          "grantees": {}
+        }
+      }
+    }
+  },
+  "createTx": "9bKhU43sKdELVa9NxXsRrahqbBDcP7JjWEZKEdM6UPqU",
+  "tokenRegistrationTx": "7hYHM5YH2kiRRVF8jk8sB98daztBA9Cvn6JU7p6Jzhok",
+  "token": "usd.lien-13569.testnet",
+  "createdBy": "lien-intents-27984.testnet",
+  "at": "2026-11-14T11:14:56.128Z"
+}
