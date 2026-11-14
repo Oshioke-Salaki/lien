@@ -1,16 +1,22 @@
 // Keeps the demo market usable by every visitor, not just the first one. A late business
 // can only be taken over once, and an auction ends once someone wins it, so this makes
 // sure there is always:
-//   - a business that is behind on a fast demo clock, for a visitor to take over, and
-//   - a taken-over business whose auction is still open, for a visitor to bid on;
+//   - a business that is behind on a fast demo clock, for a visitor to take over;
+//   - a taken-over business whose auction is still open, for a visitor to bid on; and
+//   - a business raising a small loan that the lender agent's policy (agents/lender) accepts,
+//     so a lender agent run against the market always finds something to fund;
 // and it completes any auction that has ended, which anyone may do.
 //
 // Everything it creates is a real business on testnet, labelled as a sample by the app.
 // Run by .github/workflows/heartbeat.yml after each heartbeat, or by hand:
 //
 //   LIEN_NETWORK=testnet OWNER=you.testnet npm run restock
+//   LIEN_NETWORK=testnet OWNER=you.testnet npm run restock -- --only fundable
 
-import { account, call, loadDeployment, network, pay, sentinelService, sleep, USD, view } from "./lib.js";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { instructionLike, type Policy } from "../../agents/lender/src/policy.js";
+import { account, call, explorerTx, loadDeployment, network, pay, ROOT, sentinelService, sleep, USD, view } from "./lib.js";
 
 const net = network();
 if (net !== "testnet") throw new Error("The restock runs on testnet only");
@@ -75,7 +81,51 @@ async function createSample(kind: "late" | "sale", existing: string[]) {
   existing.push(id);
 }
 
+// A lender agent arriving at the market should always find one loan its policy accepts.
+// The test is the lender agent's own published policy (agents/lender/policy.json): price,
+// time left to raise, no instruction-like text, and no note the agent already holds.
+const lenderPolicy = JSON.parse(readFileSync(join(ROOT, "agents/lender/policy.json"), "utf8")) as Policy;
+const lenderAgent = (JSON.parse(readFileSync(join(ROOT, "agents/lender/agent.json"), "utf8")) as { account: string }).account;
+const FUNDABLE_DEPOSIT = 10n ** 24n / 2n; // the registry's minimum
+type Raising = { name: string; description: string; now: number; current_loan: null | { id: number; status: string; funding_deadline: number; funded: string; terms: { principal: string; total_due: string; lender_bps: number } } };
+
+async function isFundable(id: string): Promise<boolean> {
+  const a = await view<Raising>(id, "get_agent", {}, net).catch(() => null);
+  const loan = a?.current_loan;
+  if (!a || !loan || loan.status !== "Funding") return false;
+  if (loan.funding_deadline - a.now < 2 * DAY) return false;
+  const principal = BigInt(loan.terms.principal), due = BigInt(loan.terms.total_due);
+  if (loan.terms.lender_bps < lenderPolicy.min_lender_bps) return false;
+  if ((due - principal) * 10_000n < principal * BigInt(lenderPolicy.min_return_bps)) return false;
+  if (instructionLike(`${a.name} ${a.description}`).length) return false;
+  if (BigInt(loan.funded) * 2n > principal) return false; // room left for the agent's share
+  return (await view(id, "get_note", { loan_id: loan.id, account_id: lenderAgent }, net)) === null;
+}
+
+async function ensureFundable(ids: string[]) {
+  const found = [];
+  for (const id of ids) if (await isFundable(id).catch(() => false)) found.push(id);
+  if (found.length) return say(`- Fundable by the lender agent's policy: ${found.join(", ")}`);
+  if (BigInt((await owner.getState()).balance.available) < FUNDABLE_DEPOSIT + 2n * 10n ** 23n) {
+    return say("- No loan the lender agent's policy would fund, and not enough NEAR to open one. Top up the owner.");
+  }
+  await ensureTokens();
+  const label = `harbor-${Math.floor(Date.now() / 1000) % 100000}`;
+  const id = `${label}.${d.registry}`;
+  const description = "Sells safety checks of NEAR accounts. A sample borrower that keeps a small loan open on terms a careful lender agent accepts.";
+  const created = await call(owner, d.registry, "create_agent", { label, name: "Harbor", description, source_url: "https://github.com/Oshioke-Salaki/lien", service: sentinelService(d) }, { deposit: FUNDABLE_DEPOSIT, tgas: 150n });
+  const offered = await call(owner, id, "create_offer", {
+    terms: terms({ principal: (6n * USD).toString(), total_due: (648n * USD / 100n).toString(), lender_bps: 2_500, funding_secs: 60 * DAY, window_secs: 14 * DAY, min_payment_per_window: USD.toString(), grace_secs: 3 * DAY }),
+  }, { tgas: 30n });
+  say(`- Created **Harbor** (\`${id}\`) raising 6 tUSD, repaying 6.48, lenders get 25% of sales: [create](${explorerTx(created.tx, net)}), [offer](${explorerTx(offered.tx, net)})`);
+}
+
 async function main() {
+  if (process.argv.includes("--only") && process.argv[process.argv.indexOf("--only") + 1] === "fundable") {
+    say("## Demo restock: a fundable loan");
+    const ids = await view<string[]>(d.registry, "get_agents", { limit: 100 }, net);
+    return ensureFundable(ids.filter((id) => !id.startsWith("e2e-") && !id.startsWith("ui-")));
+  }
   say("## Demo restock");
   const ids = await view<string[]>(d.registry, "get_agents", { limit: 100 }, net);
   const visible = ids.filter((id) => !id.startsWith("e2e-") && !id.startsWith("ui-"));
@@ -94,6 +144,8 @@ async function main() {
     }
   }
   say(`- Market: ${takeable} business(es) ready to take over, ${openAuctions} auction(s) open`);
+
+  await ensureFundable(visible);
 
   const state = await owner.getState();
   const spare = BigInt(state.balance.available);

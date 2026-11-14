@@ -1,0 +1,32 @@
+{
+  "token": "usd.lien-13569.testnet",
+  "registry": "v1.lien-13569.testnet",
+  "business": {
+    "name": "Courier",
+    "label_prefix": "courier",
+    "description": "Sells safety checks of NEAR accounts. Run by an autonomous borrower agent that negotiates its loan with lender agents on chain and buys checks from Sentinel."
+  },
+  "opening_terms": {
+    "principal": "10",
+    "total_due": "10.3",
+    "lender_bps": 1200,
+    "operator_bps": 2000,
+    "funding_secs": 604800,
+    "term_secs": 2592000,
+    "window_secs": 1209600,
+    "min_payment_per_window": "2",
+    "grace_secs": 259200,
+    "auction_secs": 1800,
+    "auction_reserve_bps": 10000
+  },
+  "max_lender_bps": 2500,
+  "max_return_bps": 800,
+  "min_operator_bps": 2000,
+  "vet_counterparty": "hire",
+  "counterparty_verdicts_ok": ["ALLOW"],
+  "require_lender_holds_will_fund": true,
+  "buy_checks_per_loan": 1,
+  "max_check_spend_per_run": "0.5",
+  "repay_on_schedule": true,
+  "max_repay_per_run": "3"
+}
