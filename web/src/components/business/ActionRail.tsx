@@ -275,7 +275,7 @@ function refundText(reason: string | undefined, price: bigint): { text: string; 
     case "execution_failed":
     case "no_output":
     case "malformed_output":
-      return { text: `The test network's secure computer failed this time. ${back}`, retry: true };
+      return { text: `The sealed computer's answer arrived too late (OutLayer's test network is busy). ${back} Try again, or see the free check below.`, retry: true };
     default:
       return { text: `Could not finish (no answer, or no account name). Refunded in full: ${money(price)}.`, retry: true };
   }
