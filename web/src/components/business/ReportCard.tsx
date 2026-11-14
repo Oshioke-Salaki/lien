@@ -43,7 +43,12 @@ export function ReportCard({ raw }: { raw: string | null }) {
           The Lien registry and the test-dollar token are still upgradeable by the team on the test network, which is why they score {level === "low" ? "as they do" : report.level.toLowerCase()}. Business accounts like this one have no keys at all.
         </p>
       ) : null}
-      {report.verdict ? <p className="text-[15px] italic">{report.verdict}</p> : null}
+      {report.verdict ? (
+        <div className="text-[15px]" data-testid="ai-verdict">
+          <p className="muted text-[13px]">AI verdict, from a private model on NEAR AI Cloud</p>
+          <p className="italic">{report.verdict}</p>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -118,3 +118,13 @@ On 14 November 2026 a keyless vault was created for Sentinel: `sentinel-x.v1.lie
   - ok: after the vault address received 0.0001 test ETH from a faucet, `cd ops && npx tsx src/xvault.ts broadcast` sent exactly the transaction the MPC network had signed; no private key for `0x7004…8546` exists anywhere
 
 What this shows: a keyless NEAR account holds funds on another chain and can move them only to one fixed address, enforced by its own contract before the MPC network signs. What it does not show: money arriving in the waterfall. The settlement address is held by the Lien team, and moving the money from there into Sentinel's NEAR inbox is not automated.
+
+## NEAR AI: a business that pays for its own private model
+
+Sentinel's build `b440dfe2…` asks NEAR AI Cloud's private DeepSeek V4.1 Flash model (served from a TEE) for a one-sentence verdict on each report, with a hard 25-second deadline so the check always answers. The key reaches the code only as an OutLayer secret sealed to that exact build and that business, so neither the operator nor a different build can read it, and a business cannot change its secrets while a loan is open.
+
+- **Build published and adopted by Sentinel through lender governance** ([lender approval](https://testnet.nearblocks.io/txns/GM827SJEvLTmCnnMdb3tx6dj5NuFqH8LAZgxggVE65Vh))
+- **Beacon, whose loan is repaid, moved to the build with a secrets profile** ([tx](https://testnet.nearblocks.io/txns/DLXSeTTYwymck1thzJTemRfEWeoXEm5ZyAZpgxDZaByX)), `npm run enable-ai`
+- **The key sealed for that build and business** ([tx](https://testnet.nearblocks.io/txns/A2AHb7vHVB3GVhUyTfCwuFztA92F52L1kFVrQAYKuJwp)), `npm run store-secret`
+- **A paid check, run in Intel TDX, returned with the model's verdict** ([tx](https://testnet.nearblocks.io/txns/8JJtbwJ6QSZZcmenraEqX7yJDpgYpevJ6LYiEVYvAEFA)), job 2 on `beacon-repaid-7978.v1.lien-13569.testnet`:
+  - ok: `"verdict":"Proceed with caution: this testnet account has a medium risk score of 40 and its owner can replace the contract code, so verify the contract before paying or signing."`

@@ -22,14 +22,14 @@ const service = { ...before.service, wasm: { url: d.sentinel.url, hash: d.sentin
 
 let proposal = before.proposal;
 if (!proposal || proposal.service?.wasm?.hash !== d.sentinel.hash) {
-  const sent = await call<number>(account(ownerId, net), business, "propose_change", { service });
+  const sent = await call<number>(account(ownerId, net), business, "propose_change", { service }, { tgas: 60n });
   console.log(`proposed ${before.service.wasm.hash.slice(0, 12)}… → ${d.sentinel.hash.slice(0, 12)}…: ${explorerTx(sent.tx, net)}`);
   proposal = (await view<any>(business, "get_agent", {}, net)).proposal;
 }
 for (const lender of lenders) {
   const now = await view<any>(business, "get_agent", {}, net);
   if (now.service.wasm.hash === d.sentinel.hash) break;
-  const sent = await call(account(lender, net), business, "approve_change", { proposal_id: proposal.id });
+  const sent = await call(account(lender, net), business, "approve_change", { proposal_id: proposal.id }, { tgas: 60n });
   console.log(`${lender} approved: ${explorerTx(sent.tx, net)}`);
 }
 const after = await view<any>(business, "get_agent", {}, net);

@@ -11,6 +11,11 @@ use wasi::io::poll;
 use wasi::io::streams::StreamError;
 
 pub fn post_json(url: &str, body: &str, limit: Duration) -> Result<(u16, Vec<u8>), String> {
+    post_json_auth(url, body, limit, None)
+}
+
+/// The same POST with an optional bearer token.
+pub fn post_json_auth(url: &str, body: &str, limit: Duration, bearer: Option<&str>) -> Result<(u16, Vec<u8>), String> {
     let deadline = monotonic_clock::now() + limit.as_nanos() as u64;
     let rest = |what: &str| -> Result<u64, String> {
         let now = monotonic_clock::now();
@@ -21,6 +26,9 @@ pub fn post_json(url: &str, body: &str, limit: Duration) -> Result<(u16, Vec<u8>
 
     let headers = Fields::new();
     headers.append(&"content-type".to_string(), &b"application/json".to_vec()).map_err(|_| "header")?;
+    if let Some(token) = bearer {
+        headers.append(&"authorization".to_string(), &format!("Bearer {token}").into_bytes()).map_err(|_| "header")?;
+    }
     let req = OutgoingRequest::new(headers);
     req.set_method(&Method::Post).map_err(|_| "method")?;
     req.set_scheme(Some(&scheme)).map_err(|_| "scheme")?;

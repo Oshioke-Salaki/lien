@@ -62,5 +62,5 @@ const { tx } = await call(account(operatorId, net), agent, "store_secrets", {
   profile,
   encrypted_secrets_base64: encrypted,
   access,
-}, { deposit: BigInt(estimate) });
+}, { deposit: BigInt(estimate), tgas: 150n });
 console.log(`Stored ${name} in profile "${profile}" for build ${hash.slice(0, 12)}… (${tx})`);

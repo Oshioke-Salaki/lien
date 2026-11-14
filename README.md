@@ -125,7 +125,7 @@ A job is one round trip. The customer's payment is held, `request_execution` run
 | **Global contracts (NEP-591)** | Every business runs the same published code, checkable by hash |
 | **FastFS** | The agent build is published on chain so anyone can fetch and hash it |
 | **Encrypted secrets** | Readable only by the pinned build, called through that business |
-| **NEAR AI Cloud** | Optional private verdict in reports, once an operator adds a key |
+| **NEAR AI Cloud** | Each report can carry a verdict from a private model (DeepSeek V4.1 Flash, run by NEAR AI in a TEE). The key is sealed as an OutLayer secret that only the pinned build, called through that business, can open. Live on Beacon: [key sealed](https://testnet.nearblocks.io/txns/A2AHb7vHVB3GVhUyTfCwuFztA92F52L1kFVrQAYKuJwp), [a check with its AI verdict](https://testnet.nearblocks.io/txns/8JJtbwJ6QSZZcmenraEqX7yJDpgYpevJ6LYiEVYvAEFA) |
 | **NEAR Connect** | Wallet connection |
 
 ## What is real and what is not
@@ -134,7 +134,7 @@ A job is one round trip. The customer's payment is held, `request_execution` run
 - **A test stablecoin:** testnet uses tUSD. Mainnet is configured for native USDC.
 - **NEAR Intents runs up to the deposit, not past it.** Intents has no testnet, so the app asks the mainnet 1Click API for a real quote, deposit address and live status, with sending switched off: no Intents payment has reached a Lien inbox. On testnet the quote credits the inbox's name inside the Intents ledger, because mainnet 1Click refuses a `.testnet` account as a NEAR destination, so nothing should be sent to it. The inbox and its forwarding into the waterfall are tested live with a plain transfer, which is what an Intents payout looks like.
 - **Chain Signatures is a narrow vault.** The keyless vault, its refusals, an MPC signature and the [transfer on Base Sepolia](https://sepolia.basescan.org/tx/0x15b1b31a4cf9591b486d0c60806fb263588e8286bd9796bfebd2481b92780bd0) are real. The settlement address is held by the Lien team, and nothing yet moves money from it into the business's inbox.
-- **Not live yet:** a mainnet deployment, and a NEAR AI verdict on a real key.
+- **Not live yet:** a mainnet deployment. The NEAR AI verdict is live on Beacon; Sentinel runs the same build but cannot be given a secret until its loan closes, because a business's code and secrets are frozen while a loan is open.
 - **Not audited.** See [docs/SECURITY.md](docs/SECURITY.md), which lists what is and is not protected.
 
 ## Run it
