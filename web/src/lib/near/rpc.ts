@@ -1,6 +1,6 @@
 // Read-only chain access. No library: a view call is one JSON POST.
 
-import { RPC_URLS, NETWORK, deployment } from "../config";
+import { RPC_URLS, NETWORK, deployment, type Network } from "../config";
 import type { AgentView, Business, Job, LoanView, NoteView } from "./types";
 import { NO_FACTS, parseFacts, type Facts } from "../risk";
 
@@ -11,10 +11,10 @@ export class RpcError extends Error {}
 /** Node trouble rather than an answer about the chain: the next node is asked. */
 const NODE_TROUBLE = new Set(["TIMEOUT_ERROR", "INTERNAL_ERROR", "NO_SYNCED_BLOCKS", "NOT_SYNCED_YET"]);
 
-async function rpc<T>(params: unknown): Promise<T> {
+async function rpc<T>(params: unknown, network: Network = NETWORK): Promise<T> {
   let last: unknown;
   // Start at a random node so reads spread across providers instead of exhausting one's free tier.
-  const urls = RPC_URLS[NETWORK];
+  const urls = RPC_URLS[network];
   const start = Math.floor(Math.random() * urls.length);
   for (const url of [...urls.slice(start), ...urls.slice(0, start)]) {
     try {
@@ -123,11 +123,14 @@ export const getNote = (id: string, loanId: number, account: string) =>
 export const getCredit = async (id: string, account: string) =>
   BigInt(await view<string>(id, "get_credit", { account_id: account }));
 
-/** The chain facts Sentinel's rules read (chain.rs read_account), for the free check. */
-export async function readFacts(accountId: string): Promise<Facts> {
+/**
+ * The chain facts Sentinel's rules read (chain.rs read_account), for the free check.
+ * `network` defaults to the app's own; the Agent Market worker reads mainnet accounts too.
+ */
+export async function readFacts(accountId: string, network: Network = NETWORK): Promise<Facts> {
   let state: AccountState;
   try {
-    state = await viewAccount(accountId);
+    state = await rpc<AccountState>({ request_type: "view_account", finality: "optimistic", account_id: accountId }, network);
   } catch (error) {
     if (error instanceof RpcError && /UNKNOWN_ACCOUNT|does not exist/i.test(error.message)) return NO_FACTS;
     throw error;
@@ -136,6 +139,6 @@ export async function readFacts(accountId: string): Promise<Facts> {
     request_type: "view_access_key_list",
     finality: "optimistic",
     account_id: accountId,
-  });
+  }, network);
   return parseFacts(state, keys);
 }
