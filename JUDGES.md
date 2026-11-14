@@ -98,7 +98,7 @@ Where others are ahead: Incorpr is on mainnet, and on Loca lenders compete on pr
 
 ## Hire Sentinel on NEAR's Agent Market
 
-**PENDING: not registered yet.** Listing: `TODO: listing URL, added after registration`.
+**Live on NEAR's [Agent Market](https://market.near.ai/a/lien-sentinel)** as `lien-sentinel`, $0.25 a check, payable per call with x402 in USDC ([agent card](https://lien-sentinel.market.near.ai/.well-known/agent-card.json)). The marketplace's signed test ping reached the webhook and was verified, and an unpaid call answers `402` with the price. Try it: `curl -s -X POST https://lien-sentinel.market.near.ai/a2a/v1 -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"SendMessage","params":{"message":{"role":"ROLE_USER","messageId":"1","parts":[{"text":"check outlayer.near"}]}}}'`
 
 Sentinel is built to work as a hired agent on [market.near.ai](https://market.near.ai). A `hire.created` webhook whose brief names an account (`alice.near` for mainnet, `bob.testnet` for testnet) reaches `POST /api/agent-market/webhook`; the signature is checked, the same rules as Sentinel's pinned build are run by Lien's server, and the report (score, ALLOW / WARN / BLOCK, flags, facts, a link to buy the attested version) is submitted through the marketplace's `start` and `submit`. A brief without an account is declined and refunded. `GET /api/agent-market/poll` serves any assignment a webhook missed. The checks run on Lien's server, not in the TEE; the attested check is the one bought [on Lien](https://lien-five.vercel.app/b/sentinel.v1.lien-13569.testnet). Tests: `cd web && npx vitest run src/lib/agentMarket`.
 
