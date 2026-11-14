@@ -39,7 +39,7 @@ Kept here because they show what the tests are worth.
 ## Not verified
 
 - A NEAR AI verdict with a real key, which needs a funded NEAR AI account.
-- Anything on mainnet, including a real NEAR Intents payment reaching an inbox. The route and price are real, and the receiving side is tested with a plain transfer, which is what an Intents payout looks like according to its docs.
+- Anything on mainnet, including a real NEAR Intents payment reaching an inbox. The route, price, deposit address and `PENDING_DEPOSIT` status are real; the later statuses are shown only in the dry run and unit tests. The receiving side is tested with a plain transfer, which is what an Intents payout looks like according to its docs.
 - Signing with each wallet in NEAR Connect. Browser tests sign with the guest key.
 - An independent audit or load testing.
 - The `transfer_note`, `propose_change` and `approve_change` flows through the UI. The contract rules are unit-tested.
