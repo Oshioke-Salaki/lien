@@ -7,7 +7,8 @@ import { dateTime, money, shortAccount } from "@/lib/format";
 import { getJobs } from "@/lib/near/rpc";
 import type { Business, Job } from "@/lib/near/types";
 import { parseReport } from "@/lib/report";
-import { ReportCard } from "./ReportCard";
+import { isTeamAccount } from "@/lib/demo";
+import { ReportCard, type AiContext } from "./ReportCard";
 
 const STATUS: Record<Job["status"], string> = { Pending: "Running", Done: "Delivered", Refunded: "Refunded" };
 
@@ -15,8 +16,14 @@ export function JobsPanel({ business: b }: { business: Business }) {
   const live = useLive(() => getJobs(b.id, 12), `jobs:${b.id}:${b.next_job_id}:${b.pending_jobs}`, 10_000);
   const [open, setOpen] = useState<number | null>(null);
   const jobs = live.data ?? [];
+  const ai: AiContext = { on: !!b.service.secrets_profile, loanOpen: !!b.current_loan };
   return (
     <Panel title="Checks it has sold" aside={`${b.stats.jobs_done} delivered, ${b.stats.jobs_refunded} refunded`}>
+      {b.stats.jobs_refunded > 0 ? (
+        <p className="-mt-1 mb-4 text-[14px] leading-snug text-[var(--ink-2)]" data-testid="refund-note">
+          Refunds happen when the sealed computer that runs a check doesn&rsquo;t answer in time, or fails. The buyer gets every cent back automatically.
+        </p>
+      ) : null}
       {!live.loaded ? <div className="space-y-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div> : jobs.length === 0 ? (
         <p className="rounded-[12px] bg-[var(--surface-2)] p-5 text-[15px] text-[var(--ink-2)]">Nothing sold yet. Be its first customer: buy a safety check from the actions on this page.</p>
       ) : (
@@ -31,7 +38,7 @@ export function JobsPanel({ business: b }: { business: Business }) {
               {group(jobs).map(({ job, count }) => {
                 const report = parseReport(job.report);
                 return (
-                  <JobRow key={job.id} job={job} count={count} result={job.status === "Done" && report ? `${report.level} risk` : STATUS[job.status]} open={open === job.id} onToggle={() => setOpen(open === job.id ? null : job.id)} />
+                  <JobRow key={job.id} job={job} count={count} ai={ai} result={job.status === "Done" && report ? `${report.level} risk` : STATUS[job.status]} open={open === job.id} onToggle={() => setOpen(open === job.id ? null : job.id)} />
                 );
               })}
             </tbody>
@@ -43,8 +50,16 @@ export function JobsPanel({ business: b }: { business: Business }) {
   );
 }
 
-/** The Lien team's own accounts: their purchases are tests and the heartbeat, not customers. */
-export const isTeamAccount = (account: string) => /^lien-f\d+-\d+\.testnet$/.test(account) || account === "lien-13569.testnet";
+
+/**
+ * How many columns the table shows at this width (Customer from 2xl, When from sm). The open
+ * report spans exactly these: spanning a hidden column too made the fixed table re-divide its
+ * width, squeezing the names to "ch…". Read when a row is opened, after the page has loaded.
+ */
+function visibleColumns(): number {
+  if (typeof window === "undefined") return 3;
+  return 3 + (window.matchMedia("(min-width: 640px)").matches ? 1 : 0) + (window.matchMedia("(min-width: 1536px)").matches ? 1 : 0);
+}
 
 /** Back-to-back sales of the same check, by the same buyer, with the same result, read as one row "×4". */
 function group(jobs: Job[]): Array<{ job: Job; count: number }> {
@@ -57,7 +72,7 @@ function group(jobs: Job[]): Array<{ job: Job; count: number }> {
   return out;
 }
 
-function JobRow({ job, count, result, open, onToggle }: { job: Job; count: number; result: string; open: boolean; onToggle: () => void }) {
+function JobRow({ job, count, result, open, onToggle, ai }: { job: Job; count: number; result: string; open: boolean; onToggle: () => void; ai: AiContext }) {
   const team = isTeamAccount(job.payer);
   return (
     <>
@@ -75,8 +90,8 @@ function JobRow({ job, count, result, open, onToggle }: { job: Job; count: numbe
         <td className="r hidden whitespace-nowrap sm:table-cell">{dateTime(job.created_at).replace(" UTC", "")}</td>
       </tr>
       {open ? (
-        <tr><td colSpan={5} className="bg-[var(--surface-2)]">
-          {job.status === "Done" ? <ReportCard raw={job.report} /> : <p>{job.status === "Pending" ? "The secure computer is running this check now." : "This check could not finish, so the customer was refunded in full."}</p>}
+        <tr><td colSpan={visibleColumns()} className="bg-[var(--surface-2)]">
+          {job.status === "Done" ? <ReportCard raw={job.report} ai={ai} /> : <p>{job.status === "Pending" ? "The secure computer is running this check now." : "This check could not finish, so the customer was refunded in full."}</p>}
           <p className="mt-2 text-[13px] muted">Bought by {shortAccount(job.payer, 32)} · {dateTime(job.created_at)} · program <code>{job.wasm_hash.slice(0, 12)}…</code></p>
         </td></tr>
       ) : null}
