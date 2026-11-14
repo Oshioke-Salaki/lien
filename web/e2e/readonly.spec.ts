@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { owedMoney, repaidMoney } from "../src/lib/format";
 
 const REGISTRY = "v1.lien-13569.testnet";
 const SENTINEL = `sentinel.${REGISTRY}`;
@@ -17,6 +18,15 @@ test.describe("landing page", () => {
     await expect(page.getByTestId("pulse-jobs")).toHaveText(/^\d+$/);
     // the count is read live: it settles on the registry's real number of businesses
     await expect(page.locator('[data-live="count"]')).toHaveText(/^\d+$/);
+  });
+
+  test("shows Sentinel's debt from the same source, to the same cent, as the app", async ({ page, request }) => {
+    await page.goto("/");
+    await expect(page.locator('[data-live="sentinel-owed"]')).toHaveText(/^[\d,]+\.\d\d$/);
+    const market = await (await request.get("/api/market")).json();
+    const loan = market.businesses.find((b: { id: string }) => b.id === SENTINEL).current_loan;
+    await expect(page.locator('[data-live="sentinel-owed"]').first()).toHaveText(owedMoney(loan.terms.total_due, loan.repaid).slice(1));
+    await expect(page.locator('[data-live="sentinel-repaid"]').first()).toHaveText(repaidMoney(loan.terms.total_due, loan.repaid).slice(1));
   });
 
   test("every section link in the menu lands on its section", async ({ page }) => {
