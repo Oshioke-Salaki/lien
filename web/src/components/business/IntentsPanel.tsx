@@ -22,6 +22,7 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
   const { busy, run } = useTx();
   const inbox = useLive(() => tokenBalance(b.collector).catch(() => 0n), `inbox:${b.collector}`, 10_000);
   const [routes, setRoutes] = useState<Route[]>([]);
+  const [routesState, setRoutesState] = useState<"loading" | "ready" | "failed">("loading");
   const [origin, setOrigin] = useState("");
   const [amountText, setAmountText] = useState("10");
   const [refundTo, setRefundTo] = useState("");
@@ -34,12 +35,14 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
     fetch("/api/quote")
       .then((r) => r.json())
       .then((data: { routes?: Route[] }) => {
-        if (alive && data.routes?.length) {
+        if (!alive) return;
+        if (data.routes?.length) {
           setRoutes(data.routes);
           setOrigin(data.routes[0]!.assetId);
-        }
+          setRoutesState("ready");
+        } else setRoutesState("failed");
       })
-      .catch(() => undefined);
+      .catch(() => { if (alive) setRoutesState("failed"); });
     return () => { alive = false; };
   }, []);
 
@@ -97,7 +100,9 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
             <TextField label="Your address on that chain, for refunds" testId="intents-refund" value={refundTo} onChange={setRefundTo} placeholder="0x…" />
             <button type="submit" className="btn btn-secondary w-full" data-testid="intents-quote" disabled={state === "loading" || !wanted || !refundTo.trim()}>{state === "loading" ? "Finding a route…" : isTestnet ? "See a live price (nothing is sent)" : "Get a live quote"}</button>
           </form>
-        ) : <p className="text-[14px] muted">Routes could not be loaded just now.</p>}
+        ) : routesState === "loading" ? (
+          <p className="text-[14px] muted" data-testid="intents-loading">Loading live routes from NEAR Intents…</p>
+        ) : <p className="text-[14px] muted">Routes could not be loaded just now. Reload the page to try again.</p>}
 
         {error ? <p role="alert" className="hint" data-error="true">{error}</p> : null}
         {quote ? (

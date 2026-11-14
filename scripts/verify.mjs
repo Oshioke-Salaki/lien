@@ -133,13 +133,26 @@ await check("The latest Intel TDX attestation exists and names the pinned build"
   return { ok: false, detail: `no attestation among the ${newest.length} newest transactions` };
 });
 
-await check("The operator's withdrawal during a loan was refused (recorded in the live run)", async () => {
-  const evidence = readFileSync(join(ROOT, "docs/evidence/testnet-e2e.md"), "utf8");
-  const ok = evidence.includes("ok: withdraw_opex refused") && evidence.includes("ok: update_service refused");
-  return {
-    ok,
-    detail: "docs/evidence/testnet-e2e.md records withdraw_opex and update_service refused during the live loan (no tx hash was kept);\n   proven by the_operator_cannot_reach_the_money_during_a_loan in tests/integration/tests/lifecycle.rs",
-  };
+await check("Robbing it during a loan was refused on chain (owner and stranger, read back from the chain)", async () => {
+  const rec = JSON.parse(readFileSync(join(ROOT, "docs/evidence/refusals-testnet.json"), "utf8"));
+  const lines = [];
+  let ok = rec.attempts.length > 0;
+  for (const a of rec.attempts) {
+    let status = null;
+    for (const url of RPCS) {
+      try {
+        const r = await fetchWithTimeout(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: "verify", method: "tx", params: { tx_hash: a.tx, sender_account_id: a.by, wait_until: "NONE" } }) });
+        const body = await r.json();
+        if (body.result?.status) { status = body.result.status; break; }
+      } catch {}
+    }
+    const failed = Boolean(status && status.Failure);
+    const text = status ? JSON.stringify(status.Failure ?? {}) : "";
+    const reasonOk = failed && text.includes(a.reason);
+    ok = ok && reasonOk;
+    lines.push(`${reasonOk ? "refused" : "NOT CONFIRMED"}: ${a.what} ("${a.reason}") ${EXPLORER}/txns/${a.tx}`);
+  }
+  return { ok, detail: lines.join("\n   ") };
 });
 
 const passed = results.filter(Boolean).length;

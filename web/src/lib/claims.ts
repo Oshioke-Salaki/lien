@@ -139,8 +139,12 @@ export const ATTACKS: Attack[] = [
     attack: "The operator tries to withdraw the business's money during a loan",
     result: "The contract answers \"not allowed while a loan is open\". The account has no keys to sign with either, so nobody can move its money by hand.",
     tests: [{ name: "the_operator_cannot_reach_the_money_during_a_loan", href: code(`${SANDBOX}#L242`) }],
-    evidence: [{ label: "The business was created with zero keys", href: tx("7zfvSeZ3idNUK1gxAtyP4hCLNLA4H1yAkNhT6SfdgUMc") }],
-    note: "The live testnet run recorded withdraw_opex refused during its loan, without keeping that transaction's hash, so the refusal itself is proven by the test.",
+    evidence: [
+      { label: "Refused on testnet: the owner tries, during Sentinel's open loan", href: tx("AeFjMjMWmdzLeo3NcBw2EFcMqyg6CYSQG7DNRBtwKiXW") },
+      { label: "Refused on testnet: a stranger tries", href: tx("51d7XBw8PS6P6uWQ4zs3k1TdZjZwxeehqEF2CnZPKAXQ") },
+      { label: "The business was created with zero keys", href: tx("7zfvSeZ3idNUK1gxAtyP4hCLNLA4H1yAkNhT6SfdgUMc") },
+    ],
+    note: "Both attempts are real signed transactions that the contract refused. Anyone with a testnet account can try the same.",
   },
   {
     attack: "Compromised code tries to pay someone outside the spend policy",
@@ -160,9 +164,10 @@ export const ATTACKS: Attack[] = [
       { name: "a_change_applies_only_when_more_than_half_of_principal_agrees", href: code(`${UNIT}#L1256`) },
     ],
     evidence: [
+      { label: "Refused on testnet: the owner tries to swap the code mid-loan", href: tx("AMEa6hDvGLHqTVHfaiMTHp5Tu9sLnDLUEih2D3rdKjnj") },
       { label: "The way it did change on testnet: the owner proposes", href: tx("9X2VEWuuNSmNfkwDyQRSKDyy48VthqZ2uQNNtVt7crmv") },
       { label: "and the majority lender approves", href: tx("5iG4UPPizMQvJuEkeT8yE4ChTC15KnvkagJzLMYSEyAg") },
     ],
-    note: "The live run recorded update_service refused during its loan, without keeping that transaction's hash, so the refusal itself is proven by the tests.",
+    note: "The refusal is a real signed transaction from the owner's account, rejected by the contract.",
   },
 ];

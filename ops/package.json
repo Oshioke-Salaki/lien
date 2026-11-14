@@ -13,6 +13,7 @@
     "heartbeat": "tsx src/heartbeat.ts",
     "restock": "tsx src/restock.ts",
     "upgrade": "tsx src/upgrade.ts",
+    "refusals": "tsx src/refusals.ts",
     "sample-repaid": "tsx src/sample-repaid.ts",
     "xvault": "tsx src/xvault.ts"
   },

@@ -1,0 +1,35 @@
+{
+  "business": "sentinel.v1.lien-13569.testnet",
+  "network": "testnet",
+  "at": "2026-11-14T08:15:42.318Z",
+  "loan": 0,
+  "attempts": [
+    {
+      "what": "The owner tries to withdraw the business's money during the loan",
+      "by": "lien-f1-3833.testnet",
+      "method": "withdraw_opex",
+      "refused": true,
+      "reason": "not allowed while a loan is open",
+      "tx": "AeFjMjMWmdzLeo3NcBw2EFcMqyg6CYSQG7DNRBtwKiXW",
+      "link": "https://testnet.nearblocks.io/txns/AeFjMjMWmdzLeo3NcBw2EFcMqyg6CYSQG7DNRBtwKiXW"
+    },
+    {
+      "what": "The owner tries to swap in different code during the loan, without lenders",
+      "by": "lien-f1-3833.testnet",
+      "method": "update_service",
+      "refused": true,
+      "reason": "not allowed while a loan is open",
+      "tx": "AMEa6hDvGLHqTVHfaiMTHp5Tu9sLnDLUEih2D3rdKjnj",
+      "link": "https://testnet.nearblocks.io/txns/AMEa6hDvGLHqTVHfaiMTHp5Tu9sLnDLUEih2D3rdKjnj"
+    },
+    {
+      "what": "A stranger tries to take the business's money",
+      "by": "lien-f4-3863.testnet",
+      "method": "withdraw_opex",
+      "refused": true,
+      "reason": "only the operator can do this",
+      "tx": "51d7XBw8PS6P6uWQ4zs3k1TdZjZwxeehqEF2CnZPKAXQ",
+      "link": "https://testnet.nearblocks.io/txns/51d7XBw8PS6P6uWQ4zs3k1TdZjZwxeehqEF2CnZPKAXQ"
+    }
+  ]
+}
