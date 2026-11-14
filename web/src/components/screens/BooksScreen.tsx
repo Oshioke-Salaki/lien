@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { CodeBlock } from "@/components/CodeBlock";
-import { AccountLink, EmptyState, ErrorState, Info, Panel, Skeleton } from "@/components/ui";
+import { AccountLink, EmptyState, ErrorState, Info, More, Panel, Skeleton } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
 import { KIND_LABEL, type Amount, type Books, type CustomerKind } from "@/lib/books";
 import { accountUrl, deployment, EXPLORER, RPC_URLS, NETWORK } from "@/lib/config";
@@ -44,7 +44,7 @@ export function BooksScreen({ id, initial }: { id: string; initial?: Books }) {
     return (
       <div className="space-y-6">
         <Crumb id={id} name={short} />
-        <ErrorState message={missing ? `There is no Lien business at ${id}.` : "The books could not be read from the network. This page will keep trying."} onRetry={missing ? undefined : () => void live.refresh()} />
+        <ErrorState message={missing ? `There is no Lien business at ${id}.` : "Books unreachable. Retrying automatically."} onRetry={missing ? undefined : () => void live.refresh()} />
         {missing ? <Link className="btn btn-secondary" href="/market">Back to the market</Link> : null}
       </div>
     );
@@ -56,7 +56,7 @@ export function BooksScreen({ id, initial }: { id: string; initial?: Books }) {
         <Crumb id={id} name={short} />
         <div className="space-y-3">
           <h1 className="text-[clamp(30px,3.4vw,40px)] leading-[1.05] font-medium tracking-[-0.025em]">Books</h1>
-          <p className="text-[15px] muted">Reading the contract&rsquo;s ledger, loans and sales at one block…</p>
+          <p className="text-[15px] muted">Reading the ledger, loans and sales at one block…</p>
         </div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[104px]" />)}</div>
         <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2"><Skeleton className="h-[420px]" /><Skeleton className="h-[420px]" /></div>
@@ -74,7 +74,7 @@ export function BooksScreen({ id, initial }: { id: string; initial?: Books }) {
           <BalanceChip books={books} />
         </div>
         <p className="max-w-[68ch] text-[17px] leading-snug text-[var(--ink-2)]">
-          Every figure is computed from the business&rsquo;s own contract, read at one block of the chain. Nobody types these numbers in, and nobody can edit them.
+          Computed from its own contract at one block. Nobody can type or edit them.
         </p>
         <p className="text-[14px] muted" data-testid="books-block">
           {books.block ? <>Read at block <a className="link" href={`${EXPLORER}/blocks/${books.block.hash}`} target="_blank" rel="noreferrer">#{books.block.height.toLocaleString("en-US")}</a>, {dateTime(books.now)}.</> : <>Read {dateTime(books.now)}.</>}
@@ -125,7 +125,7 @@ function Headlines({ books }: { books: Books }) {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Tile label="Sales, since it opened" value={life.sales.usd} sub={`${life.salesCount} ${life.salesCount === 1 ? "check" : "checks"} delivered`} testid="tile-sales" />
-      <Tile label="Paid to lenders" value={life.lendersRepaid.usd} sub={books.loans.ran ? `on ${books.loans.ran} ${books.loans.ran === 1 ? "loan" : "loans"}` : books.loans.lines.some((l) => l.status === "Funding") ? "none yet: its loan is still raising, and repayments start once it is full" : "it has not borrowed"} testid="tile-lenders" />
+      <Tile label="Paid to lenders" value={life.lendersRepaid.usd} sub={books.loans.ran ? `on ${books.loans.ran} ${books.loans.ran === 1 ? "loan" : "loans"}` : books.loans.lines.some((l) => l.status === "Funding") ? "none yet: repayments start once its loan fills" : "it has not borrowed"} testid="tile-lenders" />
       <Tile label="Tokens it holds" value={books.balance.held.usd} sub={books.balance.check === "equal" ? "every unit accounted for" : books.balance.check === "covers" ? `${books.balance.difference.usd} above the books` : `${books.balance.difference.usd} short`} testid="tile-held" />
       <Tile label="Paying customers" value={c.uniqueLifetime} sub={c.complete ? `${c.visitors} outside visitors, ${c.team} team` : `${c.counted} in the last ${c.jobsInRecords} jobs`} testid="tile-customers" />
     </div>
@@ -173,8 +173,9 @@ function IncomePanel({ books }: { books: Books }) {
         </tbody>
       </table>
       <p className="mt-3 text-[13px] muted">
-        A dash means the chain keeps that figure only as a lifetime total, so a 7-day amount cannot be computed exactly. {week.salesCount} {week.salesCount === 1 ? "sale" : "sales"} to {week.customers} {week.customers === 1 ? "customer" : "customers"} in the last 7 days.
-        {books.income.salesMatchCounter === true ? " Sales and refunds from the job records match the contract's own counters." : ""}
+        {week.salesCount} {week.salesCount === 1 ? "sale" : "sales"} to {week.customers} {week.customers === 1 ? "customer" : "customers"} in 7 days.
+        {books.income.salesMatchCounter === true ? " Job records match the contract's counters." : ""}
+        <Info label="dashes" tip="A dash means the chain keeps that figure only as a lifetime total, so a 7-day amount cannot be computed exactly." />
       </p>
     </Panel>
   );
@@ -260,9 +261,9 @@ function CustomersPanel({ books }: { books: Books }) {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-[13px] muted">
-            Team means the Lien team&rsquo;s own accounts: the heartbeat buyer {shortAccount("lien-f4-3863.testnet")} (a scheduled job that buys one check every few hours), the role accounts lien-f1 to lien-f7, its lender agent, and lien-13569.testnet with its sub-accounts. Free guest accounts made for visitors, and every other account, count as outside.
-          </p>
+          <More label="Who counts as team">
+            <p>Team means the Lien team&rsquo;s own accounts: the heartbeat buyer {shortAccount("lien-f4-3863.testnet")} (a scheduled job that buys one check every few hours), the role accounts lien-f1 to lien-f7, its lender agent, and lien-13569.testnet with its sub-accounts. Free guest accounts made for visitors, and every other account, count as outside.</p>
+          </More>
           <h3 className="mt-5 mb-1 text-[15px] font-medium">Latest sales</h3>
           <div className="w-full overflow-hidden">
             <table className="table w-full table-fixed" data-testid="recent-sales">
@@ -339,7 +340,7 @@ function PolicyPanel({ books }: { books: Books }) {
   ];
   return (
     <Panel title="The rules, set by people" aside={open ? "Frozen by the open loan" : "No loan open"} id="policy">
-      <p className="text-[15px] text-[var(--ink-2)]">People set these limits before anyone lent. The business runs itself inside them, and the contract refuses anything outside them.</p>
+      <p className="text-[15px] text-[var(--ink-2)]">Set before anyone lent. The contract refuses anything outside them.<Info label="the rules" tip="People set these limits before anyone lent. The business runs itself inside them, and the contract refuses anything outside them." /></p>
       <dl className="dl mt-4" data-testid="policy">
         <dt>Price of one check</dt><dd>{p.price.usd}</dd>
         <dt>Approved vendors</dt><dd>{p.vendors.length ? p.vendors.map((v) => <span key={v} className="block"><AccountLink id={v} max={24} /></span>) : <span className="muted">None: it cannot pay anyone</span>}</dd>
@@ -367,9 +368,10 @@ function HowPanel({ books }: { books: Books }) {
   const curl = `curl -s ${rpc} -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function",${at},"account_id":"${books.id}","method_name":"get_agent","args_base64":"e30="}}' | jq '.result.result | implode | fromjson | {ledger, stats}'`;
   return (
     <Panel title="Check it yourself" id="how">
-      <p className="text-[15px] text-[var(--ink-2)]" data-testid="books-how">
-        How these numbers are computed: sales, vendor payments and customers come from the contract&rsquo;s own counters (<code>get_agent</code>), refunds and the 7-day figures from its job records (<code>get_jobs</code>), lenders&rsquo; figures from its loans (<code>get_loans</code>), and tokens held from the token (<code>ft_balance_of</code>), all read at the same block and rounded to the cent the way the rest of the app rounds.
-      </p>
+      <p className="text-[15px] text-[var(--ink-2)]">Every figure here comes from four view calls at one block.</p>
+      <More label="How these numbers are computed" testId="books-how">
+        <p>Sales, vendor payments and customers come from the contract&rsquo;s own counters (<code>get_agent</code>), refunds and the 7-day figures from its job records (<code>get_jobs</code>), lenders&rsquo; figures from its loans (<code>get_loans</code>), and tokens held from the token (<code>ft_balance_of</code>), all read at the same block and rounded to the cent the way the rest of the app rounds.</p>
+      </More>
       <div className="mt-4 flex flex-wrap gap-2">
         <a className="btn btn-secondary btn-sm" href={`/api/books/${books.id}`} target="_blank" rel="noreferrer" data-testid="books-json">These books as JSON</a>
         <a className="btn btn-ghost btn-sm" href={accountUrl(books.id)} target="_blank" rel="noreferrer">The business on nearblocks</a>
