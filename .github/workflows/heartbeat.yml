@@ -1,7 +1,12 @@
-# The market's heartbeat. Every three hours a customer account buys one real Sentinel
-# check on NEAR testnet: the job runs on the pinned build in Intel TDX through OutLayer,
-# the report lands on chain, and the sale pays Sentinel's lenders first through the
+# The market's heartbeat. Scheduled about every three hours: a customer account buys one
+# real Sentinel check on NEAR testnet, the job runs on the pinned build in Intel TDX through
+# OutLayer, the report lands on chain, and the sale pays Sentinel's lenders first through the
 # waterfall. Each run's summary links the transaction.
+#
+# GitHub delays scheduled runs under load and sometimes drops them (runs have landed nine
+# hours apart), so there is a second schedule 90 minutes after the first. A scheduled run
+# that finds the buyer's last check under two hours old skips the purchase, so both firing
+# still means about one check every three hours.
 #
 # The heartbeat only buys work. The restock step then makes sure a late business and an
 # open auction always exist, creating labelled sample businesses when visitors used them
@@ -13,6 +18,7 @@ name: Market heartbeat
 on:
   schedule:
     - cron: "17 */3 * * *"
+    - cron: "47 1-23/3 * * *"
   workflow_dispatch:
 
 concurrency:

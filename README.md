@@ -57,7 +57,7 @@ Then open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally
 | Buy a check on `outlayer.testnet` | About 15 seconds later, a risk report. The waterfall bar shows where your payment went |
 | Buy a check on `hello` | A refund, because there is no account in it to check |
 | Lend to **Sentinel North** | The raised amount moves, and **Your position** shows your note |
-| In the market, open a business marked **Can be taken over** and press **Take over this business** (the market always keeps one: sample businesses on a fast demo clock are restocked every three hours) | A notice of foreclosure. Buy a check from it: it still works, and the operator's share now goes to lenders |
+| In the market, open a business marked **Can be taken over** and press **Take over this business** (the market always keeps one: sample businesses on a fast demo clock are restocked by a GitHub Actions job scheduled about every three hours, whose runs can be delayed) | A notice of foreclosure. Buy a check from it: it still works, and the operator's share now goes to lenders |
 | Open a business marked **For sale** and place a bid (an open auction is always kept available; its clock starts with the first bid) | Your bid stands, and the highest bid takes the business when the auction ends |
 | Start your own at `/create`, then choose **Short demo clocks** | Your own keyless business, and a full foreclosure in about ten minutes |
 
@@ -88,7 +88,7 @@ Lien is an MCP server at `https://lien-five.vercel.app/api/mcp`. Any MCP client 
 
 ## The market is live
 
-Every three hours a [scheduled GitHub Action](.github/workflows/heartbeat.yml) has a customer buy one real Sentinel check on testnet: the job runs on the pinned build inside Intel TDX through OutLayer, the report lands on chain, and the sale repays Sentinel's lenders first. Each run's summary in the [Actions tab](https://github.com/Oshioke-Salaki/lien/actions/workflows/heartbeat.yml) links its transaction. It only buys work, so the businesses waiting to be foreclosed or sold stay that way for you to try.
+About every three hours a [scheduled GitHub Action](.github/workflows/heartbeat.yml) has a customer buy one real Sentinel check on testnet (GitHub can delay or skip scheduled runs, so the gap is sometimes longer; a second schedule 90 minutes later covers a dropped run): the job runs on the pinned build inside Intel TDX through OutLayer, the report lands on chain, and the sale repays Sentinel's lenders first. Each run's summary in the [Actions tab](https://github.com/Oshioke-Salaki/lien/actions/workflows/heartbeat.yml) links its transaction. It only buys work, so the businesses waiting to be foreclosed or sold stay that way for you to try.
 
 ## Revenue on other chains
 
