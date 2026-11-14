@@ -35,7 +35,7 @@ export function ActionRail({ business: b, now, refresh }: Props) {
   const foreclosed = loan?.status === "Foreclosed";
 
   return (
-    <aside className="space-y-4" aria-label="Actions">
+    <aside className="space-y-4" aria-label="Actions" data-action-rail>
       {!account && ready ? (
         <section className="panel p-5" aria-labelledby="take-part">
           <h2 id="take-part" className="text-[18px] font-medium tracking-[-0.01em]">Try it with test dollars</h2>

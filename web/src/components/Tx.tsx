@@ -106,9 +106,11 @@ export function TxProvider({ children }: { children: ReactNode }) {
   return (
     <TxContext.Provider value={{ run, busy, notify }}>
       {children}
-      {/* Top centre on phones and tablets, just under the top bar, where nothing is tapped; bottom-right
-          on desktop, in the corner, never over the sidebar. Each is short-lived and can be dismissed. */}
-      <div aria-live="polite" data-testid="notices" className="pointer-events-none fixed inset-x-0 top-[calc(64px+env(safe-area-inset-top))] z-50 mx-auto flex w-[min(400px,calc(100vw-24px))] flex-col items-stretch gap-2 lg:inset-x-auto lg:top-auto lg:right-6 lg:bottom-6 lg:mx-0 lg:w-[360px]">
+      {/* Top centre up to 1280 px, just under the top bar (or the top of the page beside the sidebar),
+          where nothing is tapped. Wider, bottom-right; and on a business page, bottom-right of the
+          main column, so it never sits over the actions column (380 px + the page's 40 px gutter)
+          or the sidebar. Each is short-lived and can be dismissed. */}
+      <div aria-live="polite" data-testid="notices" className="pointer-events-none fixed inset-x-0 top-[calc(64px+env(safe-area-inset-top))] z-50 mx-auto flex w-[min(400px,calc(100vw-24px))] flex-col items-stretch gap-2 lg:top-6 lg:left-[264px] xl:inset-x-auto xl:top-auto xl:right-6 xl:bottom-6 xl:mx-0 xl:w-[360px] xl:[body:has([data-action-rail])_&]:right-[444px]">
         {notices.map((notice) => (
           <div key={notice.id} role={notice.tone === "error" ? "alert" : "status"} data-tone={notice.tone} className="notice pointer-events-auto w-full">
             <NoticeIcon tone={notice.tone} />

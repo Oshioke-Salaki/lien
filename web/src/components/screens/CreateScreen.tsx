@@ -204,8 +204,8 @@ export function CreateScreen() {
           {step("What it may spend on", "It can only pay these accounts, up to these limits, whatever its program asks for. This is what keeps a loan safe.", <>
             <TextField label="Vendors it may pay" testId="create-vendors" value={vendors} onChange={(v) => setVendors(v.toLowerCase())} error={vendorError} placeholder="e.g. compute-provider.testnet" hint={vendorList.length ? "Accounts it may pay, separated by commas." : "NEAR accounts it may pay, separated by commas. With none, it can't pay anyone for its work, such as the service it buys compute from."} />
             {sentinel?.vendor && !vendorList.includes(sentinel.vendor) ? (
-              <button type="button" className="link -mt-2 text-[14px]" data-testid="create-vendor-sentinel" onClick={() => setVendors(vendorList.length ? `${vendors.replace(/[,\s]+$/, "")}, ${sentinel.vendor}` : sentinel.vendor!)}>
-                Running Sentinel&rsquo;s program? Add the vendor it pays, {sentinel.vendor}
+              <button type="button" className="link -mt-1 block text-left text-[14px]" data-testid="create-vendor-sentinel" onClick={() => setVendors(vendorList.length ? `${vendors.replace(/[,\s]+$/, "")}, ${sentinel.vendor}` : sentinel.vendor!)}>
+                Running Sentinel&rsquo;s program? Add the vendor it pays, <span className="whitespace-nowrap">{sentinel.vendor}</span>
               </button>
             ) : null}
             <div className="grid gap-4 sm:grid-cols-2">
