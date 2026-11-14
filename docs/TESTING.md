@@ -7,11 +7,13 @@ Everything here was run. Where something has not been verified, it says so.
 | Contract unit and property tests | 146 | Every rule, refusal and money path, plus conservation under random inputs | `cargo test -p lien-agent` |
 | Sandbox lifecycles | 17 | Real cross-contract calls on a local NEAR node with a stand-in for OutLayer | `cargo test --release -p lien-integration-tests` |
 | Agent tests | 11 | Risk rules and the output format the contract parses | `cd agents/sentinel && cargo test` |
-| App logic | 71 | Money math against the Rust cases, formatting, accounts, reading outcomes, merging positions reads, the MCP server | `cd web && npm test` |
+| App logic | 95 | Money math against the Rust cases, formatting, accounts, reading outcomes, merging positions reads, the MCP server, Sentinel's risk rules ported to TypeScript (the Rust cases repeated), the ALLOW / WARN / BLOCK gate on every money-moving MCP tool | `cd web && npm test` |
+| Lender agent | 9 | The lender's policy (lend, decline with every reason, skip), WARN acknowledged only on listed flags, and the guarded signer refusing any transaction that differs from what the agent decided | `cd agents/lender && npm test` |
 | Browser, read-only | 18 | Real app on real testnet: pages, live proofs, no sideways scrolling, a live Intents quote | `npx playwright test readonly` |
 | Browser, full loan | 1 | Guest → business → loan → job → refund → claim → foreclosure → still serving → redemption | `npx playwright test lifecycle` |
 | Browser, sale | 1 | Two separate users: default, foreclosure by a stranger, bid, sale, control changes hands, lender collects | `npx playwright test sale` |
 | Live network run | 1 | The full lifecycle with real OutLayer. See [evidence](evidence/testnet-e2e.md) | `npm run e2e` in `ops` |
+| Live agent runs | 4 | The lender agent on testnet through MCP: a hire of Sentinel, a lend, a decline, a collection with a function-call key, a foreclosure; and the prompt-injection demo. See [evidence](evidence/testnet-e2e.md#an-autonomous-lender-agent-hires-sentinel-lends-collects-and-forecloses) | `npm run lender`, `npm run lender-attack` in `ops` |
 | Live claim checks | 6 | Read-only, against testnet as it is now: zero keys on Sentinel and its inbox, the published contract, the pinned build re-hashed, tokens held cover the ledger, the latest TDX quote names the pinned build, and the operator refusal recorded in the evidence file. No wallet, no transactions | `npm run verify` at the root |
 
 The money properties checked for random inputs: a split conserves every unit, notes never claim more than the pool, claiming in steps pays the same as claiming once, paying more never brings a breach forward, every unpaid loan breaches by maturity, and every valid bid increases.
