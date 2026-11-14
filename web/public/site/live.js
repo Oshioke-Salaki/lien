@@ -56,12 +56,15 @@ function simulator() {
     set('[data-testid="recovered"]', dollars(repaid + toLenders));
     set('[data-sim="surplus"]', dollars(price - toLenders));
     const recovered = repaid + toLenders;
-    set('[data-sim="shortfall"]', dollars(recovered < TOTAL_DUE ? TOTAL_DUE - recovered : 0n));
+    const shortfall = recovered < TOTAL_DUE ? TOTAL_DUE - recovered : 0n;
+    set('[data-sim="shortfall"]', dollars(shortfall));
 
     notice.dataset.state = noticed ? "foreclosed" : "active";
     set('[data-sim="title"]', noticed ? "Notice of foreclosure" : cleared ? "Lien released" : "Record of lien");
     set('[data-sim="note"]', noticed
-      ? "The address and the service stay exactly as they were. Only the owner changes."
+      ? shortfall > 0n
+        ? `Lenders took the business over and sold it. The winning bid covers ${dollars(toLenders)} of the ${dollars(outstanding)} still owed, so they lose ${dollars(shortfall)}. Move the bid to see the loss change.`
+        : "Lenders took the business over and sold it, and the winning bid covers everything still owed. The address and the service stay as they were; only the owner changes."
       : cleared ? "The debt was repaid before sales stopped, so the lien is released: the owner keeps the business, and nothing more goes to lenders."
       : months === null || months > 12n ? "At this revenue the loan isn't repaid in its 12 months: at the end, anyone could take the business over."
       : "Current. Nobody holds a key to this business.");
@@ -110,7 +113,7 @@ const bar = (key, k) => { const el = document.querySelector(`[data-live-bar="${k
 const ago = (secs) => { const mins = Math.max(1, Math.round((Date.now() / 1000 - secs) / 60)); return mins < 60 ? `${mins} min ago` : mins < 1440 ? `${Math.round(mins / 60)} h ago` : `${Math.round(mins / 1440)} d ago`; };
 const day = (secs) => new Date(secs * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 
-/** Sentinel and Sentinel North, from the contract's own get_agent view of each. */
+/** Sentinel, from the contract's own get_agent view, in the hero card. */
 function showSamples(byId) {
   const loan = byId(`sentinel.${REGISTRY}`)?.current_loan;
   if (loan) {
@@ -118,21 +121,39 @@ function showSamples(byId) {
     set("sentinel-owed", owedUsd(loan.terms.total_due, loan.repaid));
     set("sentinel-total", tusd(loan.terms.total_due));
     set("sentinel-holders", String(loan.holders));
-    set("sentinel-state", loan.is_behind ? "Behind" : loan.status === "Active" ? "Paying on time" : loan.status);
+    set("sentinel-state", LABEL[standing({ current_loan: loan, now: byId(`sentinel.${REGISTRY}`).now })]);
     if (loan.maturity) set("sentinel-due", `Due ${day(loan.maturity)}`);
     bar("sentinel", Number(loan.repaid) / Number(loan.terms.total_due));
   }
-  const raise = byId(`sentinel-north.${REGISTRY}`)?.current_loan;
-  if (raise) {
-    set("north-funded", tusd(raise.funded));
-    set("north-principal", tusd(raise.terms.principal));
-    set("north-holders", String(raise.holders));
-    set("north-state", raise.status === "Funding" ? "Raising" : raise.status === "Active" ? (raise.is_behind ? "Behind" : "Repaying") : raise.status);
-    set("north-lead", raise.status === "Funding"
-      ? "Raising its first loan. Lenders’ money only moves once the loan is full."
-      : "Its loan filled, so the lenders’ money moved to the business. Lenders are now repaid from every sale.");
-    bar("north", Number(raise.funded) / Number(raise.terms.principal));
+}
+
+/**
+ * The business featured beside the market list: one that is raising right now, so its button
+ * really does lend. Harbor (the team's always-open small loan) first, then any team business
+ * that is raising, then any raising business. If nobody is raising, the button says so.
+ */
+function showPick(businesses) {
+  const raising = businesses.filter((a) => a.current_loan?.status === "Funding" && a.now < a.current_loan.funding_deadline && BigInt(a.current_loan.funded) < BigInt(a.current_loan.terms.principal) && !PROBE.test(a.name));
+  const pick = raising.find((a) => /^harbor-/.test(a.id) && isTeam(a.operator)) ?? raising.find((a) => isTeam(a.operator)) ?? raising[0];
+  const go = document.querySelector("[data-live-pick-go]");
+  if (!pick) {
+    set("pick-state", "Nobody raising");
+    set("pick-lead", "No business is raising a loan this minute. The market shows every loan, and new ones open often.");
+    if (go) { go.textContent = "See the market"; go.href = "/market"; }
+    return pick;
   }
+  const loan = pick.current_loan;
+  set("pick-name", pick.name);
+  set("pick-state", LABEL.funding);
+  set("pick-lead", "Raising a loan. Lenders’ money only moves once the loan is full; until then, any lender can take theirs back.");
+  set("pick-funded", tusd(loan.funded));
+  set("pick-principal", tusd(loan.terms.principal));
+  set("pick-holders", String(loan.holders));
+  set("pick-share", `${Number(loan.terms.lender_bps) / 100}% of every sale`);
+  set("pick-due", tusd(loan.terms.total_due));
+  bar("pick", Number(loan.funded) / Number(loan.terms.principal));
+  if (go) { go.textContent = `Lend to ${pick.name}`; go.href = `/b/${pick.id}`; }
+  return pick;
 }
 
 function showCounts(businesses, sales, newest) {
@@ -163,7 +184,8 @@ async function live() {
     if (!res.ok || !Array.isArray(market.businesses)) throw new Error("no snapshot");
     const byId = (id) => market.businesses.find((b) => b.id === id);
     showSamples(byId);
-    renderMarket(market.businesses.map((b) => b.id), market.businesses.map((value) => ({ status: "fulfilled", value })));
+    const pick = showPick(market.businesses);
+    renderMarket(market.businesses.map((b) => b.id), market.businesses.map((value) => ({ status: "fulfilled", value })), pick?.id);
     const newest = Math.max(0, ...market.activity.filter((a) => a.key.includes(":job:")).map((a) => a.at));
     showCounts(market.stats.businesses, market.stats.checksSold, newest);
     return;
@@ -173,36 +195,59 @@ async function live() {
     const all = await Promise.allSettled(ids.map((id) => view(id, "get_agent")));
     const byId = (id) => { const r = all[ids.indexOf(id)]; return r?.status === "fulfilled" ? r.value : null; };
     showSamples(byId);
-    renderMarket(ids, all);
+    const read = all.flatMap((r, i) => (r.status === "fulfilled" ? [{ ...r.value, id: ids[i] }] : []));
+    const pick = showPick(read);
+    renderMarket(ids, all, pick?.id);
     const jobs = all.reduce((n, r) => n + (r.status === "fulfilled" ? Number(r.value.stats.jobs_done) : 0), 0);
     const latest = await Promise.all(ids.map((id) => view(id, "get_jobs", { limit: 1 }).then((j) => Number(j[0]?.created_at ?? 0), () => 0)));
     showCounts(ids.length, jobs, Math.max(0, ...latest));
   } catch { /* the placeholders stand */ }
 }
 
-const SAMPLE = /^(sentinel|lookout|watchtower|beacon)/;
-// Only the samples the Lien team still runs (web/src/lib/demo.ts TEAM): not copies visitors made or bought.
-const TEAM = new Set(["lien-f1-3833.testnet", "lien-f4-3863.testnet"]);
+// The team's accounts (web/src/lib/demo.ts isTeamAccount): role accounts, agents and their sub-accounts.
+const isTeam = (account) => !/\.guests\.[a-z\d-]+\.testnet$/.test(account) && (/(^|\.)lien-(f\d+|lender|borrower|vault|tap)-\d+\.testnet$/.test(account) || account === "lien-13569.testnet" || account.endsWith(".lien-13569.testnet"));
+// Test businesses the team runs (web/src/lib/demo.ts looksLikeProbe): never featured.
+const PROBE = /\b(probe|audit|critic|test|lumen|injection)\b/i;
+// The app's own words for each state (web/src/lib/status.ts STANDING_LABEL), so a badge reads the same on both.
+const LABEL = { "no-loan": "No loan", funding: "Raising", current: "Paying on time", behind: "Behind on payments", foreclosable: "Can be taken over", foreclosed: "Taken over, for sale", auction: "For sale, bids in", "sale-ended": "Auction ended" };
+// A payment due every few minutes marks a staged demo loan (web/src/lib/demo.ts isStagedLoan).
+const staged = (loan) => loan && Number(loan.terms.window_secs) < 3600;
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ESC[c]);
 
-/** The market window shows the live sample businesses, each a link to its page. */
-function renderMarket(ids, all) {
+/** web/src/lib/status.ts standing(), in the same order. */
+function standing(a) {
+  const loan = a.current_loan;
+  if (!loan) return "no-loan";
+  if (loan.status === "Funding") return "funding";
+  if (loan.status === "Foreclosed") {
+    if (loan.auction.ends_at !== null && a.now >= loan.auction.ends_at) return "sale-ended";
+    return loan.auction.high_bidder ? "auction" : "foreclosed";
+  }
+  if (loan.foreclosable_at !== null && a.now >= loan.foreclosable_at) return "foreclosable";
+  return loan.is_behind ? "behind" : "current";
+}
+
+/** The market window shows the live businesses the team runs, each a link to its page. */
+function renderMarket(ids, all, picked) {
   const list = document.querySelector("[data-live-market]");
   if (!list) return;
   const rows = [];
   ids.forEach((id, i) => {
     const r = all[i];
-    if (r.status !== "fulfilled" || !SAMPLE.test(id) || !TEAM.has(r.value.operator)) return;
+    if (r.status !== "fulfilled" || !isTeam(r.value.operator) || PROBE.test(r.value.name)) return;
     const a = r.value;
     const loan = a.current_loan;
-    let state = "No loan", sub = "Sells safety checks", warn = false, rank = 5;
-    if (loan && loan.status === "Funding") { state = "Raising"; sub = `$${tusd(loan.funded)} of $${tusd(loan.terms.principal)} raised`; rank = 1; }
-    else if (loan && loan.status === "Active" && loan.foreclosable_at !== null && a.now >= loan.foreclosable_at) { state = "Can be taken over"; sub = `Missed payments, $${owedUsd(loan.terms.total_due, loan.repaid)} owed`; warn = true; rank = 0; }
-    else if (loan && loan.status === "Active") { state = loan.is_behind ? "Behind" : "Paying on time"; sub = `$${repaidUsd(loan.terms.total_due, loan.repaid)} of $${tusd(loan.terms.total_due)} paid back`; warn = loan.is_behind; rank = 3; }
-    else if (loan && loan.status === "Foreclosed") { state = "For sale"; sub = `Lowest bid $${fromCents(centsUp(loan.min_next_bid || "0"))}`; warn = true; rank = 2; }
-    const sel = id.startsWith("sentinel-north.") ? ' class="is-sel"' : "";
-    rows.push({ rank, name: a.name, html: `<li${sel}><a href="/b/${esc(id)}"><span class="mk__who"><b>${esc(a.name)}</b><span>${esc(sub)}</span></span><span class="ui-chip${warn ? " is-warn" : ""}">${esc(state)}</span></a></li>` });
+    const s = standing(a);
+    const demo = staged(loan) ? "Staged demo: " : "";
+    let sub = "Sells safety checks", rank = 5;
+    if (s === "funding") { sub = `$${tusd(loan.funded)} of $${tusd(loan.terms.principal)} raised`; rank = 1; }
+    else if (s === "foreclosable") { sub = `${demo}missed payments, $${owedUsd(loan.terms.total_due, loan.repaid)} owed`; rank = 0; }
+    else if (s === "current" || s === "behind") { sub = `$${repaidUsd(loan.terms.total_due, loan.repaid)} of $${tusd(loan.terms.total_due)} paid back`; rank = 3; }
+    else if (s !== "no-loan") { sub = `${demo}lowest bid $${fromCents(centsUp(loan.min_next_bid || "0"))}`; rank = 2; }
+    const warn = !["no-loan", "funding", "current"].includes(s);
+    const sel = id === picked ? ' class="is-sel"' : "";
+    rows.push({ rank: id === picked ? -1 : rank, name: a.name, html: `<li${sel}><a href="/b/${esc(id)}"><span class="mk__who"><b>${esc(a.name)}</b><span>${esc(sub.charAt(0).toUpperCase() + sub.slice(1))}</span></span><span class="ui-chip${warn ? " is-warn" : ""}">${esc(LABEL[s])}</span></a></li>` });
   });
   // One row per name: two samples both called "Lookout" show once, the one most worth acting on.
   const seen = new Set();
@@ -210,5 +255,44 @@ function renderMarket(ids, all) {
   if (unique.length) list.innerHTML = unique.slice(0, 6).map((r) => r.html).join("");
 }
 
+/**
+ * The Product menu by keyboard, on desktop: it opens when its word is focused (CSS :focus-within)
+ * and on Enter, Space or the down arrow, which also move into it; Escape closes it and puts focus
+ * back on the word, without leaving the page header.
+ */
+function menuKeys() {
+  for (const item of document.querySelectorAll(".nav__item")) {
+    const menu = item.querySelector(".nav__menu");
+    const trigger = item.querySelector(".nav__link");
+    if (!menu || !trigger) continue;
+    const desktop = () => window.matchMedia("(min-width: 1024px)").matches;
+    if (!menu.id) menu.id = `menu-${Math.random().toString(36).slice(2, 8)}`;
+    trigger.setAttribute("aria-haspopup", "true");
+    trigger.setAttribute("aria-controls", menu.id);
+    const expanded = (open) => trigger.setAttribute("aria-expanded", String(open));
+    expanded(false);
+    const open = () => { item.classList.remove("is-menu-closed"); item.classList.add("is-menu-open"); expanded(true); };
+    const close = () => { item.classList.remove("is-menu-open"); item.classList.add("is-menu-closed"); expanded(false); };
+    trigger.addEventListener("focus", () => { if (desktop()) open(); });
+    item.addEventListener("mouseenter", () => { item.classList.remove("is-menu-closed"); expanded(true); });
+    item.addEventListener("mouseleave", () => { if (!item.contains(document.activeElement)) { item.classList.remove("is-menu-open", "is-menu-closed"); expanded(false); } });
+    item.addEventListener("focusout", (e) => { if (!item.contains(e.relatedTarget)) { item.classList.remove("is-menu-open", "is-menu-closed"); expanded(false); } });
+    trigger.addEventListener("keydown", (e) => {
+      if (!desktop() || !["Enter", " ", "ArrowDown"].includes(e.key)) return;
+      e.preventDefault();
+      open();
+      menu.querySelector("a")?.focus();
+    });
+    item.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape" || !desktop() || !item.classList.contains("is-menu-open")) return;
+      e.stopPropagation(); // the page's own Escape handler would drop focus altogether
+      close();
+      trigger.focus();
+      close();
+    });
+  }
+}
+
 simulator();
+menuKeys();
 live();

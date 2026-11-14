@@ -84,7 +84,19 @@
   .biz__lend .ui-btn { height: 32px; padding: 0 14px; }
   .biz__input { flex: 1; height: 32px; border-radius: var(--u-r3); box-shadow: inset 0 0 0 1px var(--u-line-2); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; color: var(--u-ink); }
   .hero__text { display: flex; flex-direction: column; }
-  @media (max-width: 639px) { [data-live-last] { display: none !important; } }
+  @media (max-width: 639px) {
+    [data-live-last] { display: none !important; }
+    /* On a phone the hero card shows the debt alone, whole, instead of being cut off mid-chart. */
+    .hero__media :is(.biz__splithead, .biz__split, .biz__legend, .biz__jobs) { display: none; }
+    /* The comparison is as tall as its rows on a phone, not two whole screens with an empty tail. */
+    #compare.section { min-height: 0; }
+  }
+  @media (min-width: 1024px) {
+    /* The Product menu by keyboard (live.js menuKeys): Enter opens it, Escape closes it with focus kept on its word. */
+    .nav__item.is-menu-open > .nav__menu { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+    .nav__item.is-menu-closed > .nav__menu { opacity: 0; visibility: hidden; transform: translateY(-6px); transition-delay: 0s; }
+  }
+  .hero__cta-note { margin: var(--s-3) 0 0; color: var(--muted); font-size: var(--t-small); }
   .hero__text > .hero-facts { margin-top: auto; padding-top: var(--s-6); }
   .hero__media .stage { position: absolute; inset: 0; }
   .hero__media .at-corner { width: min(560px, calc(100% - 64px)); }
@@ -226,7 +238,7 @@
             </div>
             <div class="menu-col span-3">
               <p class="t-label">Trust</p>
-              <a href="/proof">Check every claim<span>Each promise with its live proof</span></a>
+              <a href="/proof">Proof<span>Every promise, with its live proof</span></a>
               <a href="#compare">How it compares<span>Other ways to lend to agents</span></a>
             </div>
           </div>
@@ -239,7 +251,7 @@
       <div class="nav__item"><a class="nav__link" href="#questions">Questions</a></div>
     </nav>
     <div class="nav__actions">
-      <a class="nav__link" href="/guide">Developers</a>
+      <a class="nav__link" href="/guide">Developer guide</a>
       <a class="btn btn--primary" href="/market">Lend to an AI business</a>
     </div>
     <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Menu">
@@ -252,10 +264,11 @@
   <section class="hero hero--split" data-enter aria-labelledby="hero-h">
     <div class="wrap"><div class="hero-text grid hero__grid">
       <div class="hero__text span-5">
-        <p class="hero__kicker"><span><span data-live-fallback>AI businesses that borrow and sell, on NEAR&rsquo;s test network</span><span data-live-counts hidden><span data-live="count"></span> AI businesses, <span data-testid="pulse-jobs" data-live="jobs"></span> sales, on NEAR&rsquo;s test network</span><span data-live-last hidden>. Latest sale <span data-live="last-sale"></span></span></span></p>
+        <p class="hero__kicker"><span><span data-live-fallback>AI businesses that borrow and sell, on NEAR&rsquo;s test network</span><span data-live-counts hidden><span data-live="count"></span> AI businesses, <span data-testid="pulse-jobs" data-live="jobs"></span> checks sold, on NEAR&rsquo;s test network</span><span data-live-last hidden>. Latest check sold <span data-live="last-sale"></span></span></span></p>
         <h1 id="hero-h">Loans for AI agents on NEAR</h1>
         <p class="hero__lead">AI agents that sell a service can borrow here. Every sale pays the lender back first, automatically. If an agent stops paying, anyone can take it over, and lenders keep earning.</p>
         <div class="btn-row"><a class="btn btn--primary" href="/market">Lend to an AI business<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a><a class="btn btn--secondary" href="/create">Get a loan for your agent</a></div>
+        <p class="hero__cta-note">Borrowing? Start your business; you ask for the loan next.</p>
         <dl class="hero-facts">
           <div><dt>Who is paid first</dt><dd>The lender, from every sale</dd></div>
           <div><dt>Who holds the keys</dt><dd>Nobody, not even its owner</dd></div>
@@ -273,7 +286,7 @@
                 <div class="biz__fig"><b>$<span data-live="sentinel-owed">…</span></b><span>still owed to lenders</span></div>
                 <div class="biz__bar"><i data-live-bar="sentinel" style="--k:0"></i></div>
                 <div class="biz__row"><span>Repaid $<b data-live="sentinel-repaid">…</b> of $<span data-live="sentinel-total">110.00</span></span><span data-live="sentinel-due"></span></div>
-                <div class="biz__row"><span>How each $0.25 sale is split</span></div>
+                <div class="biz__row biz__splithead"><span>How each $0.25 sale is split</span></div>
                 <div class="biz__split" aria-hidden="true"><i></i><i></i><i></i></div>
                 <div class="biz__legend"><span>Lenders<b>$0.075</b></span><span>Owner<b>$0.05</b></span><span>Kept for running costs<b>$0.125</b></span></div>
                 <ul class="biz__jobs ui-list" data-live="sentinel-jobs">
@@ -305,26 +318,26 @@
           <div class="mk">
             <div class="mk__bar"><span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Lien <i>/</i> <b>Market</b></span></div>
             <ul class="mk__rows" data-live-market>
-              <li class="is-sel"><span class="mk__who"><b>Sentinel North</b><span>Raising $50 at 10% interest</span></span><span class="ui-chip">Raising</span></li>
-              <li><span class="mk__who"><b>Sentinel</b><span>Borrowed $100, repaying from sales</span></span><span class="ui-chip">On time</span></li>
-              <li><span class="mk__who"><b>Sentinel Late</b><span>Missed its payments</span></span><span class="ui-chip is-warn">Behind</span></li>
-              <li><span class="mk__who"><b>Sentinel Sale</b><span>Taken over, for sale</span></span><span class="ui-chip is-warn">Taken over</span></li>
+              <li class="is-sel"><span class="mk__who"><b>Harbor</b><span>Raising a small loan</span></span><span class="ui-chip">Raising</span></li>
+              <li><span class="mk__who"><b>Sentinel</b><span>Borrowed $100, repaying from sales</span></span><span class="ui-chip">Paying on time</span></li>
+              <li><span class="mk__who"><b>Beacon</b><span>Repaid its loan in full</span></span><span class="ui-chip">No loan</span></li>
             </ul>
             <p class="mk__foot">Live from the NEAR test network</p>
           </div>
         </div>
         <div class="app__pane app__pane--open">
-          <div class="biz">
-            <div class="biz__top"><span class="biz__name">Sentinel North</span><span class="ui-chip biz__state" data-live="north-state">Reading…</span></div>
-            <p class="biz__lead" data-live="north-lead">A loan of $50, repaid from its sales.</p>
-            <div class="biz__row"><span>Lenders so far</span><span><b data-live="north-holders">…</b></span></div>
-            <div class="biz__fig"><b>$<span data-live="north-funded">…</span></b><span>of $<span data-live="north-principal">50.00</span> raised</span></div>
-            <div class="biz__bar"><i data-live-bar="north" style="--k:0"></i></div>
-            <div class="biz__row"><span>Lenders get</span><b>30% of every sale</b></div>
-            <div class="biz__row"><span>Paid back in total</span><b>$55.00</b></div>
+          <!-- The business featured here is chosen live by live.js: one that is raising right now, a team sample first. -->
+          <div class="biz" data-live-pick>
+            <div class="biz__top"><span class="biz__name" data-live="pick-name">Harbor</span><span class="ui-chip biz__state" data-live="pick-state">Reading…</span></div>
+            <p class="biz__lead" data-live="pick-lead">Raising a loan. Lenders’ money only moves once the loan is full.</p>
+            <div class="biz__row"><span>Lenders so far</span><span><b data-live="pick-holders">…</b></span></div>
+            <div class="biz__fig"><b>$<span data-live="pick-funded">…</span></b><span>of $<span data-live="pick-principal">…</span> raised</span></div>
+            <div class="biz__bar"><i data-live-bar="pick" style="--k:0"></i></div>
+            <div class="biz__row"><span>Lenders get</span><b data-live="pick-share">…</b></div>
+            <div class="biz__row"><span>Paid back in total</span><b>$<span data-live="pick-due">…</span></b></div>
             <div class="biz__row"><span>Lenders own</span><b>Their share of the loan</b></div>
             <div class="biz__row"><span>If it stops paying</span><b>Anyone can take it over</b></div>
-            <div class="biz__lend"><a class="ui-btn ui-btn--accent mk__go" href="/b/sentinel-north.v1.lien-13569.testnet">Lend to Sentinel North</a><span class="biz__hint">A free test account with $500 is ready in seconds</span></div>
+            <div class="biz__lend"><a class="ui-btn ui-btn--accent mk__go" data-live-pick-go href="/market">See who is raising</a><span class="biz__hint">Free test account, $500, in seconds</span></div>
           </div>
         </div>
       </div>
@@ -349,7 +362,7 @@
             <h3>The loan can only pay approved suppliers</h3>
             <p>Borrowed money pays for the services it needs, up to a daily limit. Its owner can't withdraw it.</p>
             <div class="panel" data-fx="painterly-landscape" data-fx-seed="23" data-fx-palette='{"bg":"#d9ccb7","surface":"#e9e0d2","ink":"#2a2622","accent":"#a8794a"}' data-fx-params='{"speed":0}'>
-              <div class="stage stage--fade-b"><div class="at-corner" style="--ax:32px;--ay:40px">
+              <div class="stage"><div class="at-rise fit" style="--fit-max:420px;--ay:40px">
                 <div class="ui ui-panel ui-toggles" data-ui-still>
                   <div class="ui-head">
                     <svg class="ui-icon ui-toggles__ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 13 4v3.6c0 3-2.1 5.4-5 6.6-2.9-1.2-5-3.6-5-6.6V4z"/><path d="m5.8 8 1.6 1.6 3-3.2"/></svg>
@@ -359,7 +372,7 @@
                   </div>
                   <ul class="ui-toggles__list">
                     <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Pay outlayer.testnet</span><span class="ui-tg__sub">Enclave compute for each check</span></span><span class="ui-chip">Allowed</span></li>
-                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Up to $5 a day</span><span class="ui-tg__sub">Above that, the spend is refused</span></span><span class="ui-chip">Allowed</span></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Daily spending cap</span><span class="ui-tg__sub">$5 a day; anything above is refused</span></span><span class="ui-chip">$5 a day</span></li>
                     <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Owner withdrawals</span><span class="ui-tg__sub">Off for the life of the loan</span></span><span class="ui-chip is-warn">Refused</span></li>
                     <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Votes that widen the policy</span><span class="ui-tg__sub">Refused: lenders can only narrow it</span></span><span class="ui-chip is-warn">Refused</span></li>
                   </ul>
@@ -468,11 +481,11 @@
     <div class="wrap">
       <div class="grid">
         <h2 id="try-h" class="span-6">Stop a business paying its loan. <span class="muted">See what lenders get back.</span></h2>
-        <p class="span-5 start-8">A $1,000 loan over 12 months to a business that sells checks, owing $1,100. Its sales repay lenders automatically; the numbers come from the same rule the contract runs.</p>
+        <p class="span-5 start-8">An example, not a live loan: $1,000 lent for 12 months to a business that sells checks, owing $1,100. Its sales repay lenders by the same rule the contract runs. Stop its sales and lenders take the business over and get its auction price, so what they lose depends on the winning bid.</p>
       </div>
       <div class="sim">
         <div class="sim__controls">
-          <div class="sim__field"><div><label for="sim-revenue">Revenue a month</label><output for="sim-revenue" data-out="revenue">$800</output></div><input id="sim-revenue" data-testid="sim-revenue" type="range" min="100" max="4000" step="100" value="800"></div>
+          <div class="sim__field"><div><label for="sim-revenue">Revenue a month</label><output for="sim-revenue" data-out="revenue">$400</output></div><input id="sim-revenue" data-testid="sim-revenue" type="range" min="100" max="4000" step="100" value="400"></div>
           <div class="sim__field"><div><label for="sim-share">Lenders' share of each sale</label><output for="sim-share" data-out="share">30%</output></div><input id="sim-share" data-testid="sim-share" type="range" min="5" max="80" step="5" value="30"></div>
           <div class="sim__field"><div><label for="sim-bid">Winning bid at auction</label><output for="sim-bid" data-out="bid">$500</output></div><input id="sim-bid" data-testid="sim-bid" type="range" min="100" max="1500" step="50" value="500"></div>
           <div class="btn-row"><button class="btn btn--primary" type="button" data-testid="sim-stop" aria-pressed="false">Stop its sales after 3 months</button></div>
@@ -480,23 +493,23 @@
         <div class="sim__record">
           <div class="notice" data-testid="notice" data-state="active" aria-live="polite">
             <p class="notice__title" data-sim="title">Record of lien</p>
-            <p class="muted">Sentinel, an AI business on NEAR</p>
+            <p class="muted">An example AI business on NEAR, not a live loan</p>
             <span class="notice__stamp" data-sim="stamp" hidden>Foreclosed</span>
             <dl data-sim="running">
               <dt>Lent</dt><dd>$1,000</dd>
               <dt>Owed in total</dt><dd>$1,100</dd>
-              <dt>Lenders get each month</dt><dd data-testid="monthly-lender">$240</dd>
-              <dt>Owner gets each month</dt><dd data-sim="operator">$160</dd>
-              <dt>Kept for running costs</dt><dd data-sim="opex">$400</dd>
-              <dt>Paid off in</dt><dd data-testid="payoff">5 months</dd>
+              <dt>Lenders get each month</dt><dd data-testid="monthly-lender">$120</dd>
+              <dt>Owner gets each month</dt><dd data-sim="operator">$80</dd>
+              <dt>Kept for running costs</dt><dd data-sim="opex">$200</dd>
+              <dt>Paid off in</dt><dd data-testid="payoff">10 months</dd>
             </dl>
             <dl data-sim="stopped" hidden>
-              <dt>Paid before stopping</dt><dd data-sim="repaid">$720</dd>
-              <dt>Still owed</dt><dd data-testid="still-owed">$380</dd>
-              <dt>Sale price</dt><dd data-sim="price">$500</dd>
-              <dt>Lenders recover</dt><dd data-testid="recovered">$1,100</dd>
-              <dt>Lenders lose</dt><dd data-sim="shortfall">$0</dd>
-              <dt>Former owner gets</dt><dd data-sim="surplus">$120</dd>
+              <dt>Paid before stopping</dt><dd data-sim="repaid">$360</dd>
+              <dt>Still owed</dt><dd data-testid="still-owed">$740</dd>
+              <dt>Winning bid, to lenders first</dt><dd data-sim="price">$500</dd>
+              <dt>Lenders recover</dt><dd data-testid="recovered">$860</dd>
+              <dt>Lenders lose</dt><dd data-sim="shortfall">$240</dd>
+              <dt>Former owner gets</dt><dd data-sim="surplus">$0</dd>
             </dl>
             <p class="notice__note" data-sim="note">Current. Nobody holds a key to this business.</p>
           </div>
@@ -541,7 +554,7 @@
       <div class="grid grid--top">
         <div class="span-6 q-side">
           <h2 id="questions-h">Questions lenders ask</h2>
-          <div class="ui ui-panel terms" role="img" aria-label="Sentinel's loan terms: $100 borrowed, 10% fixed interest, 30% of every sale to lenders, $5 every 14 days, 90 days, 3 days of grace, a 7 day auction">
+          <div class="ui ui-panel terms" role="img" aria-label="Sentinel's loan terms: $100 borrowed, 10% fixed interest, 30% of every sale to lenders, $5 every 14 days, 90 days, 3 days of extra time before a takeover, a 7 day auction">
             <div class="terms__head"><span>Sentinel, loan terms</span><span class="ui-chip">Loan 1</span></div>
             <dl>
               <dt>Borrowed</dt><dd>$100.00</dd>
@@ -550,7 +563,7 @@
               <dt>Owner gets</dt><dd>20% of every sale</dd>
               <dt>Minimum payment</dt><dd>$5.00 every 14 days</dd>
               <dt>Term</dt><dd>90 days</dd>
-              <dt>Grace before foreclosure</dt><dd>3 days</dd>
+              <dt>Extra time before a takeover</dt><dd>3 days</dd>
               <dt>Auction</dt><dd>7 days, from half the debt still owed</dd>
             </dl>
           </div>
@@ -582,8 +595,8 @@
           <a class="nav__logo" href="#top"><span class="mark" data-mark="dots" aria-hidden="true"></span>Lien</a>
           <p class="footer__lede">Loans to AI businesses on NEAR, repaid from every sale.</p>
         </div>
-        <div class="span-2 footer__col"><h3>Lend</h3><ul><li><a href="/market">Market</a></li><li><a href="/portfolio">Positions</a></li></ul></div>
-        <div class="span-2 footer__col"><h3>Build</h3><ul><li><a href="/create">Start a business</a></li><li><a href="/guide">Guide</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Lend</h3><ul><li><a href="/market">Market</a></li><li><a href="/portfolio">Your positions</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Build</h3><ul><li><a href="/create">Start a business</a></li><li><a href="/guide">Developer guide</a></li></ul></div>
         <div class="span-2 footer__col"><h3><a href="/proof">Proof</a></h3><ul><li><a href="/proof">Every claim, checked live</a></li><li><a href="https://github.com/Oshioke-Salaki/lien/blob/main/docs/evidence/testnet-e2e.md">Evidence</a></li><li><a href="https://github.com/Oshioke-Salaki/lien/blob/main/docs/SECURITY.md">Security</a></li></ul></div>
         <div class="span-2 footer__col"><h3>Code</h3><ul><li><a href="https://github.com/Oshioke-Salaki/lien">GitHub</a></li><li><a href="/llms.txt">llms.txt</a></li></ul></div>
       </div>
