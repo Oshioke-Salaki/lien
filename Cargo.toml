@@ -5,6 +5,7 @@ members = [
   "contracts/collector",
   "contracts/registry",
   "contracts/xvault",
+  "contracts/notemarket",
   "contracts/mocks/token",
   "contracts/mocks/outlayer",
   "tests/integration",

@@ -1762,6 +1762,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "lien-notemarket"
+version = "0.1.0"
+dependencies = [
+ "near-sdk",
+]
+
+[[package]]
 name = "lien-registry"
 version = "0.1.0"
 dependencies = [
