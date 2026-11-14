@@ -1,0 +1,21 @@
+{
+  "name": "lien-lender",
+  "private": true,
+  "type": "module",
+  "description": "An autonomous lender agent that uses only Lien's public MCP server, with its own testnet account.",
+  "scripts": {
+    "setup": "tsx src/setup.ts",
+    "lender": "tsx src/lender.ts",
+    "attack": "tsx src/attack.ts",
+    "test": "node --import tsx --test src/policy.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "near-api-js": "^7.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

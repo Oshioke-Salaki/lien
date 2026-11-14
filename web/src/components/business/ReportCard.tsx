@@ -1,5 +1,6 @@
 import { deployment } from "@/lib/config";
 import { FLAG_TEXT, parseReport } from "@/lib/report";
+import { VERDICT_TEXT, verdictOf, type Verdict } from "@/lib/risk";
 
 /** Lien's own shared accounts: still upgradeable by the team on the test network. */
 const LIEN_OWN = new Set([deployment.registry, deployment.token]);
@@ -11,6 +12,22 @@ const MEANING: Record<string, string> = {
   high: "High risk: think twice before paying this account.",
 };
 
+const VERDICT_COLOR: Record<Verdict, string> = { ALLOW: "var(--ok)", WARN: "var(--warn)", BLOCK: "var(--danger)" };
+
+/** The decision the score maps to: low allows, medium warns, high blocks (thresholds in lib/risk.ts). */
+export function VerdictBadge({ verdict }: { verdict: Verdict }) {
+  return (
+    <span
+      data-testid="verdict"
+      title={VERDICT_TEXT[verdict]}
+      className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[12px] font-semibold tracking-[0.08em]"
+      style={{ color: VERDICT_COLOR[verdict], borderColor: VERDICT_COLOR[verdict] }}
+    >
+      {verdict}
+    </span>
+  );
+}
+
 export function ReportCard({ raw }: { raw: string | null }) {
   const report = parseReport(raw);
   if (!report) return raw ? <pre className="overflow-x-auto text-[13px] whitespace-pre-wrap">{raw}</pre> : <p className="muted">No report.</p>;
@@ -20,6 +37,7 @@ export function ReportCard({ raw }: { raw: string | null }) {
     return (
       <div className="space-y-2" data-testid="report">
         <p className="text-[15px]"><span className="font-medium break-all">{report.target}</span><span className="muted"> on {report.network}</span></p>
+        <VerdictBadge verdict="BLOCK" />
         <p className="text-[22px] leading-tight font-medium">No such account</p>
         <p className="text-[15px]">Nothing exists at this name on {report.network}. Check the spelling, and don&rsquo;t send anything to it.</p>
       </div>
@@ -30,6 +48,10 @@ export function ReportCard({ raw }: { raw: string | null }) {
       <p className="text-[15px]">
         <span className="font-medium break-all">{report.target}</span>
         <span className="muted"> on {report.network}</span>
+      </p>
+      <p className="flex flex-wrap items-center gap-2">
+        <VerdictBadge verdict={verdictOf(level)} />
+        <span className="text-[14px] muted">Verdict, from the score: low allows, medium warns, high blocks</span>
       </p>
       <p className="text-[22px] leading-tight font-medium">{report.level[0]!.toUpperCase()}{report.level.slice(1)} risk <span className="num text-[15px] font-normal muted">score {report.score} of 100, higher is riskier</span></p>
       {MEANING[level] ? <p className="text-[15px]">{MEANING[level]}</p> : null}

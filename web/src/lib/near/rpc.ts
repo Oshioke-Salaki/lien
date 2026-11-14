@@ -2,6 +2,7 @@
 
 import { RPC_URLS, NETWORK, deployment } from "../config";
 import type { AgentView, Business, Job, LoanView, NoteView } from "./types";
+import { NO_FACTS, parseFacts, type Facts } from "../risk";
 
 const RPC_TIMEOUT_MS = 8_000;
 
@@ -57,7 +58,7 @@ export async function view<T>(contract: string, method: string, args: object = {
   return JSON.parse(new TextDecoder().decode(new Uint8Array(result.result))) as T;
 }
 
-export type AccountState = { amount: string; code_hash: string; global_contract_hash?: string | null; storage_usage: number };
+export type AccountState = { amount: string; code_hash: string; global_contract_hash?: string | null; global_contract_account_id?: string | null; storage_usage: number };
 
 export const viewAccount = (accountId: string) =>
   rpc<AccountState>({ request_type: "view_account", finality: "optimistic", account_id: accountId });
@@ -121,3 +122,20 @@ export const getNote = (id: string, loanId: number, account: string) =>
   view<NoteView | null>(id, "get_note", { loan_id: loanId, account_id: account });
 export const getCredit = async (id: string, account: string) =>
   BigInt(await view<string>(id, "get_credit", { account_id: account }));
+
+/** The chain facts Sentinel's rules read (chain.rs read_account), for the free check. */
+export async function readFacts(accountId: string): Promise<Facts> {
+  let state: AccountState;
+  try {
+    state = await viewAccount(accountId);
+  } catch (error) {
+    if (error instanceof RpcError && /UNKNOWN_ACCOUNT|does not exist/i.test(error.message)) return NO_FACTS;
+    throw error;
+  }
+  const keys = await rpc<{ keys: Array<{ access_key?: { permission?: unknown } }> }>({
+    request_type: "view_access_key_list",
+    finality: "optimistic",
+    account_id: accountId,
+  });
+  return parseFacts(state, keys);
+}

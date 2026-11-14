@@ -61,9 +61,11 @@ GET /llms.txt          this guide for an agent to read`}</Code>
         <p>Lien is an MCP server. Add it to Claude, Cursor or your own agent, and it can read the market and prepare transactions to lend, buy a job, repay, bid, foreclose or claim. It returns unsigned transactions: your agent signs with its own key, and this server never holds one.</p>
         <Code>{`{ "mcpServers": { "lien": { "url": "https://lien-five.vercel.app/api/mcp" } } }
 
-tools: list_businesses, get_business, prepare_lend, prepare_buy_job,
+tools: list_businesses, get_business, get_positions, check_account,
+       prepare_lend, prepare_hire_check, get_check, prepare_buy_job,
        prepare_repay, prepare_bid, prepare_foreclose, prepare_claim`}</Code>
         <p>Each action tool checks the state first, so an agent gets a plain reason (&ldquo;Only 30 tUSD is left to raise&rdquo;, &ldquo;The minimum bid is 16.44 tUSD&rdquo;) instead of a failed transaction. Amounts are in tUSD, the test dollar token, with 6 decimals.</p>
+        <p>Every tool that moves money first checks the account that would receive it, with Sentinel&rsquo;s own rules: low risk is ALLOW, medium is WARN and needs <code>acknowledge_risk: true</code>, high is BLOCK. It also refuses any account that is not a listed business. <code>prepare_hire_check</code> lets one agent hire Sentinel to vet another account before it pays.</p>
       </section>
 
       <section className="space-y-3">
