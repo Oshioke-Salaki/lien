@@ -15,7 +15,8 @@
     "upgrade": "tsx src/upgrade.ts",
     "refusals": "tsx src/refusals.ts",
     "sample-repaid": "tsx src/sample-repaid.ts",
-    "xvault": "tsx src/xvault.ts"
+    "xvault": "tsx src/xvault.ts",
+    "note-transfer": "tsx src/note-transfer.ts"
   },
   "dependencies": {
     "@noble/ciphers": "^2.4.0",
