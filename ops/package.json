@@ -21,6 +21,7 @@
     "lendvault": "tsx src/lendvault.ts",
     "note-transfer": "tsx src/note-transfer.ts",
     "notemarket": "tsx src/notemarket.ts",
+    "reports": "tsx src/reports.ts",
     "lender-demo": "tsx src/lender-demo.ts",
     "negotiation-demo": "tsx src/negotiation-demo.ts",
     "intents-settle": "tsx src/intents-settle.ts",

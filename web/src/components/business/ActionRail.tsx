@@ -17,6 +17,7 @@ import { auctionEnded, isTrapped, standing } from "@/lib/status";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { OfferForm } from "./OfferForm";
 import { ReportCard, VerdictBadge } from "./ReportCard";
+import { FreeCheck } from "./FreeCheck";
 import { isFinal, loadChecks, saveChecks, type SavedCheck } from "@/lib/checks";
 import { settleNotice } from "@/lib/events";
 import { parseReport } from "@/lib/report";
@@ -237,6 +238,8 @@ export const EXAMPLES: Array<{ label: string; account: string }> = isTestnet
       { label: "A safe one", account: "aurora.testnet" },
       { label: "A risky one", account: "outlayer.testnet" },
       { label: "No such account", account: "nobody-here.testnet" },
+      // On the shared blocklist (contracts/reports): the free check below blocks it with the evidence.
+      { label: "Reported", account: "attacker.testnet" },
     ]
   : [
       // Not yet scored on mainnet, so these carry no promise about the outcome.
@@ -399,7 +402,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
               ))}
             </div>
           </div>
-          {missingNow ? <NoSuchAccount name={missingNow} /> : null}
+          {missingNow ? <NoSuchAccount name={missingNow} /> : named && isAccountId(input.trim()) ? <FreeCheck account={input.trim().toLowerCase()} payer={account} /> : null}
           {short ? <p className="hint" data-error="true">You have {money(balance.data!)}, and a check costs {money(price)}. Use Get test funds to add more.</p> : null}
           {tankEmpty ? <p className="hint" data-error="true">This business has run out of fees for checks. Anyone can top it up at the bottom of this column.</p> : null}
           {!input.trim() && current ? (
