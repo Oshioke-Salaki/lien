@@ -5,7 +5,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { ConnectButtons, useTx } from "@/components/Tx";
 import { EmptyState, ErrorState, PageHead, Panel, Skeleton, StandingLabel } from "@/components/ui";
 import { REFRESH_EVENT } from "@/lib/events";
-import { dateTime, money, pct, share } from "@/lib/format";
+import { dateTime, money, pct, pctExact, share } from "@/lib/format";
 import { claim, withdrawCredit } from "@/lib/near/actions";
 import { ShareTransfer } from "@/components/business/ShareTransfer";
 import { fetchPositions } from "@/lib/snapshotClient";
@@ -19,7 +19,7 @@ import { useWallet } from "@/lib/wallet/WalletProvider";
 import { distinctName } from "@/lib/names";
 
 type Position = { business: Business; loan: LoanView; note: NoteView };
-type Data = { positions: Position[]; credits: Array<{ business: Business; amount: bigint }>; operated: Business[]; bids: Business[]; bought: Array<{ business: Business; price: bigint }>; unread: number; all: Business[]; readAt: number };
+type Data = { positions: Position[]; credits: Array<{ business: Business; amount: bigint }>; operated: Business[]; bids: Business[]; bought: Array<{ business: Business; price: bigint }>; unread: number; all: Business[]; names: Record<string, string>; readAt: number };
 
 const CLOSED: Partial<Record<LoanStatus, string>> = { Repaid: "Paid in full", Sold: "Taken over and sold", Cancelled: "Cancelled" };
 
@@ -35,6 +35,7 @@ function toData(snapshot: PositionsSnapshot): Data {
     bought: (snapshot.bought ?? []).flatMap((x) => (byId.has(x.businessId) ? [{ business: byId.get(x.businessId)!, price: BigInt(x.price) }] : [])),
     unread: snapshot.unread,
     all: snapshot.businesses,
+    names: snapshot.names ?? {},
     readAt: Math.floor(Date.now() / 1000),
   };
 }
@@ -112,7 +113,8 @@ export function PortfolioScreen() {
   const lent = openLoans.reduce((sum, p) => sum + BigInt(p.note.principal), 0n);
   // Only a complete read may say "none": a partial one says it is still checking.
   const complete = !!data && live.checked >= live.total && data.unread === 0;
-  const nameOf = (b: Business) => distinctName(b, data?.all ?? []);
+  // The server names twins against the whole market, so "Lookout · demo 2" matches the market page.
+  const nameOf = (b: Business) => data?.names[b.id] ?? distinctName(b, data?.all ?? []);
   const stillChecking = <p className="rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px] text-[var(--ink-2)]">Still checking the rest of the market…</p>;
   const nowSecs = data?.readAt ?? 0;
 
@@ -180,8 +182,8 @@ export function PortfolioScreen() {
           <Panel title="Money you lent" aside={`${data.positions.length} ${data.positions.length === 1 ? "loan" : "loans"}`}>
             {data.positions.length === 0 && !complete ? stillChecking : data.positions.length === 0 ? <EmptyState title="You have not lent yet" body="Lend to a business that is raising money. Your share of the loan appears here, with repayments from every sale ready to collect." action={{ href: "/market", label: "See what is raising" }} /> : (
               <>
-              {/* Phones: one card per loan, so nothing scrolls sideways. */}
-              <ul className="space-y-3 sm:hidden" data-testid="notes-cards">
+              {/* Phones and tablets: one card per loan, so nothing scrolls sideways. */}
+              <ul className="grid gap-3 md:grid-cols-2 lg:hidden" data-testid="notes-cards">
                 {data.positions.map(({ business, loan, note }) => {
                   const ready = BigInt(note.claimable);
                   const open = business.current_loan?.id === loan.id;
@@ -194,22 +196,22 @@ export function PortfolioScreen() {
                       </div>
                       <dl className="dl text-[15px]">
                         <dt>You lent</dt><dd>{money(note.principal)}</dd>
-                        <dt>Share of the loan</dt><dd>{pct(share(note.principal, loan.terms.principal))}</dd>
+                        <dt>Share of the loan</dt><dd>{pctExact(share(note.principal, loan.terms.principal))}</dd>
                         <dt>Collected</dt><dd>{money(note.claimed)}</dd>
                         <dt>Ready to collect</dt><dd>{money(ready)}</dd>
                       </dl>
                       <div className="flex flex-wrap gap-2">
                         {ready > 0n ? <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={async () => { await run(claim(business.id, loan.id), { requiredOn: business.id, done: `Collected ${money(ready)}` }); await live.refresh(); }}>Collect {money(ready)}</button> : <span className="text-[14px] muted">Nothing to collect yet</span>}
-                        <button type="button" className="btn btn-sm btn-secondary" aria-expanded={moving === key} onClick={() => setMoving(moving === key ? null : key)}>Transfer</button>
+                        <button type="button" className="btn btn-sm btn-secondary" aria-expanded={moving === key} onClick={() => setMoving(moving === key ? null : key)} title="Give or sell this share to another account">Give or sell this share</button>
                       </div>
                       {moving === key ? <ShareTransfer business={business.id} loanId={loan.id} lent={BigInt(note.principal)} ready={ready} onDone={async () => { setMoving(null); await live.refresh(); }} /> : null}
                     </li>
                   );
                 })}
               </ul>
-              <div className="hidden w-full overflow-x-auto sm:block">
+              <div className="hidden w-full min-w-0 overflow-x-auto lg:block">
                 <table className="table min-w-[680px]" data-testid="notes-table">
-                  <thead><tr><th scope="col">Business</th><th scope="col">How it is doing</th><th scope="col" className="r">You lent</th><th scope="col" className="r">Share of the loan</th><th scope="col" className="r">Collected</th><th scope="col" className="r">Ready</th><th scope="col" className="text-right"><span className="sr-only">Actions</span></th></tr></thead>
+                  <thead><tr><th scope="col">Business</th><th scope="col">How it is doing</th><th scope="col" className="r">You lent</th><th scope="col" className="r">Share of the loan</th><th scope="col" className="r">Collected</th><th scope="col" className="r">Ready</th><th scope="col" className="text-right">Actions</th></tr></thead>
                   <tbody>
                     {data.positions.map(({ business, loan, note }) => {
                       const ready = BigInt(note.claimable);
@@ -220,10 +222,10 @@ export function PortfolioScreen() {
                           <td><Link className="font-medium hover:underline" href={`/b/${business.id}`}>{nameOf(business)}</Link><div className="text-[13px] muted">Loan {loan.id + 1}</div></td>
                           <td>{open ? <StandingLabel standing={standing(business)} /> : <span className="chip">{CLOSED[loan.status] ?? loan.status}</span>}</td>
                           <td className="r">{money(note.principal)}</td>
-                          <td className="r">{pct(share(note.principal, loan.terms.principal))}</td>
+                          <td className="r" title={pctExact(share(note.principal, loan.terms.principal))}>{pct(share(note.principal, loan.terms.principal))}</td>
                           <td className="r">{money(note.claimed)}</td>
                           <td className="r">{money(ready)}</td>
-                          <td className="text-right whitespace-nowrap">{ready > 0n ? <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={async () => { await run(claim(business.id, loan.id), { requiredOn: business.id, done: `Collected ${money(ready)}` }); await live.refresh(); }}>Collect</button> : <span className="text-[14px] muted">Nothing yet</span>}{" "}<button type="button" className="btn btn-sm btn-secondary" aria-expanded={moving === `${business.id}:${loan.id}`} onClick={() => setMoving(moving === `${business.id}:${loan.id}` ? null : `${business.id}:${loan.id}`)}>Transfer</button></td>
+                          <td className="text-right whitespace-nowrap">{ready > 0n ? <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={async () => { await run(claim(business.id, loan.id), { requiredOn: business.id, done: `Collected ${money(ready)}` }); await live.refresh(); }}>Collect</button> : <span className="text-[14px] muted">Nothing yet</span>}{" "}<button type="button" className="btn btn-sm btn-secondary" aria-expanded={moving === `${business.id}:${loan.id}`} onClick={() => setMoving(moving === `${business.id}:${loan.id}` ? null : `${business.id}:${loan.id}`)} title="Give or sell this share to another account">Give or sell</button></td>
                         </tr>
                         {moving === `${business.id}:${loan.id}` ? (
                           <tr><td colSpan={7}><ShareTransfer business={business.id} loanId={loan.id} lent={BigInt(note.principal)} ready={ready} onDone={async () => { setMoving(null); await live.refresh(); }} /></td></tr>

@@ -6,11 +6,11 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { ActivityFeed } from "@/components/market/ActivityFeed";
 import { Bar, EmptyState, ErrorState, Info, PageHead, Skeleton, StandingLabel, STANDING_TONE } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
-import { money, moneyUp, pct, percent, repaidMoney, share, shortAccount } from "@/lib/format";
+import { money, moneyUp, pct, pctExact, percent, repaidMoney, share, shortAccount } from "@/lib/format";
 import { fetchMarket } from "@/lib/snapshotClient";
-import { isFeatured, type MarketSnapshot } from "@/lib/snapshot";
+import { marketGroup, type MarketSnapshot } from "@/lib/snapshot";
 import type { Business } from "@/lib/near/types";
-import { isBoughtSample, isTeamSample } from "@/lib/demo";
+import { isBoughtSample, isStagedLoan, isTeamRun, isTeamSample } from "@/lib/demo";
 import { distinctName } from "@/lib/names";
 import { auctionEnded, isAlert, standing, type Standing } from "@/lib/status";
 
@@ -29,46 +29,61 @@ function nextStep(s: Standing) {
   }
 }
 
-const COLS = "lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1.6fr)_minmax(0,1fr)_auto]";
+/** "5-minute", "15-second": how often a staged demo loan wants a payment. */
+const clockWords = (secs: number) => (secs < 60 ? `${secs}-second` : `${Math.round(secs / 60)}-minute`);
+
+const COLS ="lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.3fr)_minmax(0,1.6fr)_minmax(0,1fr)_auto]";
 
 export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
   // One cached server read for the whole market, instead of a burst of RPC calls per visitor.
   const live = useLive(fetchMarket, "market", 10_000, initial);
   const router = useRouter();
-  const all = useMemo(
-    () => [...(live.data?.businesses ?? [])].sort((a, b) => ORDER[standing(a)] - ORDER[standing(b)]),
-    [live.data],
-  );
-  // Featured: the team's own samples and any business three or more different customers use.
-  // Everything else a visitor started is listed separately, folded, so it never crowds the market.
-  const rows = all.filter(isFeatured);
-  const started = all.filter((b) => !isFeatured(b));
+  const listed = useMemo(() => live.data?.businesses ?? [], [live.data]);
+  const all = useMemo(() => [...listed].sort((a, b) => ORDER[standing(a)] - ORDER[standing(b)]), [listed]);
+  // One rule places every business (lib/snapshot.ts marketGroup): featured first; the team's
+  // test businesses and the ones visitors started are listed separately, folded.
+  const rows = all.filter((b) => marketGroup(b) === "featured");
+  const teamTests = all.filter((b) => marketGroup(b) === "team");
+  const started = all.filter((b) => marketGroup(b) === "visitors");
+  // Numbered against the registry's own order, so "Lookout · demo 2" is the same on every page.
+  const nameOf = (b: Business) => distinctName(b, listed);
   const stats = live.data?.stats;
   const now = all.reduce((latest, b) => Math.max(latest, b.now), 0);
   const count = (s: Standing[]) => rows.filter((b) => s.includes(standing(b))).length;
   const raisingCount = count(["funding"]);
   const paying = count(["current"]);
-  const alerts = rows.filter((b) => isAlert(standing(b))).length;
+  const alerting = rows.filter((b) => isAlert(standing(b)));
+  const alerts = alerting.length;
+  const stagedAlerts = alerting.filter((b) => b.current_loan && isStagedLoan(b.current_loan)).length;
+  const stagedNote = !stagedAlerts ? "" : stagedAlerts === alerts ? (alerts === 1 ? " (a staged demo)" : " (all staged demos)") : ` (${stagedAlerts} staged ${stagedAlerts === 1 ? "demo" : "demos"})`;
   const noLoan = count(["no-loan"]);
   const finding = [
     `${raisingCount} raising`,
     `${paying} paying on time`,
-    `${alerts} ${alerts === 1 ? "needs" : "need"} attention`,
+    `${alerts} ${alerts === 1 ? "needs" : "need"} attention${stagedNote}`,
     ...(noLoan ? [`${noLoan} with no loan`] : []),
   ].join(", ");
-  const recovery = stats && BigInt(stats.closedDue) > 0n ? pct(share(stats.closedRecovered, stats.closedDue)) : null;
+  const others = [
+    ...(teamTests.length ? [`${teamTests.length} Lien team ${teamTests.length === 1 ? "test" : "tests"}`] : []),
+    ...(started.length ? [`${started.length} started by visitors`] : []),
+  ];
+  const recoveredShare = stats && BigInt(stats.closedDue) > 0n ? share(stats.closedRecovered, stats.closedDue) : null;
+  const staged = stats?.staged;
+  const stagedClock = staged?.longestWindowSecs ? `a ${clockWords(staged.longestWindowSecs)} clock or faster` : "a fast clock";
+  const stagedRecovered = staged && BigInt(staged.closedDue) > 0n ? pct(share(staged.closedRecovered, staged.closedDue)) : null;
 
   return (
     <div className="space-y-8">
       <PageHead
         title="Market"
         lead={
-          <p data-testid="market-finding">
+          // Three lines are reserved while loading, so the Start button does not jump when the words arrive.
+          <p data-testid="market-finding" className="min-h-[3lh]">
             {live.loaded
-              ? rows.length === 0
+              ? all.length === 0
                 ? "No businesses yet. Be the first to start one."
-                : `${rows.length} featured ${rows.length === 1 ? "business" : "businesses"}: ${finding}.${started.length ? ` Plus ${started.length} started by visitors.` : ""}`
-              : "Reading the chain…"}
+                : `${all.length} ${all.length === 1 ? "business" : "businesses"}. ${rows.length} featured: ${finding}.${others.length ? ` Plus ${others.join(" and ")}.` : ""}`
+              : "Loading live data…"}
           </p>
         }
         action={<div className="flex items-center gap-4"><ReopenIntro /><Link href="/create" className="btn btn-primary">Start a business</Link></div>}
@@ -85,13 +100,25 @@ export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
               { label: "Lent out now", tip: "Money lenders have in loans that are running or taken over, across every business on Lien.", value: stats ? money(stats.lentNow) : null },
               { label: "Repaid to lenders, all loans", tip: "Every dollar that has reached lenders, on open and closed loans. It only ever goes up.", value: stats ? money(stats.repaidAllTime) : null },
               { label: "Lent in total", tip: "Everything lenders have ever put into loans that started.", value: stats ? money(stats.lentAllTime) : null },
-              { label: "Loans closed", tip: "Loans paid back in full, and loans whose business missed payments and was taken over.", value: stats ? `${stats.loansRepaid} repaid, ${stats.loansTakenOver} taken over` : null },
-              { label: "Lenders recovered", tip: "On loans that have closed, what reached lenders against what those loans owed, including after a takeover and sale.", value: stats ? (recovery ?? "No closed loans yet") : null },
-              { label: "Checks sold", tip: "Safety checks every business here has sold and delivered. Each sale repays its lenders first.", value: stats ? stats.checksSold.toLocaleString("en-US") : null },
+              {
+                label: "Real loans closed",
+                tip: `Loans on a real clock, with payments due every few days or weeks, that were paid back in full or taken over. Staged demo loans are counted apart: the team opens them on ${stagedClock} so that visitors can try a takeover, and they fall behind on purpose.`,
+                value: stats ? `${stats.loansRepaid} repaid, ${stats.loansTakenOver} taken over` : null,
+                note: staged?.takenOver ? `Plus ${staged.takenOver} ${staged.takenOver === 1 ? "takeover" : "takeovers"} of staged demos on ${stagedClock}` : null,
+                testId: "stat-closed",
+              },
+              {
+                label: "Lenders recovered",
+                tip: `On real loans that have closed, what reached lenders against what those loans owed, including after a takeover and sale.${stagedRecovered ? ` On the staged demos that closed, lenders recovered ${stagedRecovered}.` : ""}`,
+                value: stats ? (recoveredShare !== null ? <span title={pctExact(recoveredShare)}>{pct(recoveredShare)}</span> : "No real loan has closed yet") : null,
+                note: stats ? (recoveredShare !== null ? "On real loans that closed" : null) : null,
+              },
+              { label: "Checks sold", tip: "Safety checks every business here has sold and delivered. While a loan is running, each sale repays its lenders first.", value: stats ? stats.checksSold.toLocaleString("en-US") : null },
             ].map((stat) => (
-              <div key={stat.label} className="rounded-[16px] bg-[var(--surface)] p-3 sm:p-5">
+              <div key={stat.label} className="rounded-[16px] bg-[var(--surface)] p-3 sm:p-5" data-testid={"testId" in stat ? stat.testId : undefined}>
                 <dt className="text-[13px] leading-snug muted sm:text-[14px]">{stat.label}<Info label={stat.label} tip={stat.tip} /></dt>
                 <dd className="num mt-2 text-[18px] sm:text-[26px] leading-tight font-medium tracking-[-0.02em]">{stat.value ?? <span className="skeleton inline-block h-6 w-full max-w-32 align-middle" />}</dd>
+                {"note" in stat && stat.note ? <dd className="mt-1 text-[12px] leading-snug text-[var(--ink-2)] sm:text-[13px]" data-testid="stat-note">{stat.note}</dd> : null}
               </div>
             ))}
           </dl>
@@ -106,26 +133,24 @@ export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
               <EmptyState title="Nothing is listed yet" body="A business here is an AI agent that sells a service and can borrow against its sales. Start one and it appears here." action={{ href: "/create", label: "Start a business" }} />
             ) : (
               <ul className="space-y-2">
-                {rows.map((b) => <MarketRow key={b.id} business={b} name={distinctName(b, all)} onOpen={() => router.push(`/b/${b.id}`)} />)}
+                {rows.map((b) => <MarketRow key={b.id} business={b} name={nameOf(b)} onOpen={() => router.push(`/b/${b.id}`)} />)}
               </ul>
             )}
+            {teamTests.length ? (
+              <Folded testId="team-tests" title={`Lien team tests (${teamTests.length})`} lead="Businesses the Lien team runs to test the product, such as probes and the prompt-injection demo that lender agents must refuse.">
+                {teamTests.map((b) => <MarketRow key={b.id} business={b} name={nameOf(b)} onOpen={() => router.push(`/b/${b.id}`)} />)}
+              </Folded>
+            ) : null}
             {started.length ? (
-              <details className="group rounded-[16px] bg-[var(--surface)]" data-testid="started-by-visitors">
-                <summary className="flex min-h-[56px] cursor-pointer list-none items-center justify-between gap-3 px-5 text-[16px] font-medium [&::-webkit-details-marker]:hidden">
-                  Started by visitors ({started.length})
-                  <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-180">▾</span>
-                </summary>
-                <p className="px-5 pb-3 text-[14px] text-[var(--ink-2)]">Businesses people started while trying Lien, with fewer than three different customers so far.</p>
-                <ul className="space-y-2 px-2 pb-2">
-                  {started.map((b) => <MarketRow key={b.id} business={b} name={distinctName(b, all)} onOpen={() => router.push(`/b/${b.id}`)} />)}
-                </ul>
-              </details>
+              <Folded testId="started-by-visitors" title={`Started by visitors (${started.length})`} lead="Businesses people started or bought at auction while trying Lien, with fewer than three different customers so far.">
+                {started.map((b) => <MarketRow key={b.id} business={b} name={nameOf(b)} onOpen={() => router.push(`/b/${b.id}`)} />)}
+              </Folded>
             ) : null}
           </section>
 
           {live.loaded && rows.length ? <ActivityFeed items={live.data?.activity ?? []} now={now} /> : null}
 
-          {live.loaded ? <TryIt rows={rows} /> : null}
+          {live.loaded ? <TryIt rows={rows} nameOf={nameOf} /> : null}
           <p className="max-w-[72ch] text-[14px] muted">
             Every figure is read live from the network. No person holds the keys to any business here, so none of this depends on trusting Lien. <Link className="link" href="/proof">See every promise and its proof</Link>.
           </p>
@@ -135,8 +160,22 @@ export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
   );
 }
 
+/** A folded list under the featured businesses. */
+function Folded({ testId, title, lead, children }: { testId: string; title: string; lead: string; children: React.ReactNode }) {
+  return (
+    <details className="group rounded-[16px] bg-[var(--surface)]" data-testid={testId}>
+      <summary className="flex min-h-[56px] cursor-pointer list-none items-center justify-between gap-3 px-5 text-[16px] font-medium [&::-webkit-details-marker]:hidden">
+        {title}
+        <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-180">▾</span>
+      </summary>
+      <p className="px-5 pb-3 text-[14px] text-[var(--ink-2)]">{lead}</p>
+      <ul className="space-y-2 px-2 pb-2">{children}</ul>
+    </details>
+  );
+}
+
 /** What a newcomer can do right now, built from the market's real state. */
-function TryIt({ rows }: { rows: Business[] }) {
+function TryIt({ rows, nameOf }: { rows: Business[]; nameOf: (b: Business) => string }) {
   const pick = (...states: Standing[]) => rows.find((b) => states.includes(standing(b)));
   const raising = pick("funding");
   const late = pick("foreclosable", "behind");
@@ -144,11 +183,11 @@ function TryIt({ rows }: { rows: Business[] }) {
   const ended = pick("sale-ended");
   const serving = pick("current") ?? rows[0];
   const steps = [
-    raising && { href: `/b/${raising.id}`, action: `Lend to ${raising.name}`, result: "You get a share of the loan, repaid from every sale it makes." },
-    serving && { href: `/b/${serving.id}`, action: `Buy a safety check from ${serving.name}`, result: "A report on any account, usually in under a minute, sometimes up to two. If it fails, you get your money back." },
-    late && { href: `/b/${late.id}`, action: `Take over ${late.name}`, result: "It missed its payments, so anyone can take it over for its lenders. It keeps serving customers." },
-    sale && { href: `/b/${sale.id}`, action: `Bid on ${sale.name}`, result: "The highest bid takes a running business." },
-    !sale && ended && { href: `/b/${ended.id}`, action: `Complete the sale of ${ended.name}`, result: "Its auction has ended. Anyone can complete the sale; the price goes to lenders first." },
+    raising && { href: `/b/${raising.id}`, action: `Lend to ${nameOf(raising)}`, result: "You get a share of the loan, repaid from every sale it makes." },
+    serving && { href: `/b/${serving.id}`, action: `Buy a safety check from ${nameOf(serving)}`, result: "A report on any account, usually in under a minute, sometimes up to two. If it fails, you get your money back." },
+    late && { href: `/b/${late.id}`, action: `Take over ${nameOf(late)}`, result: `${late.current_loan && isStagedLoan(late.current_loan) ? "A staged demo: its loan wants a payment every few minutes, so it falls behind on purpose." : "It missed its payments."} Anyone can take it over for its lenders, and it keeps serving customers.` },
+    sale && { href: `/b/${sale.id}`, action: `Bid on ${nameOf(sale)}`, result: "The highest bid takes a running business. The price goes to its lenders first." },
+    !sale && ended && { href: `/b/${ended.id}`, action: `Complete the sale of ${nameOf(ended)}`, result: "Its auction has ended. Anyone can complete the sale; the price goes to lenders first." },
   ].filter((s): s is { href: string; action: string; result: string } => Boolean(s));
   if (!steps.length) return null;
   return (
@@ -187,7 +226,7 @@ function MarketRow({ business: b, name, onOpen }: { business: Business; name: st
     >
       <div className="min-w-0">
         <Link className="text-[17px] font-medium hover:underline" href={`/b/${b.id}`} onClick={(e) => e.stopPropagation()}>{name}</Link>
-        <div className="truncate text-[13px] muted" title={b.id}>{isTeamSample(b) ? "Sample by the Lien team" : isBoughtSample(b) ? `Bought by ${shortAccount(b.operator, 22)}` : shortAccount(b.id, 36)}</div>
+        <div className="truncate text-[13px] muted" title={b.id}>{isTeamSample(b) ? "Sample by the Lien team" : isTeamRun(b) ? "Run by the Lien team" : isBoughtSample(b) ? `Bought by ${shortAccount(b.operator, 22)}` : shortAccount(b.id, 36)}{loan && isStagedLoan(loan) ? " · staged demo loan" : ""}</div>
       </div>
       <div className="justify-self-end lg:justify-self-start"><StandingLabel standing={s} /></div>
       <div className="col-span-2 min-w-0 lg:col-span-1">
@@ -195,7 +234,7 @@ function MarketRow({ business: b, name, onOpen }: { business: Business; name: st
           <>
             <div className="mb-2 flex justify-between gap-3 text-[14px]">
               <span className="num">{raising ? `${money(loan.funded)} of ${money(loan.terms.principal)} raised` : `${repaidMoney(loan.terms.total_due, loan.repaid)} of ${money(loan.terms.total_due)} paid back`}</span>
-              <span className="num muted">{pct(progress)}</span>
+              <span className="num muted" title={pctExact(progress)}>{pct(progress)}</span>
             </div>
             <Bar value={progress} tone={raising ? "var(--accent)" : STANDING_TONE[s]} label={raising ? `${pct(progress)} raised` : `${pct(progress)} repaid`} />
           </>

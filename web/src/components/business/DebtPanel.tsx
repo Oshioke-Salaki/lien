@@ -8,9 +8,10 @@ import { getLoans } from "@/lib/near/rpc";
 import { splitInflow } from "@/lib/math";
 import type { Business, LoanView } from "@/lib/near/types";
 import { isTrapped, standing } from "@/lib/status";
+import { isStagedLoan } from "@/lib/demo";
 
-/** Loans whose payment window is under an hour run on demo clocks, so a visitor can watch them play out. */
-export const isDemoClock = (loan: LoanView | null) => !!loan && loan.terms.window_secs < 3_600;
+/** Loans whose payment window is under an hour run on demo clocks (lib/demo.ts isStagedLoan, the rule the market stats use). */
+export const isDemoClock = (loan: LoanView | null) => !!loan && isStagedLoan(loan);
 
 /**
  * The element only this product has: the payment clock. Paid against what the
@@ -114,7 +115,7 @@ export function DebtPanel({ business: b, now }: { business: Business; now: numbe
       </div>
       {raising ? (
         <div className="mt-6"><div className="mb-2 flex justify-between text-[14px] muted"><span>Raised</span><span className="num text-[var(--ink)]">{pct(share(loan.funded, loan.terms.principal))}</span></div><div className="track h-[10px]" role="img" aria-label={`${pct(share(loan.funded, loan.terms.principal))} raised`}>
-          <i style={{ width: `${pct(share(loan.funded, loan.terms.principal))}` }} />
+          <i style={{ width: `${Math.min(100, share(loan.funded, loan.terms.principal))}%` }} />
         </div></div>
       ) : <PaymentClock loan={loan} now={now} />}
       {isDemoClock(loan) ? <DemoNote loan={loan} /> : null}

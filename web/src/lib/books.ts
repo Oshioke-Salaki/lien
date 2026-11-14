@@ -7,6 +7,7 @@
 
 import { centsUp, money, nearAmount, owedMoney, repaidMoney, toCents } from "./format";
 import { ledgerTotal } from "./near/proof";
+import { isTeamAccount } from "./demo";
 import type { Business, Job, LoanView } from "./near/types";
 
 /** An amount in token base units, and the same amount as the app shows it (one rounding rule). */
@@ -38,8 +39,7 @@ export function customerKind(account: string): CustomerKind {
   if (account === HEARTBEAT) return "heartbeat";
   if (/\.guests\.lien-13569\.testnet$/.test(account) || /^lien-guest-[a-z\d-]+\.testnet$/.test(account)) return "guest";
   // The team's role accounts and agents (lender, borrower, vault, faucet-funded helpers), and their sub-accounts.
-  if (/(^|\.)lien-(f\d+|lender|borrower|vault|tap)-\d+\.testnet$/.test(account)) return "team";
-  if (account === "lien-13569.testnet" || account.endsWith(".lien-13569.testnet")) return "team";
+  if (isTeamAccount(account)) return "team";
   return "outside";
 }
 
