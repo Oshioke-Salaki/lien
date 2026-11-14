@@ -89,7 +89,7 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
       <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
         Lenders get {percent(loan.terms.lender_bps)} of every sale until repaid plus {percent(interest)}.
       </p>
-      <ConnectGate quiet reason="Connect to lend. You can read everything without one.">
+      <ConnectGate quiet reason="Connect to lend.">
         <form className="space-y-3" onSubmit={async (e) => {
           e.preventDefault();
           if (!value || check.error) return;
