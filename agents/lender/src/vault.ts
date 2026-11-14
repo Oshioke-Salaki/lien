@@ -17,8 +17,8 @@
 // Every step is one JSON line in logs/vault.jsonl.
 //
 // With --vault2 it lends through lendvault v2 (contracts/lendvault2) instead, as
-// agent2.lien-vault-48296.testnet, whose only key is a function-call key for
-// hire_check, lend, claim and foreclose on lendvault2.lien-vault-48296.testnet.
+// agent2b.lien-vault-48296.testnet, whose only key is a function-call key for
+// hire_check, lend, claim and foreclose on lendvault2b.lien-vault-48296.testnet.
 // Before lending it has the vault buy a Sentinel check on the business's operator
 // (hire_check: the vault pays from its own balance), waits for the attested verdict,
 // and passes the job id to lend. The vault reads that job on chain and refuses unless
@@ -44,8 +44,8 @@ import { checkRefusal, refusalMessage, reusableCheck, type SentinelJob, type Vau
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const V2 = process.argv.includes("--vault2");
-const AGENT = process.env.VAULT_AGENT ?? (V2 ? "agent2.lien-vault-48296.testnet" : "agent.lien-vault-48296.testnet");
-const VAULT = process.env.VAULT_ID ?? (V2 ? "lendvault2.lien-vault-48296.testnet" : "lendvault.lien-vault-48296.testnet");
+const AGENT = process.env.VAULT_AGENT ?? (V2 ? "agent2b.lien-vault-48296.testnet" : "agent.lien-vault-48296.testnet");
+const VAULT = process.env.VAULT_ID ?? (V2 ? "lendvault2b.lien-vault-48296.testnet" : "lendvault.lien-vault-48296.testnet");
 const KEY_PATH = join(homedir(), ".near-credentials", "testnet", "lien-lender", AGENT, `${VAULT}.json`);
 const RPCS = (process.env.LENDER_RPC ?? "https://rpc.testnet.fastnear.com,https://testnet-rpc.intea.rs,https://near-testnet.drpc.org").split(",");
 const DRY = process.argv.includes("--dry-run");
