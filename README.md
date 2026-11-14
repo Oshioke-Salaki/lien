@@ -37,7 +37,7 @@ Lien is a market of loans to AI businesses on NEAR. Each business is a contract 
 | Liquidation with no keeper | Once a loan falls behind past its extra time, **anyone** can foreclose; the business keeps earning for its lenders and is auctioned with a reserve, 5% bid steps and anti-sniping |
 | A secondary market | Loan shares (notes) trade through a keyless [note market](docs/evidence/testnet-e2e.md#a-loan-share-sold-atomically-through-a-keyless-market): payment and transfer in one transaction, refunded if anything fails |
 | A vault with on-chain risk limits | The [lending vault](docs/evidence/testnet-e2e.md#the-lender-agent-lends-with-a-function-call-key-through-a-keyless-policy-vault) caps every loan, every share and the total, and lends only to listed businesses |
-| Settlement across chains | NEAR Intents (1Click) quotes, deposit addresses and live status into a business's inbox; a keyless Chain Signatures vault [paid on Base Sepolia](https://sepolia.basescan.org/tx/0x15b1b31a4cf9591b486d0c60806fb263588e8286bd9796bfebd2481b92780bd0) |
+| Settlement across chains | A signed NEAR Intents payment [settled on testnet](https://testnet.nearblocks.io/txns/F7UgwSefS91xmx3xJWBybSAxuQTZwHL7FE7NaxEKkPeR) through NEAR's unmodified verifier (same code hash as `intents.near`) into Sentinel's inbox, then [into the waterfall](https://testnet.nearblocks.io/txns/GK6NJSM7wkS1RxoSrmoRXsRfUozYWGxWeEVCMJBrGpfo); 1Click quotes, deposit addresses and live status in the app; a keyless Chain Signatures vault [paid on Base Sepolia](https://sepolia.basescan.org/tx/0x15b1b31a4cf9591b486d0c60806fb263588e8286bd9796bfebd2481b92780bd0) |
 
 **The Autonomous Business brief, point by point:**
 
