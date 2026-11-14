@@ -49,7 +49,7 @@ export function TxProvider({ children }: { children: ReactNode }) {
   const run = useCallback<TxContextValue["run"]>(async (request, options = {}) => {
     const id = ++counter.current;
     setBusy(true);
-    setNotices((all) => [...all.slice(-2), { id, tone: "pending", title: request.summary, summary: request.summary, text: options.pending ?? "Waiting for the network. This usually takes a few seconds." }]);
+    setNotices((all) => [...all.slice(-2), { id, tone: "pending", title: request.summary, summary: request.summary, text: options.pending ?? "Waiting for the network, usually a few seconds." }]);
     const finish = (notice: Omit<Notice, "id">) => {
       // A notice already settled by its outcome keeps saying so when the transaction confirms.
       setNotices((all) => all.map((n) => (n.id === id ? (n.settled && notice.tone === "done" ? { ...n, hash: notice.hash ?? n.hash } : { id, ...notice }) : n)));
@@ -57,14 +57,14 @@ export function TxProvider({ children }: { children: ReactNode }) {
     };
     const update = (text: string) => setNotices((all) => all.map((n) => (n.id === id ? { ...n, text } : n)));
     // Once signed, the hash is known: the notice links it, so a slow confirmation is never a mystery.
-    const sent = (hash: string) => setNotices((all) => all.map((n) => (n.id === id && n.tone === "pending" ? { ...n, hash, text: options.pending ?? "Sent. Waiting for the network to confirm it." } : n)));
-    const slow = setTimeout(() => setNotices((all) => all.map((n) => (n.id === id && n.tone === "pending" ? { ...n, text: "Still confirming on the test network. It can take a minute when the network is busy; you can follow it with the link." } : n))), 30_000);
+    const sent = (hash: string) => setNotices((all) => all.map((n) => (n.id === id && n.tone === "pending" ? { ...n, hash, text: options.pending ?? "Sent. Waiting for confirmation." } : n)));
+    const slow = setTimeout(() => setNotices((all) => all.map((n) => (n.id === id && n.tone === "pending" ? { ...n, text: "Still confirming; up to a minute when busy. Follow the link." } : n))), 30_000);
     const faucet = (text: string) => (isFeeShortfall(text) && kind !== "guest" ? { faucet: true } : {});
     try {
       const ready = "prepare" in request ? await request.prepare() : request;
       const result = await send(ready, options.requiredOn, update, sent);
       if (result.ok) finish({ tone: "done", title: options.done ?? `${request.summary}: done`, text: "Confirmed on the network.", hash: result.hash });
-      else finish({ tone: "error", title: `${request.summary} did not go through`, text: result.error ?? "The transaction failed. Nothing was taken that was not given back.", hash: result.hash, ...faucet(result.error ?? "") });
+      else finish({ tone: "error", title: `${request.summary} did not go through`, text: result.error ?? "It failed. Anything taken was given back.", hash: result.hash, ...faucet(result.error ?? "") });
       // Every screen re-reads the chain now, instead of on its next poll.
       if (result.ok) {
         window.dispatchEvent(new Event(REFRESH_EVENT));
@@ -208,7 +208,7 @@ export function ConnectButtons({ compact = false }: { compact?: boolean }) {
     <div className={compact ? "flex flex-col gap-2 [&>.btn]:w-full [&>.btn]:whitespace-nowrap [&>.btn]:px-3 [&>.btn]:text-[14px]" : "flex flex-wrap gap-2"}>
       <GuestButton busy={state === "guest"} paused={guestPaused} disabled={state !== "idle" || guestPaused} onClick={() => attempt("guest", async () => {
         await startGuest();
-        notify("Your free test account is ready", "It has $500 of test dollars to try everything. It lives only in this browser.");
+        notify("Your free test account is ready", "$500 of test dollars. It lives only in this browser.");
       })} />
       <button type="button" className={`btn ${process.env.NEXT_PUBLIC_NETWORK === "mainnet" || guestPaused ? "btn-primary" : "btn-secondary"}`} disabled={state !== "idle"} onClick={() => attempt("wallet", connect)}>
         {state === "wallet" ? "Opening…" : "Connect a wallet"}

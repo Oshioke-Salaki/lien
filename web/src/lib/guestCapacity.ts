@@ -1,6 +1,6 @@
 /** Shown when the sponsor that pays for free test accounts has run out of test NEAR. */
 export const GUEST_PAUSED =
-  "Free test accounts are paused while we refill test funds. Connect a NEAR testnet wallet to keep going, or try again in a few hours.";
+  "Free test accounts are paused while we refill. Use a testnet wallet, or retry in a few hours.";
 
 export type GuestCapacity = { available: boolean; accounts: number | null; businesses: number | null };
 

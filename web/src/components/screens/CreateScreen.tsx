@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AmountField, checkAmount, TextField } from "@/components/business/fields";
 import { ConnectGate, useTx } from "@/components/Tx";
-import { PageHead, Panel } from "@/components/ui";
+import { Info, PageHead, Panel } from "@/components/ui";
 import { CREATE_DEPOSIT_NEAR, deployment, REPO_URL } from "@/lib/config";
 import { isPayableAccount, labelProblem } from "@/lib/accounts";
 import { money, shortHash, toYocto } from "@/lib/format";
@@ -188,32 +188,32 @@ export function CreateScreen() {
 
   return (
     <div className="space-y-8">
-      <PageHead title="Start a business" lead="Set up an AI business that sells a service and can borrow against its sales. Nobody holds its keys, not even you, which is why lenders can trust it. It takes about a minute." />
+      <PageHead title="Start a business" lead={<>An AI business that sells a service and borrows against its sales. About a minute.<Info label="why lenders trust it" tip="Nobody holds its keys, not even you, which is why lenders can trust it." /></>} />
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="create-form">
-          {step("Its name", "The account name is permanent. The business name is what customers see.", <>
+          {step("Its name", "The account name is permanent; customers see the business name.", <>
             <TextField label="Account name" testId="create-label" value={label} onChange={(v) => setLabel(v.toLowerCase())} placeholder="scout"
               error={labelError ?? (taken ? "That name is taken." : null)}
               hint={label && !labelError && taken === false ? `${label}.${deployment.registry} is free. Income arrives at ${label}-in.${deployment.registry}.` : label && !labelError ? "Checking the name…" : `Becomes <name>.${deployment.registry}`} />
             <TextField label="Business name" testId="create-name" value={name} onChange={setName} error={name !== "" ? nameError : null} placeholder="A name of its own, like Harbor Checks" />
           </>)}
-          {step("What it sells", "One service at one price. Customers pay the business, which holds the money until the work is done, and refunds it if the work fails.", <>
+          {step("What it sells", "One service, one price. Payment is held until done; refunded if it fails.", <>
             <AmountField label="Price of one sale" testId="create-price" value={price} onChange={setPrice} error={priceCheck.error} hint="Up to $1,000 a sale." />
             <TextField label="What it does" value={description} onChange={setDescription} multiline error={descriptionError} />
           </>)}
-          {step("What it may spend on", "It can only pay these accounts, up to these limits, whatever its program asks for. This is what keeps a loan safe.", <>
-            <TextField label="Vendors it may pay" testId="create-vendors" value={vendors} onChange={(v) => setVendors(v.toLowerCase())} error={vendorError} placeholder="e.g. compute-provider.testnet" hint={vendorList.length ? "Accounts it may pay, separated by commas." : "NEAR accounts it may pay, separated by commas. With none, it can't pay anyone for its work, such as the service it buys compute from."} />
+          {step("What it may spend on", "It can pay only these accounts, within these limits. This keeps loans safe.", <>
+            <TextField label="Vendors it may pay" testId="create-vendors" value={vendors} onChange={(v) => setVendors(v.toLowerCase())} error={vendorError} placeholder="e.g. compute-provider.testnet" hint={vendorList.length ? "Accounts it may pay, separated by commas." : "NEAR accounts it may pay, comma-separated. With none, it can pay nobody, not even for compute."} />
             {sentinel?.vendor && !vendorList.includes(sentinel.vendor) ? (
               <button type="button" className="link -mt-1 block text-left text-[14px]" data-testid="create-vendor-sentinel" onClick={() => setVendors(vendorList.length ? `${vendors.replace(/[,\s]+$/, "")}, ${sentinel.vendor}` : sentinel.vendor!)}>
                 Running Sentinel&rsquo;s program? Add the vendor it pays, <span className="whitespace-nowrap">{sentinel.vendor}</span>
               </button>
             ) : null}
             <div className="grid gap-4 sm:grid-cols-2">
-              <AmountField label="Most per payment" value={perTx} onChange={setPerTx} error={perTxCheck.error ?? limitError} hint={perTx.trim() === "" ? "Left empty, the limit is $0: its program will not be able to pay any vendor." : undefined} />
+              <AmountField label="Most per payment" value={perTx} onChange={setPerTx} error={perTxCheck.error ?? limitError} hint={perTx.trim() === "" ? "Empty means $0: it cannot pay any vendor." : undefined} />
               <AmountField label="Most per day" value={perDay} onChange={setPerDay} error={perDayCheck.error} />
             </div>
           </>)}
-          {step("Its program", "It starts with Sentinel, our open example agent that sells safety checks. Paste your own to run something else.", <>
+          {step("Its program", "Starts as Sentinel, our open safety-check agent. Paste your own build to change it.", <>
             <details>
               <summary className="cursor-pointer rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[15px] font-medium transition-colors hover:bg-[var(--surface-3)]">Use your own program</summary>
               <div className="mt-4 space-y-4">
@@ -228,7 +228,7 @@ export function CreateScreen() {
               <div className="flex flex-wrap items-center gap-4">
                 <button type="submit" className="btn btn-primary w-full sm:w-auto" data-testid="create-submit" disabled={!ready || busy || preparing}>{preparing ? "Preparing your account…" : kind === "guest" ? "Create it, free on your test account" : `Create it for ${CREATE_DEPOSIT_NEAR} NEAR`}</button>
                 <p className="text-[14px]" data-error={!!blocker} style={{ color: blocker ? "var(--warn)" : "var(--ink-2)" }}>
-                  {blocker ?? (depositCovered ? `Ready. The one-time ${CREATE_DEPOSIT_NEAR} NEAR network deposit is covered for you; it takes about 20 seconds.` : "Ready. Your wallet will ask you to confirm.")}
+                  {blocker ?? (depositCovered ? `Ready. The ${CREATE_DEPOSIT_NEAR} NEAR deposit is covered; about 20 seconds.` : "Ready. Your wallet will ask you to confirm.")}
                 </p>
               </div>
               {prepareError ? <p role="alert" className="hint" data-error="true">{prepareError}</p> : null}
@@ -248,7 +248,8 @@ export function CreateScreen() {
               <dt>Network deposit</dt><dd>{depositCovered ? "Covered for you" : guestPaused ? "Paused: test funds are being refilled" : `${CREATE_DEPOSIT_NEAR} NEAR`}</dd>
             </dl>
             <p className="mt-4 text-[14px] leading-snug muted">
-              NEAR is the network&rsquo;s own currency, used for fees. Creating a business takes a one-time {CREATE_DEPOSIT_NEAR} NEAR deposit, which mostly stays in the business to pay for its computing.{depositCovered ? " On a free test account it is covered for you." : guestPaused ? " Free test accounts can't cover it right now, while we refill test funds." : " Without a loan you can withdraw it."}
+              One-time {CREATE_DEPOSIT_NEAR} NEAR deposit, kept mostly for its computing.{depositCovered ? " Covered on a free test account." : guestPaused ? " Free accounts can't cover it while we refill." : " Withdrawable while it has no loan."}
+              <Info label="NEAR" tip="NEAR is the network's own currency, used for fees. The deposit mostly stays in the business to pay for its computing." />
             </p>
           </Panel>
         </aside>

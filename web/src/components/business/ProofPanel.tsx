@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { AccountLink, Panel, Term } from "@/components/ui";
+import { AccountLink, Info, Panel, Term } from "@/components/ui";
 import { attestationUrl, deployment, txUrl } from "@/lib/config";
 import { dateTime, money, shortHash } from "@/lib/format";
 import { GLOSSARY } from "@/lib/glossary";
@@ -38,8 +38,7 @@ function Result({ claim, state, detail, waiting = false }: { claim: keyof typeof
     <li className="grid grid-cols-[auto_1fr_auto] items-start gap-x-3 py-3" data-testid="proof-row" data-state={state}>
       <StateDot state={state} />
       <div className="min-w-0">
-        <p className="text-[15px] font-medium">{CLAIMS[claim]!.label}</p>
-        <p className="text-[14px] text-[var(--ink-2)]">{CLAIMS[claim]!.plain}</p>
+        <p className="text-[15px] font-medium">{CLAIMS[claim]!.label}<Info label={CLAIMS[claim]!.label} tip={CLAIMS[claim]!.plain} /></p>
         <p className="mt-1 text-[13px] break-words muted">{detail}</p>
       </div>
       <p className="text-[14px] font-medium" style={{ color }}>{word}</p>
@@ -107,7 +106,7 @@ export function ProofPanel({ business: b, listed }: { business: Business; listed
       </ul>
       {unreached ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-[var(--surface-2)] px-4 py-3 text-[14px]">
-          <span className="text-[var(--ink-2)]">A public source did not answer in time. Nothing failed; it simply was not checked.</span>
+          <span className="text-[var(--ink-2)]">A source timed out. Nothing failed; it was not checked.</span>
           <button type="button" className="btn btn-secondary btn-sm" data-testid="proof-retry" onClick={() => { setAttestation(undefined); setRound((r) => r + 1); }}>Check again</button>
         </div>
       ) : null}
@@ -127,7 +126,7 @@ export function ProofPanel({ business: b, listed }: { business: Business; listed
 function AttestationRow({ attestation, pinned, jobsDone }: { attestation: Attestation | null | undefined; pinned: string; jobsDone: number }) {
   if (attestation === undefined) return <Result claim="enclave" state="checking" detail="Finding the latest proof from the secure computer" />;
   if (attestation === null) {
-    return <Result claim="enclave" state="unknown" waiting={jobsDone === 0} detail={jobsDone === 0 ? "No checks have run yet. The proof appears with the first one." : "Proof not available for this business's recent jobs right now. Use Check again to retry."} />;
+    return <Result claim="enclave" state="unknown" waiting={jobsDone === 0} detail={jobsDone === 0 ? "Appears with the first check." : "Not available right now. Use Check again."} />;
   }
   const matches = attestation.executed_wasm_sha256 === pinned;
   return (

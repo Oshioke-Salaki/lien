@@ -50,33 +50,45 @@ function PaymentClock({ loan, now }: { loan: LoanView; now: number }) {
   );
 }
 
-function headline(b: Business, now: number): string {
+/** The state in one short line, with the longer reason one tap away. */
+function headline(b: Business, now: number): { text: string; tip?: string } {
   const loan = b.current_loan;
-  if (!loan) return b.loan_count ? "No open loan. Its last loan has closed." : "This business has never borrowed.";
+  if (!loan) return { text: b.loan_count ? "No open loan. Its last loan has closed." : "Never borrowed." };
   const s = standing({ ...b, now });
   switch (s) {
-    case "funding": return `Raising money from lenders until ${dateTime(loan.funding_deadline)}. Lenders' money is held by the contract and reaches the business only once the full amount is raised; if it isn't, every lender can take theirs back.`;
+    case "funding": return { text: `Raising until ${dateTime(loan.funding_deadline)}.`, tip: "Lenders' money is held by the contract and reaches the business only once the full amount is raised; if it isn't, every lender can take theirs back." };
     case "current": {
-      if (!loan.breach_at) return "Paying on time.";
-      const minimum = `the minimum is ${money(loan.terms.min_payment_per_window)} every ${duration(loan.terms.window_secs)}`;
+      if (!loan.breach_at) return { text: "Paying on time." };
+      const minimum = `Minimum payment: ${money(loan.terms.min_payment_per_window)} every ${duration(loan.terms.window_secs)}.`;
       // Sales can cover several payment windows at once; say so rather than leave the gap unexplained.
       return loan.breach_at - now > loan.terms.window_secs
-        ? `Paying on time, and paid ahead: the next payment is due ${fromNow(loan.breach_at, now)} (${minimum}).`
-        : `Paying on time. The next payment is due ${fromNow(loan.breach_at, now)} (${minimum}).`;
+        ? { text: `Paying on time, paid ahead. Next payment due ${fromNow(loan.breach_at, now)}.`, tip: `${minimum} Sales can cover several payment periods at once, so it is ahead of schedule.` }
+        : { text: `Paying on time. Next payment due ${fromNow(loan.breach_at, now)}.`, tip: minimum };
     }
-    case "behind": return `Behind on payments. A payment now puts it back on track; if none comes, anyone can take it over ${fromNow(loan.foreclosable_at!, now)}.`;
-    case "foreclosable": return "Missed its payments, and its extra time is up. Anyone can take it over now.";
-    case "foreclosed": return "Taken over for its lenders. It keeps selling, and its owner's share of each sale now goes to lenders until it is sold.";
-    case "auction": return "Taken over and for sale. The highest bid when the auction ends buys the business.";
-    case "sale-ended": return "Taken over, and its auction has ended. Anyone can complete the sale now: the price goes to lenders first and the highest bidder gets the business.";
-    default: return "";
+    case "behind": return { text: `Behind on payments. Takeover possible ${fromNow(loan.foreclosable_at!, now)}.`, tip: "A payment now puts it back on track; if none comes, anyone can take it over then." };
+    case "foreclosable": return { text: "Missed its payments. Anyone can take it over now.", tip: "Its extra time after the missed payment is up." };
+    case "foreclosed": return { text: "Taken over. The owner's share now goes to lenders until it sells.", tip: "It keeps selling as before; only where the owner's share goes has changed." };
+    case "auction": return { text: "Taken over and for sale. The highest bid at the end wins." };
+    case "sale-ended": return { text: "Auction ended. Anyone can complete the sale now.", tip: "Completing the sale pays the price to lenders first and gives the business to the highest bidder." };
+    default: return { text: "" };
   }
+}
+
+function Headline({ b, now }: { b: Business; now: number }) {
+  const h = headline(b, now);
+  return (
+    <p className="text-[17px] leading-snug">
+      <span data-testid="headline">{h.text}</span>
+      {h.tip ? <Info label="this status" tip={h.tip} /> : null}
+    </p>
+  );
 }
 
 function DemoNote({ loan }: { loan: LoanView }) {
   return (
     <p className="mt-4 rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[14px] text-[var(--ink-2)]" data-testid="demo-clock">
-      Demo loan: it runs on a fast clock (a payment is due every {duration(loan.terms.window_secs)}) so you can watch a takeover happen in about a minute. Real loans run over weeks.
+      Demo loan: payments due every {duration(loan.terms.window_secs)}.
+      <Info label="demo loan" tip="It runs on a fast clock so you can watch a takeover happen in about a minute. Real loans run over weeks." />
     </p>
   );
 }
@@ -87,7 +99,7 @@ export function DebtPanel({ business: b, now }: { business: Business; now: numbe
     const revenue = BigInt(b.stats.job_revenue) + BigInt(b.stats.external_revenue);
     return (
       <Panel>
-        <p className="text-[17px] leading-snug" data-testid="headline">{headline(b, now)}</p>
+        <Headline b={b} now={now} />
         {b.loan_count > 0 ? <LastLoan id={b.id} count={b.loan_count} /> : null}
         <p className="num mt-5 text-[clamp(40px,5vw,56px)] leading-none font-medium tracking-[-0.03em]">{money(revenue)} <span className="text-[17px] font-normal tracking-normal muted">earned from sales</span></p>
       </Panel>
@@ -96,7 +108,7 @@ export function DebtPanel({ business: b, now }: { business: Business; now: numbe
   const raising = loan.status === "Funding";
   return (
     <Panel>
-      <p className="text-[17px] leading-snug" data-testid="headline">{headline(b, now)}</p>
+      <Headline b={b} now={now} />
       <div className="mt-6 flex flex-wrap items-end justify-between gap-x-10 gap-y-3">
         <div>
           <p className="text-[14px] muted">{raising ? "Still to raise" : "Still owed to lenders"}<Info label={raising ? "still to raise" : "still owed"} tip={raising ? "How much more lenders need to put in before the loan starts." : "What the business still has to pay its lenders, including the fixed interest. Every sale pays some of it automatically."} /></p>
@@ -130,8 +142,8 @@ function LastLoan({ id, count }: { id: string; count: number }) {
   if (!last || (last.status !== "Repaid" && last.status !== "Sold")) return null;
   return (
     <p className="mt-3 text-[15px] text-[var(--ink-2)]" data-testid="recovered">
-      {last.status === "Repaid" ? "It paid its last loan back in full: " : "Its last loan ended in a takeover and sale: "}
-      lenders recovered {repaidMoney(last.terms.total_due, last.repaid)} of {money(last.terms.total_due)}.
+      {last.status === "Repaid" ? "Last loan paid in full: " : "Last loan ended in a takeover and sale: "}
+      lenders got {repaidMoney(last.terms.total_due, last.repaid)} of {money(last.terms.total_due)}.
     </p>
   );
 }
@@ -153,7 +165,7 @@ export function WaterfallPanel({ business: b, now }: { business: Business; now: 
     { key: "Owner", value: split.operator, color: "var(--ink-2)" },
     { key: "Kept for running costs", value: split.opex, color: "#6b6158" },
   ].filter((p) => loan || p.key === "Kept for running costs");
-  const aside = trapped ? "The owner's share goes to lenders now" : raising ? "Once the loan starts" : !loan ? "No loan, so nothing goes to lenders" : undefined;
+  const aside = trapped ? "The owner's share goes to lenders now" : raising ? "Once the loan starts" : !loan ? "No loan" : undefined;
   return (
     <Panel title={`Where each ${money(price)} sale goes`} aside={aside}>
       <div className="flex h-9 gap-[3px] overflow-hidden rounded-[8px]" role="img" aria-label={parts.map((p) => `${p.key} ${moneyExact(p.value)}`).join(", ")}>
@@ -169,7 +181,10 @@ export function WaterfallPanel({ business: b, now }: { business: Business; now: 
           </div>
         ))}
       </dl>
-      <p className="mt-4 text-[14px] text-[var(--ink-2)]">{loan ? "The contract splits every sale the moment it is paid. Nobody, not even the owner, can change this during the loan." : "With no loan, every sale stays with the business. Once it borrows, lenders are paid first from each sale."}</p>
+      <p className="mt-4 text-[14px] text-[var(--ink-2)]">
+        {loan ? "Split by the contract on every sale." : "No loan: every sale stays with the business."}
+        <Info label="the split" tip={loan ? "The contract splits every sale the moment it is paid. Nobody, not even the owner, can change this during the loan." : "Once it borrows, lenders are paid first from each sale."} />
+      </p>
     </Panel>
   );
 }

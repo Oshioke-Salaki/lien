@@ -93,10 +93,10 @@ export function PortfolioScreen() {
   if (ready && !account) {
     return (
       <div className="space-y-8">
-        <PageHead title="Your positions" lead="Everything you have in Lien: money you lent, repayments ready to collect, your bids and the businesses you own." />
+        <PageHead title="Your positions" lead="Your loans, repayments to collect, bids and businesses." />
         <section className="panel max-w-[620px] p-6">
           <h2 className="text-[20px] font-medium tracking-[-0.01em]">Connect to see your positions</h2>
-          <p className="mt-2 mb-5 text-[15px] leading-snug text-[var(--ink-2)]">Use your NEAR wallet, or a free test account that lives in this browser. Nothing is signed until you press a button.</p>
+          <p className="mt-2 mb-5 text-[15px] leading-snug text-[var(--ink-2)]">A NEAR wallet or a free test account. Nothing signs until you press.</p>
           <ConnectButtons />
         </section>
       </div>
@@ -115,21 +115,21 @@ export function PortfolioScreen() {
   const complete = !!data && live.checked >= live.total && data.unread === 0;
   // The server names twins against the whole market, so "Lookout · demo 2" matches the market page.
   const nameOf = (b: Business) => data?.names[b.id] ?? distinctName(b, data?.all ?? []);
-  const stillChecking = <p className="rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px] text-[var(--ink-2)]">Still checking the rest of the market…</p>;
+  const stillChecking = <p className="rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px] text-[var(--ink-2)]">Checking the rest of the market…</p>;
   const nowSecs = data?.readAt ?? 0;
 
   return (
     <div className="space-y-6">
-      <PageHead title="Your positions" lead="Money you lent, repayments ready to collect, your bids and the businesses you own." />
+      <PageHead title="Your positions" lead="Your loans, repayments to collect, bids and businesses." />
 
-      {live.error && !data ? <ErrorState message="Your positions could not be read from the network." onRetry={() => void live.refresh()} /> : !data ? (
+      {live.error && !data ? <ErrorState message="Network unreachable; your positions can't load." onRetry={() => void live.refresh()} /> : !data ? (
         <div className="space-y-5" aria-busy="true"><Skeleton className="h-[170px] w-full" /><Skeleton className="h-[220px] w-full" /><Skeleton className="h-[120px] w-full" /></div>
       ) : (
         <>
           <Panel>
             <p className="text-[14px] muted">Ready to collect</p>
             <p className="num mt-1 text-[clamp(44px,5.4vw,64px)] leading-none font-medium tracking-[-0.03em]" data-testid="collect-total">{money(ready_to_collect)}</p>
-            <p className="mt-3 text-[15px] text-[var(--ink-2)]">{data.positions.length ? `You lent ${money(lent)} in total, across ${openLoans.length} ${openLoans.length === 1 ? "loan" : "loans"}${openLoans.length !== data.positions.length ? `, plus ${data.positions.length - openLoans.length} cancelled ${data.positions.length - openLoans.length === 1 ? "offer" : "offers"} that hand your money back` : ""}. Repayments arrive with every sale those businesses make; collect them any time.` : complete ? "You have not lent yet." : "Looking for your loans…"}{inBids > 0n ? ` You also have ${money(inBids)} in ${data.bids.length === 1 ? "a bid" : `${data.bids.length} bids`}, held until the auction ends or someone outbids you.` : ""}</p>
+            <p className="mt-3 text-[15px] text-[var(--ink-2)]">{data.positions.length ? `Lent ${money(lent)} across ${openLoans.length} ${openLoans.length === 1 ? "loan" : "loans"}${openLoans.length !== data.positions.length ? `, plus ${data.positions.length - openLoans.length} cancelled ${data.positions.length - openLoans.length === 1 ? "offer" : "offers"} to refund you` : ""}. Repayments arrive with each sale; collect any time.` : complete ? "You have not lent yet." : "Looking for your loans…"}{inBids > 0n ? ` Plus ${money(inBids)} in ${data.bids.length === 1 ? "a bid" : `${data.bids.length} bids`}, held until the auction ends or you are outbid.` : ""}</p>
           </Panel>
 
           {data.credits.length ? (
@@ -145,7 +145,7 @@ export function PortfolioScreen() {
             </Panel>
           ) : null}
 
-          {!complete ? <p role="status" className="flex items-center gap-2 rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]" data-testid="positions-checking"><span className="spinner spinner-ink" aria-hidden />Checked {live.checked} of {live.total} businesses; the rest are read again in a few seconds.</p> : null}
+          {!complete ? <p role="status" className="flex items-center gap-2 rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px]" data-testid="positions-checking"><span className="spinner spinner-ink" aria-hidden />Checked {live.checked} of {live.total} businesses; retrying the rest in a few seconds.</p> : null}
           {data.bids.length ? (
             <Panel title="Your bids" aside={`${data.bids.length}`}>
               <ul className="space-y-2" data-testid="bids">
@@ -180,7 +180,7 @@ export function PortfolioScreen() {
           ) : null}
 
           <Panel title="Money you lent" aside={`${data.positions.length} ${data.positions.length === 1 ? "loan" : "loans"}`}>
-            {data.positions.length === 0 && !complete ? stillChecking : data.positions.length === 0 ? <EmptyState title="You have not lent yet" body="Lend to a business that is raising money. Your share of the loan appears here, with repayments from every sale ready to collect." action={{ href: "/market", label: "See what is raising" }} /> : (
+            {data.positions.length === 0 && !complete ? stillChecking : data.positions.length === 0 ? <EmptyState title="You have not lent yet" body="Lend to a raising business; your share and repayments appear here." action={{ href: "/market", label: "See what is raising" }} /> : (
               <>
               {/* Phones and tablets: one card per loan, so nothing scrolls sideways. */}
               <ul className="grid gap-3 md:grid-cols-2 lg:hidden" data-testid="notes-cards">
@@ -241,7 +241,7 @@ export function PortfolioScreen() {
           </Panel>
 
           <Panel title="Businesses you own" aside={`${data.operated.length}`}>
-            {data.operated.length === 0 && !complete ? stillChecking : data.operated.length === 0 ? <EmptyState title="You own no businesses yet" body="Start one in a minute: an AI agent that sells a service and can borrow against its sales." action={{ href: "/create", label: "Start a business" }} /> : (
+            {data.operated.length === 0 && !complete ? stillChecking : data.operated.length === 0 ? <EmptyState title="You own no businesses yet" body="An AI agent that sells a service and borrows against its sales. Takes a minute." action={{ href: "/create", label: "Start a business" }} /> : (
               <ul className="space-y-2">
                 {data.operated.map((b) => (
                   <li key={b.id}>

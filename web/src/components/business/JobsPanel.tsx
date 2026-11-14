@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Panel, Skeleton } from "@/components/ui";
+import { Info, Panel, Skeleton } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
 import { dateTime, money, shortAccount } from "@/lib/format";
 import { getJobs } from "@/lib/near/rpc";
@@ -21,11 +21,11 @@ export function JobsPanel({ business: b }: { business: Business }) {
     <Panel title="Checks it has sold" aside={`${b.stats.jobs_done} delivered, ${b.stats.jobs_refunded} refunded`}>
       {b.stats.jobs_refunded > 0 ? (
         <p className="-mt-1 mb-4 text-[14px] leading-snug text-[var(--ink-2)]" data-testid="refund-note">
-          Refunds happen when the sealed computer that runs a check doesn&rsquo;t answer in time, or fails. The buyer gets every cent back automatically.
+          Refunds are automatic when the sealed computer fails or times out.
         </p>
       ) : null}
       {!live.loaded ? <div className="space-y-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div> : jobs.length === 0 ? (
-        <p className="rounded-[12px] bg-[var(--surface-2)] p-5 text-[15px] text-[var(--ink-2)]">Nothing sold yet. Be its first customer: buy a safety check from the actions on this page.</p>
+        <p className="rounded-[12px] bg-[var(--surface-2)] p-5 text-[15px] text-[var(--ink-2)]">Nothing sold yet. Buy the first check from the actions here.</p>
       ) : (
         <>
         <Concentration jobs={jobs} uniquePayers={b.stats.unique_payers} />
@@ -91,7 +91,7 @@ function JobRow({ job, count, result, open, onToggle, ai }: { job: Job; count: n
       </tr>
       {open ? (
         <tr><td colSpan={visibleColumns()} className="bg-[var(--surface-2)]">
-          {job.status === "Done" ? <ReportCard raw={job.report} ai={ai} /> : <p>{job.status === "Pending" ? "The secure computer is running this check now." : "This check could not finish, so the customer was refunded in full."}</p>}
+          {job.status === "Done" ? <ReportCard raw={job.report} ai={ai} /> : <p>{job.status === "Pending" ? "Running now on the secure computer." : "Could not finish; the customer was refunded in full."}</p>}
           <p className="mt-2 text-[13px] muted">Bought by {shortAccount(job.payer, 32)} · {dateTime(job.created_at)} · program <code>{job.wasm_hash.slice(0, 12)}…</code></p>
         </td></tr>
       ) : null}
@@ -114,10 +114,9 @@ function Concentration({ jobs, uniquePayers }: { jobs: Job[]; uniquePayers: numb
   const outsiders = [...counts.keys()].filter((p) => !isTeamAccount(p)).length;
   return (
     <p data-testid="concentration" className={`mb-4 rounded-[12px] p-4 text-[15px] ${concentrated ? "bg-[var(--warn-bg,#2a2114)]" : "bg-[var(--surface-2)]"}`}>
-      {uniquePayers} {uniquePayers === 1 ? "customer has" : "different customers have"} bought from it in all.
-      {teamSales ? ` Of the last ${jobs.length} sales, ${teamSales} ${teamSales === 1 ? "was" : "were"} the Lien team's own test ${teamSales === 1 ? "purchase" : "purchases"} (tagged), and ${outsiders} ${outsiders === 1 ? "other buyer" : "other buyers"} bought the rest.` : ""}
-      {" "}The biggest buyer, <span title={top}>{shortAccount(top, 22)}</span>, bought {share}% of the last {jobs.length} {jobs.length === 1 ? "sale" : "sales"}.
-      {concentrated ? (isTeamAccount(top) ? " That is the Lien team testing it, so these sales show it works, not that customers want it." : " So treat its sales as a claim, not proof that people want it: that one buyer could be its own owner.") : ""}
+      {uniquePayers} {uniquePayers === 1 ? "customer" : "customers"} in all · top buyer <span title={top}>{shortAccount(top, 22)}</span>: {share}% of the last {jobs.length}.
+      {concentrated ? (isTeamAccount(top) ? " Mostly Lien team tests: proof it works, not demand." : " Treat these sales as a claim: one buyer could be the owner.") : ""}
+      {teamSales ? <Info label="team purchases" tip={`Of the last ${jobs.length} sales, ${teamSales} ${teamSales === 1 ? "was" : "were"} the Lien team's own test ${teamSales === 1 ? "purchase" : "purchases"} (tagged), and ${outsiders} ${outsiders === 1 ? "other buyer" : "other buyers"} bought the rest.${concentrated ? (isTeamAccount(top) ? " These sales show it works, not that customers want it." : " That one buyer could be its own owner, so its sales are not proof that people want it.") : ""}`} /> : null}
     </p>
   );
 }

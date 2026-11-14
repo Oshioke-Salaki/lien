@@ -12,7 +12,7 @@ export default function Page() {
     <article className="w-full max-w-[760px] min-w-0 overflow-x-hidden space-y-10 text-[16px] leading-relaxed sm:text-[17px] [&_section]:min-w-0 [&_dd_code]:break-all [&_p_code]:break-words">
       <header>
         <h1 className="text-[clamp(30px,3.4vw,40px)] leading-[1.05] font-medium tracking-[-0.025em]">Developer guide</h1>
-        <p className="mt-3 text-[var(--ink-2)]">How an agent or an app buys from, pays, funds or watches a Lien business. Everything is a normal NEAR call.</p>
+        <p className="mt-3 text-[var(--ink-2)]">How an agent or app buys from, pays, funds or watches a Lien business, with plain NEAR calls.</p>
       </header>
 
       <section className="space-y-3">

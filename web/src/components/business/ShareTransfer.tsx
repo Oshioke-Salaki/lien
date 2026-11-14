@@ -26,7 +26,7 @@ export async function checkRecipient(raw: string, self: string | null): Promise<
   if (id !== raw.trim()) notes.push(`NEAR account names are lowercase, so this goes to ${id}.`);
   // An account running code is a program: unless it was built to hold loan shares, the share may be stuck there.
   const code = await viewAccount(id).then((a) => a.global_contract_hash ?? a.code_hash).catch(() => null);
-  if (code && code !== NO_CODE) notes.push("That account runs a program. Only send your share there if that program is built to receive and pass on loan shares; otherwise the repayments could be stuck for good.");
+  if (code && code !== NO_CODE) notes.push("That account runs a program. Send only if it can pass on loan shares, or repayments may be stuck for good.");
   return { id, notes };
 }
 

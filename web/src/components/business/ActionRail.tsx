@@ -40,7 +40,7 @@ export function ActionRail({ business: b, now, refresh }: Props) {
       {!account && ready ? (
         <section className="panel p-5" aria-labelledby="take-part">
           <h2 id="take-part" className="text-[18px] font-medium tracking-[-0.01em]">Try it with test dollars</h2>
-          <p className="mt-2 mb-4 text-[15px] leading-snug text-[var(--ink-2)]">Lend, buy a safety check or bid on a business. A free test account with $500 of <Term tip={GLOSSARY.testDollars}>test dollars</Term> is ready in about ten seconds, with nothing to install.</p>
+          <p className="mt-2 mb-4 text-[15px] leading-snug text-[var(--ink-2)]">A free account with $500 of <Term tip={GLOSSARY.testDollars}>test dollars</Term>, ready in ten seconds.<Info label="test account" tip="Use it to lend, buy a safety check or bid on a business. It is ready in about ten seconds, with nothing to install." /></p>
           <ConnectButtons compact />
         </section>
       ) : null}
@@ -77,7 +77,7 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
   if (expired) {
     return (
       <Panel title="Raising has ended">
-        <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">This loan did not fill in time, so it will not go ahead. Cancelling it lets every lender take their money back.</p>
+        <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">Not filled in time. Cancelling lets every lender take their money back.</p>
         <ConnectGate quiet reason="Connect to cancel it. Anyone can.">
           <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={async () => { await run(tx.cancelOffer(b.id), { requiredOn: b.id, done: "The offer was cancelled" }); await refresh(); }}>Cancel the offer</button>
         </ConnectGate>
@@ -88,9 +88,9 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
   return (
     <Panel featured={featured} title="Lend to this business" aside={`Closes ${fromNow(loan.funding_deadline, now)}`}>
       <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
-        It pays lenders back from every sale, {percent(loan.terms.lender_bps)} of each one, until they have {percent(interest)} more than they lent.
+        Lenders get {percent(loan.terms.lender_bps)} of every sale until repaid plus {percent(interest)}.
       </p>
-      <ConnectGate quiet reason="Connect to lend. You can read everything without one.">
+      <ConnectGate quiet reason="Connect to lend.">
         <form className="space-y-3" onSubmit={async (e) => {
           e.preventDefault();
           if (!value || check.error) return;
@@ -98,7 +98,7 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
           if (result?.ok) setText("");
           await Promise.all([refresh(), balance.refresh()]);
         }}>
-          <AmountField label="How much to lend" testId="lend-amount" value={text} onChange={setText} error={check.error} hint={`${money(remaining)} left to raise. The smallest loan is ${money(min)}.`} />
+          <AmountField label="How much to lend" testId="lend-amount" value={text} onChange={setText} error={check.error} hint={`${money(remaining)} left to raise · minimum ${money(min)}`} />
           <button type="button" className="link text-[14px]" onClick={() => { const most = balance.data !== undefined && balance.data < remaining ? balance.data : remaining; setText(inputAmount(most - (most % CENT))); }}>Lend the most I can</button>
           <button type="submit" data-testid="lend-submit" className="btn btn-primary w-full" disabled={busy || !value || !!check.error}>{value && !check.error ? `Lend ${money(value)}` : "Enter an amount to lend"}</button>
           {value && !check.error ? (
@@ -106,11 +106,11 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
               <dt><Term tip={GLOSSARY.share}>Your share</Term></dt><dd>{pctExact(noteShare)} of the loan</dd>
               <dt>You get back</dt><dd>{money(returns)} in total</dd>
               <dt>If it stops paying</dt><dd>Anyone can take it over</dd>
-              <dt>If it is taken over and sold<Info label="sale floor" tip={`After a takeover the business is auctioned. The first bid must be at least ${percent(loan.terms.auction_reserve_bps)} of what is still owed (a floor the owner set in the terms), and each later bid must beat the highest by 5%. The price pays lenders first, split by their shares. Counting repayments before the takeover, lenders as a whole get back at least ${moneyUp(floor)}.`} /></dt>
-              <dd data-testid="lend-floor">At least {moneyUp((floor * value) / principal)} in total, if it sells at or above its reserve price</dd>
+              <dt>If taken over and sold<Info label="sale floor" tip={`After a takeover the business is auctioned. The first bid must be at least ${percent(loan.terms.auction_reserve_bps)} of what is still owed (a floor the owner set in the terms), and each later bid must beat the highest by 5%. The price pays lenders first, split by their shares. Counting repayments before the takeover, lenders as a whole get back at least ${moneyUp(floor)}. Your figure assumes it sells at or above that reserve price.`} /></dt>
+              <dd data-testid="lend-floor">At least {moneyUp((floor * value) / principal)} in total</dd>
             </dl>
           ) : null}
-          <p className="hint">Your money leaves your balance at once and is held by the contract. It reaches the business only when the whole loan is raised; if it isn&rsquo;t by {dateTime(loan.funding_deadline)}, you can take it back.</p>
+          <p className="hint">Held by the contract until fully raised; refundable if not by {dateTime(loan.funding_deadline)}.<Info label="where your money waits" tip="Your money leaves your balance at once and is held by the contract. It reaches the business only when the whole loan is raised; if it isn't by the deadline, you can take it back." /></p>
         </form>
       </ConnectGate>
     </Panel>
@@ -125,23 +125,24 @@ function ForecloseCard({ business: b, now, refresh, featured }: Props) {
   return (
     <Panel featured={featured} title={ready ? "Anyone can take over this business" : "This business is behind on payments"}>
       <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
-        {ready
+        {ready ? "It keeps selling; the owner's share goes to lenders. Anyone can do this." : "Any payment now puts it back on track."}
+        <Info label="taking over" tip={ready
           ? "It missed its payments and its extra time is up. Taking over does not shut it down: it keeps selling, its owner's share of each sale goes to lenders instead, and it goes up for auction. Anyone can do this, not only lenders."
-          : `Any payment now puts it back on track. If none comes, anyone can take it over ${fromNow(loan.foreclosable_at!, now)}.`}
+          : `If no payment comes, anyone can take it over ${fromNow(loan.foreclosable_at!, now)}.`} />
       </p>
       <ConnectGate quiet reason="Connect to take it over. Anyone can.">
         {confirming && ready ? (
           <div className="space-y-3 rounded-[12px] bg-[var(--surface-2)] p-4 text-[15px] leading-snug" data-testid="foreclose-confirm-box">
             <p className="font-medium">What taking over does</p>
             <ul className="list-disc space-y-1 pl-5 text-[var(--ink-2)]">
-              <li>The owner&rsquo;s unpaid share and its spare running money go to lenders now.</li>
-              <li>From then on, the owner&rsquo;s share of every sale goes to lenders too.</li>
-              <li>The business goes up for auction. The price pays lenders first.</li>
+              <li>Owner&rsquo;s unpaid share and spare running money go to lenders now.</li>
+              <li>The owner&rsquo;s share of every later sale goes to lenders.</li>
+              <li>It goes up for auction; the price pays lenders first.</li>
             </ul>
-            <p className="text-[var(--ink-2)]">You pay only the network fee. If you lent to it, your share of that money is yours to collect; either way, you can then bid to buy it.</p>
+            <p className="text-[var(--ink-2)]">You pay only the network fee.<Info label="what you get" tip="If you lent to it, your share of that money is yours to collect; either way, you can then bid to buy it." /></p>
             <div className="flex flex-wrap gap-2">
               <button type="button" data-testid="foreclose-confirm" className="btn btn-warn" disabled={busy} onClick={async () => {
-                const result = await run(tx.foreclose(b.id), { requiredOn: b.id, done: "Taken over: the owner's share now goes to lenders, and the business is up for auction" });
+                const result = await run(tx.foreclose(b.id), { requiredOn: b.id, done: "Taken over: lenders get the owner's share; auction open" });
                 if (result?.ok) setConfirming(false);
                 await refresh();
               }}>Yes, take it over</button>
@@ -153,7 +154,7 @@ function ForecloseCard({ business: b, now, refresh, featured }: Props) {
             {ready ? "Take over this business" : `Possible ${fromNow(loan.foreclosable_at!, now)}`}
           </button>
         )}
-        <p className="hint">After the takeover it is put up for sale. The auction starts with the first bid, and the price pays lenders first.</p>
+        <p className="hint">Then it is auctioned from the first bid; the price pays lenders first.</p>
       </ConnectGate>
     </Panel>
   );
@@ -191,14 +192,15 @@ function AuctionCard({ business: b, now, refresh, featured }: Props) {
       </dl>
       {!ended && minNext < inside ? (
         <p className="mb-3 rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[14px] leading-snug" data-testid="bargain">
-          The lowest bid ({moneyUp(minNext)}) is below the {money(inside)} of running money the buyer gets. This floor was set in the loan&rsquo;s terms, and lenders accepted it when they lent. Bids above it go to lenders.
+          Lowest bid {moneyUp(minNext)}, below the {money(inside)} running money inside.<Info label="low floor" tip="The buyer gets that running money. This floor was set in the loan's terms, and lenders accepted it when they lent. Bids above it go to lenders." />
         </p>
       ) : null}
       {iWin && !ended ? (
-        <p className="mb-3 rounded-[10px] bg-[var(--accent-tint)] px-4 py-3 text-[15px]" data-testid="winning">You are the highest bidder. If nobody bids more before the clock runs out, the business is yours.</p>
+        <p className="mb-3 rounded-[10px] bg-[var(--accent-tint)] px-4 py-3 text-[15px]" data-testid="winning">You are the highest bidder. If nobody outbids you, it&rsquo;s yours.</p>
       ) : null}
       <p className="mb-4 text-[14px] leading-snug text-[var(--ink-2)]">
-        The winner gets the whole business: its name, its customers, its future sales and the money inside it. The price pays lenders first; anything above the debt goes to the old owner. Bidding is open to anyone, so competition sets the price.
+        Winner gets the whole business. The price pays lenders first.
+        <Info label="what the winner gets" tip="Its name, its customers, its future sales and the money inside it. Anything above the debt goes to the old owner. Bidding is open to anyone, so competition sets the price." />
       </p>
       {ended ? (
         <ConnectGate quiet reason="Connect to complete the sale. Anyone can.">
@@ -218,7 +220,7 @@ function AuctionCard({ business: b, now, refresh, featured }: Props) {
             // Nodes lag by a block: read the balance again so it shows the bid taken out.
             setTimeout(() => void balance.refresh(), 2_500);
           }}>
-            <AmountField label="Your bid" testId="bid-amount" value={text} onChange={setText} error={check.error} hint={`The lowest bid accepted now is ${moneyUp(minNext)}. If someone outbids you, your money comes straight back.`} />
+            <AmountField label="Your bid" testId="bid-amount" value={text} onChange={setText} error={check.error} hint={`Minimum ${moneyUp(minNext)} · outbid bids are refunded.`} />
             <button type="submit" data-testid="bid-submit" className="btn btn-primary w-full" disabled={busy || !check.value || !!check.error}>{check.value && !check.error ? `${iWin ? "Raise your bid to" : "Bid"} ${money(check.value)}` : iWin ? "Enter a higher bid" : "Enter a bid"}</button>
           </form>
         </ConnectGate>
@@ -257,25 +259,25 @@ function NoSuchAccount({ name }: { name: string }) {
     <div className="inset space-y-2" data-testid="no-such-account" role="status">
       <p className="flex flex-wrap items-center gap-2"><VerdictBadge verdict="BLOCK" /><span className="text-[14px] muted">Answered for free, nothing was charged</span></p>
       <p className="text-[17px] font-medium">No such account</p>
-      <p className="text-[15px] leading-snug text-[var(--ink-2)]">Nothing exists at <span className="font-medium text-[var(--ink)] [overflow-wrap:anywhere]">{name}</span> on the {isTestnet ? "test " : ""}network, so anything sent to it could be lost. Sentinel&rsquo;s rules block it; there is nothing to pay for. Check the spelling.</p>
+      <p className="text-[15px] leading-snug text-[var(--ink-2)]">Nothing exists at <span className="font-medium text-[var(--ink)] [overflow-wrap:anywhere]">{name}</span>. Check the spelling.<Info label="no such account" tip={`Nothing exists at that name on the ${isTestnet ? "test " : ""}network, so anything sent to it could be lost. Sentinel's rules block it; there is nothing to pay for.`} /></p>
     </div>
   );
 }
 
 /** What went wrong with a refunded check, in words, from the reason the contract recorded. */
 function refundText(reason: string | undefined, price: bigint): { text: string; retry: boolean } {
-  const back = `Your ${money(price)} was refunded in full, automatically.`;
+  const back = `Your ${money(price)} was refunded in full.`;
   switch (reason) {
     case "agent_declined":
-      return { text: `No NEAR account name was found in what you typed, so the check did not run. ${back} Type an account name, like the examples above.`, retry: false };
+      return { text: `No account name found, so it did not run. ${back} Type an account name.`, retry: false };
     case "expired":
-      return { text: `The check took too long and was cancelled. ${back}`, retry: true };
+      return { text: `The check timed out. ${back}`, retry: true };
     case "execution_failed":
     case "no_output":
     case "malformed_output":
-      return { text: `The secure computer that runs checks did not answer properly this time, which happens now and then on the test network. ${back}`, retry: true };
+      return { text: `The test network's secure computer failed this time. ${back}`, retry: true };
     default:
-      return { text: `This check could not finish, so you were refunded in full (${money(price)}). Either the secure computer did not answer, or no account name was found in what you typed.`, retry: true };
+      return { text: `Could not finish (no answer, or no account name). Refunded in full: ${money(price)}.`, retry: true };
   }
 }
 
@@ -338,8 +340,8 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
         if (latest.status !== "Pending") {
           // The result is in: say so now, even if the payment is still finalising on the network.
           settleNotice(latest.status === "Done"
-            ? { summary: "Buy a safety check", tone: "done", title: "Check delivered", text: "The report is ready on this page, and the lenders were paid their share." }
-            : { summary: "Buy a safety check", tone: "done", title: "Check refunded", text: `It couldn't finish, so your ${money(price)} came back automatically.` });
+            ? { summary: "Buy a safety check", tone: "done", title: "Check delivered", text: "Report ready on this page. Lenders got their share." }
+            : { summary: "Buy a safety check", tone: "done", title: "Check refunded", text: `It couldn't finish. Your ${money(price)} came back.` });
           // The lenders' share lands with the result: re-read the loan now and once more for a lagging node.
           void refresh();
           window.dispatchEvent(new Event(REFRESH_EVENT));
@@ -362,7 +364,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
     const since = Math.floor(Date.now() / 1000);
     // Saved before paying: if the page is refreshed mid-payment, the check is still followed.
     update((all) => [{ id: b.next_job_id, input: text, since, confirmed: false, status: "Pending" }, ...all]);
-    const result = await pay(price, { action: "job", input: text }, "Buy a safety check", "Check paid for", "Paid. A secure computer is running the check now; it usually takes under a minute, sometimes up to two. You can keep using the page.");
+    const result = await pay(price, { action: "job", input: text }, "Buy a safety check", "Check paid for", "Paid. The check is running, usually under a minute.");
     // Paid: the box empties, so pressing the button again never buys the same check twice by accident.
     if (result?.ok) setInput((now) => (now.trim() === text ? "" : now));
     const started = result?.events.find((event) => event.event === "job_started");
@@ -385,7 +387,8 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
   return (
     <Panel featured={featured} title={`Buy a safety check, ${money(price)}`}>
       <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
-        A safety report on any NEAR account, like a background check before you pay someone. It runs on a <Term tip={GLOSSARY.sealedComputer}>sealed computer</Term>, and if it fails you get your money back.
+        A risk report on any NEAR account. Refunded if it fails.
+        <Info label="safety check" tip={`${GLOSSARY.check} It runs on a sealed computer: ${GLOSSARY.sealedComputer}`} />
       </p>
       <ConnectGate quiet reason="Connect to buy one.">
         <form className="space-y-3" onSubmit={async (e) => { e.preventDefault(); await submit(input.trim()); }}>
@@ -393,7 +396,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
             <TextField label="Account to check" testId="job-input" value={input} onChange={setInput} placeholder={`an account name, e.g. ${EXAMPLES[0]!.account}`} error={inputError} />
           </div>
           <div className="space-y-2" aria-label="Examples" data-testid="job-examples">
-            <p className="text-[14px] muted">Not sure what to check? Try one:</p>
+            <p className="text-[14px] muted">Or try one:</p>
             <div className="flex flex-wrap gap-2">
               {EXAMPLES.map((example) => (
                 <button key={example.account} type="button" className="example-chip whitespace-nowrap" onClick={() => setInput(example.account)} title={example.account}>
@@ -403,8 +406,8 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
             </div>
           </div>
           {missingNow ? <NoSuchAccount name={missingNow} /> : named && isAccountId(input.trim()) ? <FreeCheck account={input.trim().toLowerCase()} payer={account} /> : null}
-          {short ? <p className="hint" data-error="true">You have {money(balance.data!)}, and a check costs {money(price)}. Use Get test funds to add more.</p> : null}
-          {tankEmpty ? <p className="hint" data-error="true">This business has run out of fees for checks. Anyone can top it up at the bottom of this column.</p> : null}
+          {short ? <p className="hint" data-error="true">You have {money(balance.data!)}; a check costs {money(price)}. Use Get test funds.</p> : null}
+          {tankEmpty ? <p className="hint" data-error="true">Out of fees for checks. Anyone can top it up below.</p> : null}
           {!input.trim() && current ? (
             // After a check, the box is empty and the button starts the next one rather than paying again.
             <button type="button" data-testid="job-submit" className="btn btn-secondary w-full" onClick={() => inputRef.current?.querySelector("input")?.focus()}>Check another account</button>
@@ -419,8 +422,8 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
             <p className="flex items-start gap-2 text-[15px]">
               <span className="spinner spinner-ink mt-[3px] shrink-0" aria-hidden />
               <span>
-                Your check of <span className="font-medium break-all">{current.input}</span> is running (bought {duration(Math.max(0, now - current.since))} ago).{" "}
-                {now - current.since > 120 ? "The test network's secure computers are slow right now, so this can take a few minutes. If it fails, your money comes back automatically." : "It usually takes under a minute, sometimes up to two."}
+                Checking <span className="font-medium break-all">{current.input}</span> ({duration(Math.max(0, now - current.since))} so far).{" "}
+                {now - current.since > 120 ? "The network is slow; this can take minutes. Refunded if it fails." : "Usually under a minute, up to two."}
               </span>
             </p>
           ) : current.status === "Done" ? <ReportCard raw={current.report ?? null} ai={{ on: !!b.service.secrets_profile, loanOpen: !!b.current_loan }} /> : (
@@ -470,12 +473,13 @@ function RepayCard({ business: b, refresh, isOperator }: { business: Business; r
   return (
     <Panel title={foreclosed ? "Pay off the debt to stop the sale" : "Pay down the debt"}>
       <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">
-        {foreclosed
+        {foreclosed ? "Paying it all before the auction ends cancels the sale." : "Anyone can pay. It goes to lenders and counts at once."}
+        <Info label="paying down" tip={foreclosed
           ? `Paying the full ${moneyUp(outstanding)} before the auction ends cancels the sale and gives the business back to its owner. Anyone can pay.`
-          : `Anyone can pay, not only the owner. It goes to lenders and counts toward the next payment at once. ${moneyUp(outstanding)} is owed; the app never sends more than that.`}
+          : `Anyone can pay, not only the owner. It goes to lenders and counts toward the next payment at once. ${moneyUp(outstanding)} is owed; the app never sends more than that.`} />
       </p>
       {!isOperator ? (
-        <p className="mb-3 rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[14px] leading-snug" data-testid="gift-note">You don&rsquo;t own this business, so what you pay is a gift to its lenders: it goes to them, not back to you.</p>
+        <p className="mb-3 rounded-[10px] bg-[var(--surface-2)] px-4 py-3 text-[14px] leading-snug" data-testid="gift-note">Not your business: what you pay is a gift to its lenders.</p>
       ) : null}
       <ConnectGate quiet reason="Connect to pay.">
         <form className="space-y-3" onSubmit={async (e) => {
@@ -534,7 +538,7 @@ function PositionCard({ business: b, refresh }: { business: Business; refresh: (
       <div className="space-y-4" data-testid="position">
         {owed > 0n ? (
           <div>
-            <p className="mb-2 text-[15px]">{money(owed)} is waiting for you here: a refund, a bid that was outbid, or a payout.</p>
+            <p className="mb-2 text-[15px]">Waiting for you: a refund, an outbid bid or a payout.</p>
             <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={async () => { await run(tx.withdrawCredit(b.id, account), { done: "Paid out to you" }); await credit.refresh(); }}>Collect {money(owed)}</button>
           </div>
         ) : null}
@@ -553,10 +557,10 @@ function PositionCard({ business: b, refresh }: { business: Business; refresh: (
                   await run(tx.claim(b.id, loan.id), { requiredOn: b.id, done: `Collected ${money(claimable)}` });
                   await Promise.all([positions.refresh(), credit.refresh(), refresh()]);
                 }}>Collect {money(claimable)}</button>
-              ) : <p className="text-[14px] text-[var(--ink-2)]">Nothing to collect yet. Repayments arrive with each sale the business makes.</p>}
+              ) : <p className="text-[14px] text-[var(--ink-2)]">Nothing to collect yet; repayments arrive with each sale.</p>}
               {proposal && proposal.loan_id === loan.id && note.voted_proposal !== proposal.id ? (
                 <div className="callout">
-                  <p className="mb-2">The owner wants to change its program (new build <code>{proposal.service.wasm.hash.slice(0, 12)}…</code>, price {money(proposal.service.price)}). It needs lenders holding over half the loan to agree. Agreed so far: {pct(share(proposal.approvals, loan.terms.principal))}.</p>
+                  <p className="mb-2">New program proposed (build <code>{proposal.service.wasm.hash.slice(0, 12)}…</code>, price {money(proposal.service.price)}). {pct(share(proposal.approvals, loan.terms.principal))} agreed of the over 50% needed.</p>
                   <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={async () => { await run(tx.approveChange(b.id, proposal.id), { requiredOn: b.id, done: "Your approval is recorded" }); await Promise.all([positions.refresh(), refresh()]); }}>Approve the change</button>
                 </div>
               ) : null}
@@ -605,7 +609,7 @@ function OperatorCard({ business: b, now, refresh }: Props) {
         </button>
 
         {loan?.status === "Funding" ? (
-          <button type="button" className="btn btn-secondary w-full" disabled={busy} data-testid="cancel-offer" onClick={async () => { await run(tx.cancelOffer(b.id), { requiredOn: b.id, done: "The offer was cancelled, and lenders can take their money back" }); await refresh(); }}>Cancel this loan offer</button>
+          <button type="button" className="btn btn-secondary w-full" disabled={busy} data-testid="cancel-offer" onClick={async () => { await run(tx.cancelOffer(b.id), { requiredOn: b.id, done: "Offer cancelled; lenders can take their money back" }); await refresh(); }}>Cancel this loan offer</button>
         ) : null}
 
         {!loan ? (
@@ -623,7 +627,7 @@ function OperatorCard({ business: b, now, refresh }: Props) {
                 setWithdraw("");
                 await refresh();
               }}>
-                <AmountField label="Amount" value={withdraw} onChange={setWithdraw} error={withdrawCheck.error} hint={`${money(opex)} available. This is only possible while it has no loan.`} />
+                <AmountField label="Amount" value={withdraw} onChange={setWithdraw} error={withdrawCheck.error} hint={`${money(opex)} available · only while it has no loan`} />
                 <button className="btn btn-secondary btn-sm" disabled={busy || !withdrawCheck.value || !!withdrawCheck.error}>Withdraw</button>
               </form>
             </details>
@@ -657,7 +661,7 @@ function OperatorCard({ business: b, now, refresh }: Props) {
                 setNewUrl("");
                 await refresh();
               }}>
-                <p className="hint">Its program is frozen during a loan. It only changes if lenders holding more than half the loan agree.</p>
+                <p className="hint">Frozen during a loan unless lenders holding over half agree.</p>
                 <TextField label="Build URL" value={newUrl} onChange={setNewUrl} error={newUrl && !urlValid ? "Must start with https://" : null} />
                 <TextField label="SHA-256 of the build" value={newHash} onChange={setNewHash} error={newHash && !hashValid ? "64 lowercase hex characters" : null} />
                 <button className="btn btn-secondary btn-sm" disabled={busy || !hashValid || !urlValid}>Propose</button>
@@ -678,11 +682,11 @@ function TankCard({ business: b, refresh }: { business: Business; refresh: () =>
   const left = perJob > 0n ? tank / perJob : 0n;
   const low = tank < perJob * 5n;
   if (!low) {
-    return <p className="px-2 text-[14px] muted" data-testid="tank">It has fees set aside for about {left.toString()} more checks.</p>;
+    return <p className="px-2 text-[14px] muted" data-testid="tank">Fees set aside for about {left.toString()} more checks.</p>;
   }
   return (
     <Panel title="Running low on fees for checks">
-      <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">It can pay for about {left.toString()} more checks ({nearAmount(b.tank)} <Term tip={GLOSSARY.near}>NEAR</Term> left). Without fees it cannot sell, and it will fall behind on its loan. Anyone can add more, and lenders have the most reason to.</p>
+      <p className="mb-4 text-[15px] leading-snug text-[var(--ink-2)]">Fees for about {left.toString()} more checks ({nearAmount(b.tank)} <Term tip={GLOSSARY.near}>NEAR</Term> left).<Info label="check fees" tip="Without fees it cannot sell, and it will fall behind on its loan. Anyone can add more, and lenders have the most reason to." /></p>
       {account ? (
         <button type="button" className="btn btn-primary w-full" disabled={busy} onClick={async () => { await run(tx.fundTank(b.id, toYocto("1")), { requiredOn: b.id, done: "1 NEAR added for check fees" }); await refresh(); }}>Add 1 NEAR of fees</button>
       ) : null}

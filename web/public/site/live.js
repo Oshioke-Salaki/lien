@@ -63,10 +63,10 @@ function simulator() {
     set('[data-sim="title"]', noticed ? "Notice of foreclosure" : cleared ? "Lien released" : "Record of lien");
     set('[data-sim="note"]', noticed
       ? shortfall > 0n
-        ? `Lenders took the business over and sold it. The winning bid covers ${dollars(toLenders)} of the ${dollars(outstanding)} still owed, so they lose ${dollars(shortfall)}. Move the bid to see the loss change.`
-        : "Lenders took the business over and sold it, and the winning bid covers everything still owed. The address and the service stay as they were; only the owner changes."
-      : cleared ? "The debt was repaid before sales stopped, so the lien is released: the owner keeps the business, and nothing more goes to lenders."
-      : months === null || months > 12n ? "At this revenue the loan isn't repaid in its 12 months: at the end, anyone could take the business over."
+        ? `Lenders took it over and sold it. The bid covers ${dollars(toLenders)} of ${dollars(outstanding)} owed, so they lose ${dollars(shortfall)}. Move the bid to see.`
+        : "Lenders took it over and sold it; the bid covers the whole debt. Same address and service, new owner."
+      : cleared ? "Repaid before sales stopped, so the lien is released. The owner keeps the business."
+      : months === null || months > 12n ? "At this revenue it isn't repaid in 12 months; then anyone could take it over."
       : "Current. Nobody holds a key to this business.");
     $('[data-sim="stamp"]', root).hidden = !noticed;
     $('[data-sim="running"]', root).hidden = noticed;
@@ -138,14 +138,14 @@ function showPick(businesses) {
   const go = document.querySelector("[data-live-pick-go]");
   if (!pick) {
     set("pick-state", "Nobody raising");
-    set("pick-lead", "No business is raising a loan this minute. The market shows every loan, and new ones open often.");
+    set("pick-lead", "Nothing is raising right now. New loans open often; see the market.");
     if (go) { go.textContent = "See the market"; go.href = "/market"; }
     return pick;
   }
   const loan = pick.current_loan;
   set("pick-name", pick.name);
   set("pick-state", LABEL.funding);
-  set("pick-lead", "Raising a loan. Lenders’ money only moves once the loan is full; until then, any lender can take theirs back.");
+  set("pick-lead", "Raising a loan. Money moves only once it is full; until then lenders can withdraw.");
   set("pick-funded", tusd(loan.funded));
   set("pick-principal", tusd(loan.terms.principal));
   set("pick-holders", String(loan.holders));

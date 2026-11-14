@@ -51,13 +51,13 @@ export function ProofScreen() {
     <div className="space-y-8">
       <PageHead
         title="Proof"
-        lead="Every promise Lien makes, with the check your browser runs right now, the code and test behind it, and a real transaction where it happened. Nothing here asks you to trust us."
+        lead="Every promise Lien makes, checked live, with its code, test and transaction."
       />
 
       <section aria-labelledby="rob-title" className="space-y-3" data-testid="try-to-rob-it">
         <h2 id="rob-title" className="text-[22px] font-medium tracking-[-0.015em]">Try to rob it</h2>
         <p className="max-w-[70ch] text-[15px] text-[var(--ink-2)]">
-          Three ways someone might take a business&rsquo;s money. Each is refused by the contract, with the test that proves it and a testnet transaction where one exists.
+          Three ways to take a business&rsquo;s money. The contract refuses each one.
         </p>
         <ol className="grid gap-3 lg:grid-cols-3">
           {ATTACKS.map((a) => (
@@ -88,7 +88,7 @@ export function ProofScreen() {
       <section aria-labelledby="live-title" className="space-y-3">
         <h2 id="live-title" className="text-[22px] font-medium tracking-[-0.015em]">Checked live, on a real business</h2>
         <p className="max-w-[70ch] text-[15px] text-[var(--ink-2)]">
-          These run in your browser against <Link className="link" href={`/b/${SENTINEL}`}>Sentinel</Link>, reading the public network directly. Every business page runs the same checks.
+          Run in your browser against <Link className="link" href={`/b/${SENTINEL}`}>Sentinel</Link>, straight from the network. Every business page runs them.
         </p>
         {sentinel.data ? <ProofPanel business={sentinel.data} listed={true} /> : <Skeleton className="h-[360px] w-full" />}
       </section>

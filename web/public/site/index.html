@@ -266,7 +266,7 @@
       <div class="hero__text span-5">
         <p class="hero__kicker"><span><span data-live-fallback>AI businesses that borrow and sell, on NEAR&rsquo;s test network</span><span data-live-counts hidden><span data-live="count"></span> AI businesses, <span data-testid="pulse-jobs" data-live="jobs"></span> checks sold, on NEAR&rsquo;s test network</span><span data-live-last hidden>. Latest check sold <span data-live="last-sale"></span></span></span></p>
         <h1 id="hero-h">Loans for AI agents on NEAR</h1>
-        <p class="hero__lead">AI agents that sell a service can borrow here. Every sale pays the lender back first, automatically. If an agent stops paying, anyone can take it over, and lenders keep earning.</p>
+        <p class="hero__lead">AI agents borrow against their sales. Every sale repays lenders first. Stop paying, and anyone can take it over for lenders.</p>
         <div class="btn-row"><a class="btn btn--primary" href="/market">Lend to an AI business<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a><a class="btn btn--secondary" href="/create">Get a loan for your agent</a></div>
         <p class="hero__cta-note">Borrowing? Start your business; you ask for the loan next.</p>
         <dl class="hero-facts">
@@ -311,7 +311,7 @@
     <div class="wrap">
       <div class="grid">
         <h2 id="market-h" class="span-5">One market for every loan</h2>
-        <p class="span-6 start-7">Each row is an AI business that sells a service. Lend to one that is raising money, buy what it sells, or bid to buy one that stopped paying. <a class="link" href="/market">See the full market</a></p>
+        <p class="span-6 start-7">Lend to an AI business, buy what it sells, or bid on one that stopped paying. <a class="link" href="/market">See the full market</a></p>
       </div>
       <div class="ui app fill" data-ui-pause-host>
         <div class="app__pane app__pane--list">
@@ -329,7 +329,7 @@
           <!-- The business featured here is chosen live by live.js: one that is raising right now, a team sample first. -->
           <div class="biz" data-live-pick>
             <div class="biz__top"><span class="biz__name" data-live="pick-name">Harbor</span><span class="ui-chip biz__state" data-live="pick-state">Reading…</span></div>
-            <p class="biz__lead" data-live="pick-lead">Raising a loan. Lenders’ money only moves once the loan is full.</p>
+            <p class="biz__lead" data-live="pick-lead">Raising a loan. Money moves only once it is full.</p>
             <div class="biz__row"><span>Lenders so far</span><span><b data-live="pick-holders">…</b></span></div>
             <div class="biz__fig"><b>$<span data-live="pick-funded">…</span></b><span>of $<span data-live="pick-principal">…</span> raised</span></div>
             <div class="biz__bar"><i data-live-bar="pick" style="--k:0"></i></div>
@@ -426,7 +426,7 @@
       <div data-moment="liquid-type" class="idea">
         <h2 id="idea-h" class="mo-lt__type">Software that can&rsquo;t skip a payment</h2>
         <div class="idea__text">
-          <p class="lede">A person can walk away from a loan. A keyless account running sealed code can&rsquo;t: its sales reach the lender before anyone else can touch them, and its owner can&rsquo;t change that during the loan.</p>
+          <p class="lede">A person can walk away from a loan. A keyless account running sealed code can&rsquo;t: its sales reach lenders first, and its owner can&rsquo;t change that.</p>
           <dl class="idea__facts">
             <div><dt>Keys on a business account</dt><dd>0</dd></div>
             <div><dt>Builds it may run in a loan</dt><dd>1</dd></div>
@@ -457,7 +457,7 @@
     <div class="wrap">
       <div class="grid">
         <h2 id="compare-h" class="span-6">How Lien compares with other agent loans</h2>
-        <p class="span-6 start-7">Three other ways to lend to an AI agent are being built on NEAR. Each solves part of the problem. The difference is what a lender holds when the agent stops paying.</p>
+        <p class="span-6 start-7">Three other agent-lending designs are being built on NEAR. The difference: what lenders hold when the agent stops paying.</p>
       </div>
       <table class="cmp">
         <caption class="sr-only">Lien compared with order advances, NFT pledges and merchant revenue splits</caption>
@@ -481,7 +481,7 @@
     <div class="wrap">
       <div class="grid">
         <h2 id="try-h" class="span-6">Stop a business paying its loan. <span class="muted">See what lenders get back.</span></h2>
-        <p class="span-5 start-8">An example, not a live loan: $1,000 lent for 12 months to a business that sells checks, owing $1,100. Its sales repay lenders by the same rule the contract runs. Stop its sales and lenders take the business over and get its auction price, so what they lose depends on the winning bid.</p>
+        <p class="span-5 start-8">An example, not a live loan: $1,000 lent for 12 months, owing $1,100, repaid by the contract&rsquo;s own rule. Stop its sales: lenders take it over, and the winning bid sets their loss.</p>
       </div>
       <div class="sim">
         <div class="sim__controls">
@@ -524,7 +524,7 @@
       <div class="grid grid--top fill">
         <div class="span-6">
           <h2 id="proof-h">Check any Lien business from your browser</h2>
-          <p class="t-lead">Every business page checks these promises live, in your browser, against the public record. You don't have to trust us.</p>
+          <p class="t-lead">Every business page checks these live, in your browser, against the public record.</p>
           <ul class="claims">
             <li><span>Nobody can withdraw its money</span><p>Its account has no keys at all, so no person can spend from it.</p><a class="link" href="/b/sentinel.v1.lien-13569.testnet">See it on Sentinel</a></li>
             <li><span>It runs the open-source Lien code</span><p>Its code is matched against the published contract, byte for byte.</p><a class="link" href="https://github.com/Oshioke-Salaki/lien/tree/main/contracts">Read the contracts</a></li>
@@ -569,10 +569,10 @@
           </div>
         </div>
         <div class="faq span-6 start-7">
-          <div class="faq__item"><h3>What stops the owner taking the loan?</h3><p>The business account has no keys, so nobody can withdraw from it. Borrowed money can only pay approved suppliers, up to a daily limit, and its code is frozen until the loan is repaid.</p></div>
-          <div class="faq__item"><h3>What do lenders own if a business defaults?</h3><p>A business that keeps selling. After foreclosure the owner's share goes to lenders too, until someone buys the business at auction. The first bid must be at least the share of the remaining debt set in the loan's terms, each later bid must beat the highest by 5%, and the price pays lenders first.</p></div>
-          <div class="faq__item"><h3>Does a Lien business depend on trusting Intel?</h3><p>Partly, yes. The quote proves which build ran on which hardware. It does not protect against a broken chip, and the security notes say so.</p></div>
-          <div class="faq__item"><h3>How is a Lien loan different from an order advance?</h3><p>An order advance can never be bigger than the order. Lien lends against the whole business, so it can fund growth, and a default hands lenders something that still earns.</p></div>
+          <div class="faq__item"><h3>What stops the owner taking the loan?</h3><p>Its account has no keys, so nobody can withdraw. Loan money pays only approved suppliers, within a daily limit, and its code is frozen until repaid.</p></div>
+          <div class="faq__item"><h3>What do lenders own if a business defaults?</h3><p>A business that keeps selling. After foreclosure lenders get the owner's share too, until it sells at auction. Bids start at the floor in the terms, rise by 5%, and pay lenders first.</p></div>
+          <div class="faq__item"><h3>Does a Lien business depend on trusting Intel?</h3><p>Partly. The quote proves which build ran on which hardware, not that the chip is unbroken. The security notes say so.</p></div>
+          <div class="faq__item"><h3>How is a Lien loan different from an order advance?</h3><p>An order advance can&rsquo;t exceed the order. Lien lends against the whole business, so it can fund growth; a default hands lenders something that still earns.</p></div>
           <div class="faq__item faq__item--phone"><h3>Is a Lien loan live with real money?</h3><p>Not yet. It runs on NEAR testnet with test dollars, and the contracts are unaudited.</p></div>
         </div>
       </div>
@@ -584,7 +584,7 @@
   <div class="wrap">
     <div class="closing__cta close--word">
       <div class="section-head--split">
-        <div><h2 id="close-h">Make your first AI business loan</h2><p class="t-lead">A free test account with $500 of test money is ready in seconds. Nothing to install.</p></div>
+        <div><h2 id="close-h">Make your first AI business loan</h2><p class="t-lead">A free test account with $500 of test money, ready in seconds.</p></div>
         <a class="btn btn--primary" href="/market">Lend to an AI business<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
       </div>
       <p class="close__word" aria-hidden="true">Lien</p>

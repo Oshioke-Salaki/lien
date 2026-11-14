@@ -160,6 +160,22 @@ export function Info({ tip: text, label }: { tip: string; label: string }) {
   );
 }
 
+/**
+ * The longer explanation behind a card's one-line summary, one click away. Collapsed by
+ * default so the card leads with its state, its number and its action.
+ */
+export function More({ children, label = "How this works", testId, className = "mt-3" }: { children: ReactNode; label?: string; testId?: string; className?: string }) {
+  return (
+    <details className={`group text-[14px] ${className}`} data-testid={testId}>
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 py-1 text-[var(--ink-2)] hover:text-[var(--ink)] [&::-webkit-details-marker]:hidden">
+        {label}
+        <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-180">▾</span>
+      </summary>
+      <div className="mt-2 space-y-2 leading-snug text-[var(--ink-2)]">{children}</div>
+    </details>
+  );
+}
+
 /** A page's title row: what this is, one line on it, and its main action. */
 export function PageHead({ title, lead, action }: { title: ReactNode; lead?: ReactNode; action?: ReactNode }) {
   return (

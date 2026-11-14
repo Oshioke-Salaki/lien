@@ -7,7 +7,7 @@ import { HistoryPanel } from "@/components/business/HistoryPanel";
 import { IntentsPanel } from "@/components/business/IntentsPanel";
 import { JobsPanel } from "@/components/business/JobsPanel";
 import { ProofPanel } from "@/components/business/ProofPanel";
-import { AccountLink, ErrorState, Skeleton, StandingLabel, Term } from "@/components/ui";
+import { AccountLink, ErrorState, More, Skeleton, StandingLabel, Term } from "@/components/ui";
 import { useChainNow, useLive } from "@/hooks/useLive";
 import { GLOSSARY } from "@/lib/glossary";
 import { getBusiness, listBusinessIds } from "@/lib/near/rpc";
@@ -36,7 +36,7 @@ export function BusinessScreen({ id, initial }: { id: string; initial?: Business
       <div className="space-y-6">
         <Crumb name={id.split(".")[0]!} />
         <ErrorState
-          message={missing ? `There is no Lien business at ${id}.` : "The network could not be reached. This page will keep trying."}
+          message={missing ? `There is no Lien business at ${id}.` : "Network unreachable. Retrying automatically."}
           onRetry={missing ? undefined : () => void live.refresh()}
         />
         {missing ? <Link className="btn btn-secondary" href="/market">Back to the market</Link> : null}
@@ -50,7 +50,7 @@ export function BusinessScreen({ id, initial }: { id: string; initial?: Business
         <Crumb name={id.split(".")[0]!} />
         <div className="space-y-3">
           <h1 className="text-[clamp(30px,3.4vw,40px)] leading-[1.05] font-medium tracking-[-0.025em]">{id.split(".")[0]}</h1>
-          <p className="text-[15px] muted">Reading this business from the chain…</p>
+          <p className="text-[15px] muted">Loading from the chain…</p>
         </div>
         <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="space-y-5"><Skeleton className="h-[260px]" /><Skeleton className="h-[140px]" /><Skeleton className="h-[320px]" /></div>
@@ -116,8 +116,11 @@ function ForeclosureNotice() {
     <div className="flex items-center justify-between gap-4 overflow-hidden rounded-[16px] bg-[rgb(255_122_110_/_0.1)] px-5 py-4 shadow-[inset_0_0_0_1px_rgb(255_122_110_/_0.35)]" data-testid="foreclosure-notice" role="status">
       <div>
         <p className="text-[17px] font-medium">Notice: taken over for its lenders</p>
-        <p className="mt-1 text-[15px] text-[var(--ink-2)]">It missed its payments, so it now works for its lenders. Same address and same service, but every sale pays lenders the owner&rsquo;s share too, until someone buys the business at auction.</p>
-        <p className="mt-2 text-[14px] text-[var(--ink-2)]">At the takeover, the owner&rsquo;s unpaid share and any running money above about a week&rsquo;s costs went straight to lenders, which is why &ldquo;paid back&rdquo; jumped.</p>
+        <p className="mt-1 text-[15px] text-[var(--ink-2)]">It missed its payments. It keeps selling, now for its lenders.</p>
+        <More label="Why paid back jumped">
+          <p>It missed its payments, so it now works for its lenders. Same address and same service, but every sale pays lenders the owner&rsquo;s share too, until someone buys the business at auction.</p>
+          <p>At the takeover, the owner&rsquo;s unpaid share and any running money above about a week&rsquo;s costs went straight to lenders, which is why &ldquo;paid back&rdquo; jumped.</p>
+        </More>
       </div>
       <span className="stamp-in hidden shrink-0 rounded-[6px] border-2 border-[var(--danger)] px-3 py-1 text-[14px] font-semibold text-[var(--danger)] sm:block">Taken over</span>
     </div>
