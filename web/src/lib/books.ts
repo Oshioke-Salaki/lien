@@ -37,7 +37,8 @@ export const KIND_LABEL: Record<CustomerKind, string> = {
 export function customerKind(account: string): CustomerKind {
   if (account === HEARTBEAT) return "heartbeat";
   if (/\.guests\.lien-13569\.testnet$/.test(account) || /^lien-guest-[a-z\d-]+\.testnet$/.test(account)) return "guest";
-  if (/^lien-f\d+-\d+\.testnet$/.test(account) || /^lien-lender-\d+\.testnet$/.test(account)) return "team";
+  // The team's role accounts and agents (lender, borrower, vault, faucet-funded helpers), and their sub-accounts.
+  if (/(^|\.)lien-(f\d+|lender|borrower|vault|tap)-\d+\.testnet$/.test(account)) return "team";
   if (account === "lien-13569.testnet" || account.endsWith(".lien-13569.testnet")) return "team";
   return "outside";
 }

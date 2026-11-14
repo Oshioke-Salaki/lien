@@ -77,6 +77,16 @@ const JOBS = [
 const ACTIVE = loan(0, "Active", 100n * D, 110n * D, 20_210_000n);
 const HELD = "124550000";
 
+import { customerKind as kindOf } from "./books";
+
+describe("team accounts in the books", () => {
+  it("counts the team's agents and helpers as team, not outside customers", () => {
+    for (const a of ["lien-borrower-648123.testnet", "lien-lender-645368.testnet", "agent.lien-vault-48296.testnet", "lien-tap-46660.testnet", "lien-f2-3840.testnet"]) expect(kindOf(a)).toBe("team");
+    expect(kindOf("alice.testnet")).toBe("outside");
+    expect(kindOf("my-lien-borrower-1.testnet")).toBe("outside");
+  });
+});
+
 describe("who a customer is", () => {
   it("names the heartbeat, the team, guests and everyone else", () => {
     expect(customerKind("lien-f4-3863.testnet")).toBe("heartbeat");
