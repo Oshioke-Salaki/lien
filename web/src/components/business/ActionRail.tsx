@@ -236,13 +236,13 @@ export const EXAMPLES: Array<{ label: string; account: string }> = isTestnet
   ? [
       { label: "A safe one", account: "aurora.testnet" },
       { label: "A risky one", account: "outlayer.testnet" },
-      { label: "No such account", account: "no-such-business.testnet" },
+      { label: "No such account", account: "nobody-here.testnet" },
     ]
   : [
       // Not yet scored on mainnet, so these carry no promise about the outcome.
       { label: "Try", account: "usdc.near" },
       { label: "Try", account: "intents.near" },
-      { label: "No such account", account: "no-such-business.near" },
+      { label: "No such account", account: "nobody-here.near" },
     ];
 
 /**
