@@ -28,6 +28,17 @@ Lien is a market of loans to AI businesses on NEAR. Each business is a contract 
 | Receipts for every task | The [receipts table](JUDGES.md): what was bought, from whom, at what price, the check's verdict and the transaction |
 | Try it yourself | `cd agents/lender && npm i && LIEN_MCP=https://lien-five.vercel.app/api/mcp npm run lender -- --dry-run`: it plans a Sentinel hire and a loan, and declines a business whose description tries to instruct it |
 
+**The Unstoppable DeFi brief, point by point:**
+
+| The brief asks for | In Lien |
+|---|---|
+| Lending with no custodian | Every business is a contract account with **zero keys**; lenders' money sits in its ledger, and nobody, not even its owner, can withdraw during a loan (`npm run verify` reads the refused attempts back from the chain) |
+| Repayment enforced by code | `split_inflow`: every sale pays lenders first, then the owner, then running costs, inside the contract |
+| Liquidation with no keeper | Once a loan falls behind past its extra time, **anyone** can foreclose; the business keeps earning for its lenders and is auctioned with a reserve, 5% bid steps and anti-sniping |
+| A secondary market | Loan shares (notes) trade through a keyless [note market](docs/evidence/testnet-e2e.md#a-loan-share-sold-atomically-through-a-keyless-market): payment and transfer in one transaction, refunded if anything fails |
+| A vault with on-chain risk limits | The [lending vault](docs/evidence/testnet-e2e.md#the-lender-agent-lends-with-a-function-call-key-through-a-keyless-policy-vault) caps every loan, every share and the total, and lends only to listed businesses |
+| Settlement across chains | NEAR Intents (1Click) quotes, deposit addresses and live status into a business's inbox; a keyless Chain Signatures vault [paid on Base Sepolia](https://sepolia.basescan.org/tx/0x15b1b31a4cf9591b486d0c60806fb263588e8286bd9796bfebd2481b92780bd0) |
+
 **The Autonomous Business brief, point by point:**
 
 | The brief asks for | In Lien |
