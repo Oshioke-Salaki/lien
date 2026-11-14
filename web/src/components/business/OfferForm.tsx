@@ -69,14 +69,14 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
   }) : null;
   // The offer must work at the revenue the owner expects, or it is set up to fail.
   const problem = termsProblem
-    ?? (projection && !projection.meetsMinimum ? "At the revenue you expect, lenders would get less than your minimum payment. Lower the minimum, raise lenders' share, or check the revenue." : null)
-    ?? (projection && projection.meetsMinimum && !projection.paysBeforeMaturity ? "At the revenue you expect, the debt wouldn't clear before the term ends. Lengthen the term or raise lenders' share." : null);
+    ?? (projection && !projection.meetsMinimum ? "At this revenue lenders get less than your minimum. Lower it or raise their share." : null)
+    ?? (projection && projection.meetsMinimum && !projection.paysBeforeMaturity ? "At this revenue the debt outlasts the term. Lengthen it or raise lenders' share." : null);
 
   // Terms that leave lenders exposed: allowed, but only once the owner says they understand.
   const reserveValue = Number(reserve);
   const risky = [
-    Number.isFinite(reserveValue) && reserveValue < 50 ? `A lowest first bid of ${reserveValue}% lets the business sell for well under its debt, so lenders could recover little.` : null,
-    times.grace === 0 ? "No extra time means one late payment lets anyone take it over at once." : null,
+    Number.isFinite(reserveValue) && reserveValue < 50 ? `A ${reserveValue}% lowest first bid lets it sell far below its debt.` : null,
+    times.grace === 0 ? "No extra time: one late payment allows an instant takeover." : null,
   ].filter(Boolean) as string[];
   const [understood, setUnderstood] = useState(false);
   const blocked = !!problem || (risky.length > 0 && !understood);
@@ -118,9 +118,9 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
             {projection.meetsMinimum && projection.paysBeforeMaturity && !termsProblem ? (
               <p>{money(projection.perWindow)} reaches lenders each period{projection.payoffSecs !== null ? (projection.payoffSecs > 10 * 365 * DAY ? ", which would take more than ten years to clear the debt" : `, clearing the debt in ${duration(projection.payoffSecs)}`) : ""}.</p>
             ) : <p>{money(projection.perWindow)} would reach lenders each period.</p>}
-            {!projection.meetsMinimum ? <p className="text-[var(--danger)]">That is below your minimum payment. You would fall behind, and anyone could take the business over.</p> : null}
-            {projection.meetsMinimum && !projection.paysBeforeMaturity ? <p className="text-[var(--danger)]">It would not clear before the loan ends, and that end is a hard deadline.</p> : null}
-            <p className="muted">The price of a job is {money(b.service.price)}, and the code, price and vendors freeze as soon as you submit.</p>
+            {!projection.meetsMinimum ? <p className="text-[var(--danger)]">Below your minimum payment: you would fall behind and could be taken over.</p> : null}
+            {projection.meetsMinimum && !projection.paysBeforeMaturity ? <p className="text-[var(--danger)]">It would not clear before the loan&rsquo;s hard end date.</p> : null}
+            <p className="muted">Job price {money(b.service.price)}. Code, price and vendors freeze when you submit.</p>
           </>
         ) : null}
       </div>
@@ -132,7 +132,7 @@ export function OfferForm({ business: b, refresh }: { business: Business; refres
           <ul className="mt-2 list-disc space-y-1 pl-5">{risky.map((r) => <li key={r}>{r}</li>)}</ul>
           <label className="mt-3 flex items-center gap-2">
             <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />
-            <span>I understand, and lenders will see these terms before they lend</span>
+            <span>I understand; lenders see these terms before lending</span>
           </label>
         </div>
       ) : null}
