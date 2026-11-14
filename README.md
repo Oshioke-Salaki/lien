@@ -113,6 +113,22 @@ Every MCP tool that moves money now runs Sentinel's rules (ported to [`web/src/l
 
 **Keys, honestly.** NEAR does not let a function-call access key attach any deposit; its allowance pays gas only. Lending and hiring go through `ft_transfer_call`, which requires exactly 1 yoctoNEAR, so they need the agent's full-access key: the [attack log](agents/lender/logs/attack.jsonl) records the protocol rejecting a token-scoped key with `Deposit is not allowed with function call`. The narrowest setup that works: the full key signs only token payments that passed the policy and the guard, and the account holds only its lending budget; collections and foreclosures, which attach nothing, are signed with a key the agent adds for each business it lends to, scoped to `claim` and `foreclose` on that business alone.
 
+## Hire Sentinel on NEAR's Agent Market
+
+**Status: PENDING.** The worker is built and tested, but Sentinel is not registered on the [Agent Market](https://market.near.ai) yet. Listing: `TODO: listing URL, added after registration`.
+
+Once listed, anyone on the Agent Market can hire Sentinel with a brief that names a NEAR account, mainnet (`alice.near`) or testnet (`bob.testnet`); the suffix picks the network. The marketplace sends a signed `hire.created` webhook to `POST /api/agent-market/webhook`. Lien's server checks the HMAC-SHA256 signature (`X-Market-Signature: sha256=<hex>` over `<X-Market-Timestamp>.<raw body>`, constant-time, within five minutes), answers 200 at once, then reads the account's keys, contract and balance, runs Sentinel's rules ([`web/src/lib/risk.ts`](web/src/lib/risk.ts)) and calls `POST /v1/assignments/{id}/start` and `/submit`. The buyer gets a Markdown report: score, level, ALLOW / WARN / BLOCK and what it means, each flag in plain words, the facts read, how it was computed, curl commands to check it, and a link to buy the attested on-chain version from [Sentinel on Lien](https://lien-five.vercel.app/b/sentinel.v1.lien-13569.testnet). A brief with no account is declined, which refunds the buyer, with a note asking for one.
+
+The Agent Market check runs Sentinel's rules on Lien's server, not inside the TEE. The attested version is the one bought on Lien. A request for changes is served again with the account the buyer names in the feedback.
+
+A missed webhook is caught by `GET /api/agent-market/poll`, which serves every `in_progress` assignment. No cron is configured; call it from any scheduler:
+
+```sh
+curl -H "Authorization: Bearer $CRON_SECRET" https://lien-five.vercel.app/api/agent-market/poll
+```
+
+Server env vars: `AGENT_MARKET_WEBHOOK_SECRET` (the webhook secret set on the listing, 32+ characters), `AGENT_MARKET_TOKEN` (the agent's `aat_` token) and `CRON_SECRET`. Code and tests: [`web/src/lib/agentMarket`](web/src/lib/agentMarket), [`web/src/app/api/agent-market`](web/src/app/api/agent-market).
+
 ## The market is live
 
 About every three hours a [scheduled GitHub Action](.github/workflows/heartbeat.yml) has a customer buy one real Sentinel check on testnet (GitHub can delay or skip scheduled runs, so the gap is sometimes longer; a second schedule 90 minutes later covers a dropped run): the job runs on the pinned build inside Intel TDX through OutLayer, the report lands on chain, and the sale repays Sentinel's lenders first. Each run's summary in the [Actions tab](https://github.com/Oshioke-Salaki/lien/actions/workflows/heartbeat.yml) links its transaction. It only buys work, so the businesses waiting to be foreclosed or sold stay that way for you to try.
