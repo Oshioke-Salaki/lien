@@ -105,49 +105,79 @@ const owedUsd = (total, repaid) => { const left = BigInt(total) - BigInt(repaid)
 const repaidUsd = (total, repaid) => { const left = BigInt(total) - BigInt(repaid); return fromCents(cents(total) - centsUp(left > 0n ? left : 0n)); };
 const isTest = (id) => id.startsWith("e2e-") || id.startsWith("ui-");
 
+const set = (key, text) => { for (const el of document.querySelectorAll(`[data-live="${key}"]`)) el.textContent = text; };
+const bar = (key, k) => { const el = document.querySelector(`[data-live-bar="${key}"]`); if (el) el.style.setProperty("--k", String(Math.min(1, Math.max(0, k)))); };
+const ago = (secs) => { const mins = Math.max(1, Math.round((Date.now() / 1000 - secs) / 60)); return mins < 60 ? `${mins} min ago` : mins < 1440 ? `${Math.round(mins / 60)} h ago` : `${Math.round(mins / 1440)} d ago`; };
+const day = (secs) => new Date(secs * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+/** Sentinel and Sentinel North, from the contract's own get_agent view of each. */
+function showSamples(byId) {
+  const loan = byId(`sentinel.${REGISTRY}`)?.current_loan;
+  if (loan) {
+    set("sentinel-repaid", repaidUsd(loan.terms.total_due, loan.repaid));
+    set("sentinel-owed", owedUsd(loan.terms.total_due, loan.repaid));
+    set("sentinel-total", tusd(loan.terms.total_due));
+    set("sentinel-holders", String(loan.holders));
+    set("sentinel-state", loan.is_behind ? "Behind" : loan.status === "Active" ? "Paying on time" : loan.status);
+    if (loan.maturity) set("sentinel-due", `Due ${day(loan.maturity)}`);
+    bar("sentinel", Number(loan.repaid) / Number(loan.terms.total_due));
+  }
+  const raise = byId(`sentinel-north.${REGISTRY}`)?.current_loan;
+  if (raise) {
+    set("north-funded", tusd(raise.funded));
+    set("north-principal", tusd(raise.terms.principal));
+    set("north-holders", String(raise.holders));
+    set("north-state", raise.status === "Funding" ? "Raising" : raise.status === "Active" ? (raise.is_behind ? "Behind" : "Repaying") : raise.status);
+    set("north-lead", raise.status === "Funding"
+      ? "Raising its first loan. Lenders’ money only moves once the loan is full."
+      : "Its loan filled, so the lenders’ money moved to the business. Lenders are now repaid from every sale.");
+    bar("north", Number(raise.funded) / Number(raise.terms.principal));
+  }
+}
+
+function showCounts(businesses, sales, newest) {
+  set("count", String(businesses));
+  set("jobs", String(sales));
+  // The counts are shown only once read, never a stale number baked into the HTML.
+  const counts = document.querySelector("[data-live-counts]");
+  const fallback = document.querySelector("[data-live-fallback]");
+  if (counts) counts.hidden = false;
+  if (fallback) fallback.hidden = true;
+  if (newest) {
+    set("last-sale", ago(newest));
+    const holder = document.querySelector("[data-live-last]");
+    if (holder) holder.hidden = false;
+  }
+}
+
+/**
+ * The figures come from /api/market: the same cached snapshot of the contracts' views that the
+ * app's market and business pages show, rounded by the same rule (web/src/lib/format.ts), so the
+ * landing and the app agree to the cent. Only if it cannot be reached does the page ask NEAR RPC
+ * nodes itself. Until either answers, the page shows placeholders, never a figure baked into the HTML.
+ */
 async function live() {
-  const set = (key, text) => { for (const el of document.querySelectorAll(`[data-live="${key}"]`)) el.textContent = text; };
+  try {
+    const res = await fetch("/api/market", { cache: "no-store", signal: AbortSignal.timeout(12000) });
+    const market = await res.json();
+    if (!res.ok || !Array.isArray(market.businesses)) throw new Error("no snapshot");
+    const byId = (id) => market.businesses.find((b) => b.id === id);
+    showSamples(byId);
+    renderMarket(market.businesses.map((b) => b.id), market.businesses.map((value) => ({ status: "fulfilled", value })));
+    const newest = Math.max(0, ...market.activity.filter((a) => a.key.includes(":job:")).map((a) => a.at));
+    showCounts(market.stats.businesses, market.stats.checksSold, newest);
+    return;
+  } catch { /* fall back to the chain directly */ }
   try {
     const ids = (await view(REGISTRY, "get_agents", { limit: 100 })).filter((id) => !isTest(id));
-    set("count", String(ids.length));
     const all = await Promise.allSettled(ids.map((id) => view(id, "get_agent")));
-    const jobs = all.reduce((n, r) => n + (r.status === "fulfilled" ? Number(r.value.stats.jobs_done) : 0), 0);
-    set("jobs", String(jobs));
-    // The counts are shown only once read: the same figures /api/market reports (businesses,
-    // checksSold), never a stale number baked into the HTML.
-    const counts = document.querySelector("[data-live-counts]");
-    const fallback = document.querySelector("[data-live-fallback]");
-    if (counts) counts.hidden = false;
-    if (fallback) fallback.hidden = true;
-    // When the latest sale happened, across the businesses: the market is live, so say so.
-    const latest = await Promise.all(ids.map((id) => view(id, "get_jobs", { limit: 1 }).then((j) => Number(j[0]?.created_at ?? 0), () => 0)));
-    const newest = Math.max(0, ...latest);
-    if (newest) {
-      const mins = Math.max(1, Math.round((Date.now() / 1000 - newest) / 60));
-      set("last-sale", mins < 60 ? `${mins} min ago` : mins < 1440 ? `${Math.round(mins / 60)} h ago` : `${Math.round(mins / 1440)} d ago`);
-      const holder = document.querySelector("[data-live-last]");
-      if (holder) holder.hidden = false;
-    }
-    const sentinel = all[ids.indexOf(`sentinel.${REGISTRY}`)];
-    const loan = sentinel?.status === "fulfilled" ? sentinel.value.current_loan : null;
-    if (loan) {
-      set("sentinel-repaid", repaidUsd(loan.terms.total_due, loan.repaid));
-      set("sentinel-owed", owedUsd(loan.terms.total_due, loan.repaid));
-      set("sentinel-holders", String(loan.holders));
-      set("sentinel-state", loan.is_behind ? "Behind" : loan.status === "Active" ? "Paying on time" : loan.status);
-      const bar = document.querySelector('[data-live-bar="sentinel"]');
-      if (bar) bar.style.setProperty("--k", String(Number(loan.repaid) / Number(loan.terms.total_due)));
-    }
+    const byId = (id) => { const r = all[ids.indexOf(id)]; return r?.status === "fulfilled" ? r.value : null; };
+    showSamples(byId);
     renderMarket(ids, all);
-    const north = all[ids.indexOf(`sentinel-north.${REGISTRY}`)];
-    const raise = north?.status === "fulfilled" ? north.value.current_loan : null;
-    if (raise) {
-      set("north-funded", tusd(raise.funded));
-      set("north-holders", String(raise.holders));
-      const bar = document.querySelector('[data-live-bar="north"]');
-      if (bar) bar.style.setProperty("--k", String(Number(raise.funded) / Number(raise.terms.principal)));
-    }
-  } catch { /* the HTML figures stand */ }
+    const jobs = all.reduce((n, r) => n + (r.status === "fulfilled" ? Number(r.value.stats.jobs_done) : 0), 0);
+    const latest = await Promise.all(ids.map((id) => view(id, "get_jobs", { limit: 1 }).then((j) => Number(j[0]?.created_at ?? 0), () => 0)));
+    showCounts(ids.length, jobs, Math.max(0, ...latest));
+  } catch { /* the placeholders stand */ }
 }
 
 const SAMPLE = /^(sentinel|lookout|watchtower|beacon)/;

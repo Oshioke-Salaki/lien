@@ -7,8 +7,8 @@ Everything here was run. Where something has not been verified, it says so.
 | Contract unit and property tests | 146 | Every rule, refusal and money path, plus conservation under random inputs | `cargo test -p lien-agent` |
 | Sandbox lifecycles | 17 | Real cross-contract calls on a local NEAR node with a stand-in for OutLayer | `cargo test --release -p lien-integration-tests` |
 | Agent tests | 11 | Risk rules and the output format the contract parses | `cd agents/sentinel && cargo test` |
-| App logic | 71 | Money math against the Rust cases, formatting, accounts, reading outcomes, merging positions reads, the MCP server | `cd web && npm test` |
-| Browser, read-only | 18 | Real app on real testnet: pages, live proofs, no sideways scrolling, a live Intents quote | `npx playwright test readonly` |
+| App logic | 90 | Money math against the Rust cases, formatting, accounts, reading outcomes, merging positions reads, the MCP server, NEAR Intents quote requests and status wording | `cd web && npm test` |
+| Browser, read-only | 21 | Real app on real testnet: pages, the landing agreeing with the app to the cent, live proofs, no sideways scrolling, a live Intents quote with a real deposit address and its status, the Intents dry run | `npx playwright test readonly` |
 | Browser, full loan | 1 | Guest → business → loan → job → refund → claim → foreclosure → still serving → redemption | `npx playwright test lifecycle` |
 | Browser, sale | 1 | Two separate users: default, foreclosure by a stranger, bid, sale, control changes hands, lender collects | `npx playwright test sale` |
 | Live network run | 1 | The full lifecycle with real OutLayer. See [evidence](evidence/testnet-e2e.md) | `npm run e2e` in `ops` |
@@ -27,6 +27,7 @@ Kept here because they show what the tests are worth.
 - **A false claim in the UI:** a panel called the contract "audited". It is not, and now says "published".
 - **Guests ready before funded:** the app showed guests signed in before their test funds arrived.
 - **Faucet limits:** the public faucet allows about one account per IP every 11 hours, which would have failed for nearly every visitor. Guests now come from a sponsor.
+- **The landing and the app disagreed (found by a judge):** the landing showed Sentinel at $94.47 owed and $15.53 repaid while its page showed $89.94 and $20.06. Same rounding, same chain, but the landing's figures were baked into the HTML and only replaced after its own slow RPC sweep, which a throttled node could stop. The landing now reads `/api/market`, the snapshot the app shows, shows placeholders until then, and a browser test checks the two agree to the cent.
 
 ## Verified live, by hand
 
@@ -38,7 +39,7 @@ Kept here because they show what the tests are worth.
 ## Not verified
 
 - A NEAR AI verdict with a real key, which needs a funded NEAR AI account.
-- Anything on mainnet, including a real NEAR Intents payment reaching an inbox. The route and price are real, and the receiving side is tested with a plain transfer, which is what an Intents payout looks like according to its docs.
+- Anything on mainnet, including a real NEAR Intents payment reaching an inbox. The route, price, deposit address and `PENDING_DEPOSIT` status are real; the later statuses are shown only in the dry run and unit tests. The receiving side is tested with a plain transfer, which is what an Intents payout looks like according to its docs.
 - Signing with each wallet in NEAR Connect. Browser tests sign with the guest key.
 - An independent audit or load testing.
 - The `transfer_note`, `propose_change` and `approve_change` flows through the UI. The contract rules are unit-tested.

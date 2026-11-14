@@ -1,5 +1,6 @@
 // The market's heartbeat: a customer buys one real Sentinel check, so the business keeps
-// earning and its lenders keep being repaid through the waterfall, on a schedule.
+// earning and its lenders keep being repaid through the waterfall, on a schedule: about every
+// three hours by GitHub Actions, whose scheduled runs can be delayed or skipped.
 //
 // It only ever buys work. It never forecloses, settles or cancels anything, so the demo
 // businesses stay in the states the judges' guide describes. Run by
@@ -22,6 +23,7 @@ const BUSINESS = process.env.BUSINESS ?? `sentinel.${d.registry}`;
 const YOCTO = 10n ** 24n;
 const TANK_FLOOR = 15n * 10n ** 22n; // 0.15 NEAR: about seven runs of compute left
 const TANK_TOPUP = 3n * 10n ** 23n; // 0.3 NEAR
+const MIN_GAP_SECS = 2 * 3600;
 
 // Real accounts worth checking, so every report is a real answer about something that exists.
 const TARGETS = [
@@ -62,6 +64,19 @@ async function main() {
     }
   }
   if (BigInt(agent.tank) + TANK_TOPUP < compute) { say("- Not enough compute funds for a run; skipping."); return; }
+
+  // The workflow has two schedules, 90 minutes apart, because GitHub delays or drops scheduled
+  // runs under load. When both fire, the second one sees the first's purchase and skips, so the
+  // market still gets about one check every three hours, not two.
+  if (process.env.GITHUB_EVENT_NAME === "schedule") {
+    const recent = await view<any[]>(BUSINESS, "get_jobs", { limit: 10 }, net);
+    const mine = recent.find((job) => job.payer === buyerId);
+    const since = mine ? Number(agent.now) - Number(mine.created_at) : Infinity;
+    if (since < MIN_GAP_SECS) {
+      say(`- This buyer bought a check ${Math.round(since / 60)} minutes ago, so this scheduled run skips the purchase.`);
+      return;
+    }
+  }
 
   // Keep the buyer able to pay. The test token has an open faucet.
   const held = BigInt(await view<string>(d.token, "ft_balance_of", { account_id: buyerId }, net));

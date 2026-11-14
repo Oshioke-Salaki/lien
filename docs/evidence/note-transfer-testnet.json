@@ -1,0 +1,60 @@
+{
+  "business": "watchtower-late-5337.v1.lien-13569.testnet",
+  "network": "testnet",
+  "loan": 0,
+  "loanStatus": "Foreclosed",
+  "at": "2026-11-14T08:33:04.679Z",
+  "before": {
+    "holder": {
+      "principal": "40000000",
+      "claimed": "0",
+      "voted_proposal": null,
+      "claimable": "5230000"
+    },
+    "buyer": null,
+    "holders": 1
+  },
+  "steps": [
+    {
+      "what": "A stranger tries to move a note it does not hold",
+      "by": "lien-f6-3876.testnet",
+      "refused": true,
+      "reason": "this account holds no note on that loan"
+    },
+    {
+      "what": "The lender moves its whole note to lien-f5-3869.testnet",
+      "by": "lien-f4-3863.testnet",
+      "method": "transfer_note",
+      "tx": "2ZFiDVZ729qkLDPvpUmsUYEZouGZXVDZEJjY95SXpQWy",
+      "link": "https://testnet.nearblocks.io/txns/2ZFiDVZ729qkLDPvpUmsUYEZouGZXVDZEJjY95SXpQWy",
+      "after": {
+        "holder": null,
+        "buyer": {
+          "principal": "40000000",
+          "claimed": "0",
+          "voted_proposal": null,
+          "claimable": "5230000"
+        },
+        "holders": 1
+      }
+    },
+    {
+      "what": "lien-f5-3869.testnet moves it back",
+      "by": "lien-f5-3869.testnet",
+      "method": "transfer_note",
+      "tx": "DQR67ULxkYfKk1RXFHoWoYDLZZnJ5BeQ6Hbcf3XnABgZ",
+      "link": "https://testnet.nearblocks.io/txns/DQR67ULxkYfKk1RXFHoWoYDLZZnJ5BeQ6Hbcf3XnABgZ",
+      "after": {
+        "holder": {
+          "principal": "40000000",
+          "claimed": "0",
+          "voted_proposal": null,
+          "claimable": "5230000"
+        },
+        "buyer": null,
+        "holders": 1
+      }
+    }
+  ],
+  "restored": true
+}

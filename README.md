@@ -57,7 +57,7 @@ Then open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally
 | Buy a check on `outlayer.testnet` | About 15 seconds later, a risk report. The waterfall bar shows where your payment went |
 | Buy a check on `hello` | A refund, because there is no account in it to check |
 | Lend to **Sentinel North** | The raised amount moves, and **Your position** shows your note |
-| In the market, open a business marked **Can be taken over** and press **Take over this business** (the market always keeps one: sample businesses on a fast demo clock are restocked every three hours) | A notice of foreclosure. Buy a check from it: it still works, and the operator's share now goes to lenders |
+| In the market, open a business marked **Can be taken over** and press **Take over this business** (the market always keeps one: sample businesses on a fast demo clock are restocked by a GitHub Actions job scheduled about every three hours, whose runs can be delayed) | A notice of foreclosure. Buy a check from it: it still works, and the operator's share now goes to lenders |
 | Open a business marked **For sale** and place a bid (an open auction is always kept available; its clock starts with the first bid) | Your bid stands, and the highest bid takes the business when the auction ends |
 | Start your own at `/create`, then choose **Short demo clocks** | Your own keyless business, and a full foreclosure in about ten minutes |
 
@@ -88,7 +88,7 @@ Lien is an MCP server at `https://lien-five.vercel.app/api/mcp`. Any MCP client 
 
 ## The market is live
 
-Every three hours a [scheduled GitHub Action](.github/workflows/heartbeat.yml) has a customer buy one real Sentinel check on testnet: the job runs on the pinned build inside Intel TDX through OutLayer, the report lands on chain, and the sale repays Sentinel's lenders first. Each run's summary in the [Actions tab](https://github.com/Oshioke-Salaki/lien/actions/workflows/heartbeat.yml) links its transaction. It only buys work, so the businesses waiting to be foreclosed or sold stay that way for you to try.
+About every three hours a [scheduled GitHub Action](.github/workflows/heartbeat.yml) has a customer buy one real Sentinel check on testnet (GitHub can delay or skip scheduled runs, so the gap is sometimes longer; a second schedule 90 minutes later covers a dropped run): the job runs on the pinned build inside Intel TDX through OutLayer, the report lands on chain, and the sale repays Sentinel's lenders first. Each run's summary in the [Actions tab](https://github.com/Oshioke-Salaki/lien/actions/workflows/heartbeat.yml) links its transaction. It only buys work, so the businesses waiting to be foreclosed or sold stay that way for you to try.
 
 ## Revenue on other chains
 
@@ -119,7 +119,7 @@ A job is one round trip. The customer's payment is held, `request_execution` run
 |---|---|
 | **OutLayer** | Runs the pinned WASM in Intel TDX and returns the result on chain |
 | **Yield and resume** | The contract pauses while the enclave works and resumes with the result |
-| **NEAR Intents, 1Click API** | Income from other chains reaches a business's inbox. The app shows a live route and price |
+| **NEAR Intents, 1Click API** | Income from other chains reaches a business's inbox. The app gets a real quote and deposit address, follows its status (pending, deposit seen, processing, success, incomplete deposit, refunded, failed) and has a dry run for judges |
 | **Chain Signatures** | A keyless vault controls an EVM address and has the MPC network sign only transfers to one fixed address on Base Sepolia |
 | **Keyless accounts** | Sub-accounts deployed with no access keys, so nobody can spend or change them |
 | **Global contracts (NEP-591)** | Every business runs the same published code, checkable by hash |
@@ -132,7 +132,7 @@ A job is one round trip. The customer's payment is held, `request_execution` run
 
 - **Real on testnet:** every contract, loan, job, foreclosure and sale. Jobs run on OutLayer's live workers and produce real Intel TDX quotes.
 - **A test stablecoin:** testnet uses tUSD. Mainnet is configured for native USDC.
-- **NEAR Intents is a quote only.** Intents has no testnet, so the app asks the mainnet 1Click API for a live route and price as a dry run, with sending switched off: no Intents payment has reached a Lien inbox. The inbox and its forwarding into the waterfall are tested live with a plain transfer, which is what an Intents payout looks like.
+- **NEAR Intents runs up to the deposit, not past it.** Intents has no testnet, so the app asks the mainnet 1Click API for a real quote, deposit address and live status, with sending switched off: no Intents payment has reached a Lien inbox. On testnet the quote credits the inbox's name inside the Intents ledger, because mainnet 1Click refuses a `.testnet` account as a NEAR destination, so nothing should be sent to it. The inbox and its forwarding into the waterfall are tested live with a plain transfer, which is what an Intents payout looks like.
 - **Chain Signatures is a narrow vault.** The keyless vault, its refusals, an MPC signature and the [transfer on Base Sepolia](https://sepolia.basescan.org/tx/0x15b1b31a4cf9591b486d0c60806fb263588e8286bd9796bfebd2481b92780bd0) are real. The settlement address is held by the Lien team, and nothing yet moves money from it into the business's inbox.
 - **Not live yet:** a mainnet deployment, and a NEAR AI verdict on a real key.
 - **Not audited.** See [docs/SECURITY.md](docs/SECURITY.md), which lists what is and is not protected.

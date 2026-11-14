@@ -63,7 +63,7 @@ Its account name, inbox, customers, record, sealed credentials, seven days of wo
 Not solved. Businesses on Lien share dependencies, at least OutLayer and the stablecoin, so their defaults are correlated. Today a lender diversifies by hand across businesses. A pooled product with limits on shared exposure would be the next step.
 
 **Can a lender get out before the loan ends?**
-Yes. A note can be transferred to another account with `transfer_note`, so a secondary market can price it. There is no order book for notes yet.
+Yes. A note can be transferred to another account with `transfer_note`, with its uncollected repayments, so it can be sold or given away; `get_note` shows what it has earned and can claim, so a buyer can price it. It has been done on testnet ([recorded](evidence/note-transfer-testnet.json)). There is no order book or escrow for notes yet, so a sale is a payment and a transfer in two steps.
 
 **Can a business sell at auction for less than the money inside it?**
 Yes, if its loan's terms allow it. The lowest first bid is a share of what is still owed when the bid is placed, which the owner offers and lenders accept before lending (`auction_reserve_bps`); every later bid must beat the highest by at least 5%. The running money a buyer receives is set by the loan, so a low floor can price the business below its cash. The app says so on the auction and on the lend form, before anyone lends. Lien's own sample businesses now set the floor at the whole debt; the two older samples, Lookout and Sentinel Late, keep the lower floors their loans were made with, because terms never change after funding.
