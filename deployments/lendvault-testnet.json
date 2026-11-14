@@ -1,0 +1,36 @@
+{
+  "vault": "lendvault.lien-vault-48296.testnet",
+  "agent": "agent.lien-vault-48296.testnet",
+  "beneficiary": "lien-vault-48296.testnet",
+  "token": "usd.lien-13569.testnet",
+  "registry": "v1.lien-13569.testnet",
+  "policy": {
+    "token": "usd.lien-13569.testnet",
+    "registry": "v1.lien-13569.testnet",
+    "beneficiary": "lien-vault-48296.testnet",
+    "agent": "agent.lien-vault-48296.testnet",
+    "max_per_loan": "10000000",
+    "max_share_bps": 5000,
+    "total_budget": "30000000"
+  },
+  "agentKeyMethods": [
+    "lend",
+    "claim",
+    "foreclose"
+  ],
+  "agentTx": "5ejbMEf5peCQ9Chqm7uBQjTb1xKZRZwmhQ9CkK25d4X",
+  "vaultTx": "5YDUA4dr4ajRdeUknk8VeYwRstaUvV3DKqZrYeUVo7KY",
+  "codeBytes": 192569,
+  "fundTx": "Xjr6YnFcj4K6yfiiZPxLLtBUnEzx7isczP8vn9KFtro",
+  "funded": "30000000",
+  "lendTx": "GVnPoohzpHmGYTtPJjRgv4SfbmJZK7qMbKcm2rYRVr4G",
+  "lendBusiness": "courier-48265.v1.lien-13569.testnet",
+  "lendLoanId": 1,
+  "lendAccepted": "3000000",
+  "lendSignedBy": "agent.lien-vault-48296.testnet, function-call key only (agents/lender/src/vault.ts)",
+  "refuseCapTx": "2YEKSJXax1iuU2S48fFuEK3GG8dNTVF9MAj1Fg43rKXk",
+  "refuseShareTx": "3kAKEtpuZ4iwTrRHj8QCF4pN3PdB5oCcMP59qopa9neV",
+  "refuseNonBusinessTx": "4x5wsFRzqsUCLngV31PdeqnMPzabzczuaswFpWCJTxuw",
+  "refuseUnlistedTx": "5WPToFMUJv4bjb3DTAc79RPmxvuehbUateNL8PzSrJ7Q",
+  "withdrawTx": "5QskvjsKogT3qaZtB7x7jNHK8K4r9A3LSHx4L9Cruyoh"
+}

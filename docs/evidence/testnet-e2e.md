@@ -172,3 +172,35 @@ The same day, `cd ops && npm run lender-attack` played a fully obedient agent ag
 - Result: the agent held 50.25 tUSD before and after; attacker.testnet held 0 before and after.
 
 **What a function-call key cannot do.** NEAR lets no function-call key attach a deposit; the allowance pays gas only. `ft_transfer_call` requires exactly 1 yoctoNEAR, so lending and hiring cannot be signed with a scoped key: the token-scoped key above was rejected for exactly that. The agent therefore keeps its full key for token payments that pass the policy and the guard, holds only its lending budget, and signs collections and foreclosures, which attach nothing, with a key scoped to those two methods on one business.
+
+## The lender agent lends with a function-call key through a keyless policy vault
+
+On 14 November 2026, with `cd ops && npx tsx src/lendvault.ts` and `cd agents/lender && npx tsx src/vault.ts`. Every hash is also in [deployments/lendvault-testnet.json](../../deployments/lendvault-testnet.json); the agent's lines are in [agents/lender/logs/vault.jsonl](../../agents/lender/logs/vault.jsonl).
+
+**Why.** NEAR lets no function-call key attach a deposit, and `ft_transfer_call` needs exactly 1 yoctoNEAR, so the lender above lends with its full-access key. `contracts/lendvault` moves the payment into a contract: the agent calls `lend` with no deposit, and the vault attaches the 1 yoctoNEAR from its own NEAR balance after checking its policy.
+
+**Accounts.** `lien-vault-48296.testnet` (a new faucet account, 10 NEAR) stands for the human who funds the vault; it is the vault's beneficiary.
+
+- [Created `agent.lien-vault-48296.testnet`](https://testnet.nearblocks.io/txns/5ejbMEf5peCQ9Chqm7uBQjTb1xKZRZwmhQ9CkK25d4X) with 1 NEAR and one key, a function-call key for `lendvault.lien-vault-48296.testnet` that can call only `lend`, `claim` and `foreclose` (allowance 1 NEAR, gas only). The agent has no full-access key.
+- [Created `lendvault.lien-vault-48296.testnet`](https://testnet.nearblocks.io/txns/5YDUA4dr4ajRdeUknk8VeYwRstaUvV3DKqZrYeUVo7KY) in one transaction (create, 2.3 NEAR, deploy 192,569 bytes, `new`) with no AddKey: `view_access_key_list` returns no keys. The policy, fixed by `new` with no method to change it: token `usd.lien-13569.testnet`, registry `v1.lien-13569.testnet`, beneficiary `lien-vault-48296.testnet`, agent `agent.lien-vault-48296.testnet`, `max_per_loan` 10 tUSD, `max_share_bps` 5000, `total_budget` 30 tUSD.
+- Registered the vault ([tx](https://testnet.nearblocks.io/txns/CAn2Uf32kt7YkhNPAZkVqased2EGDZeyMJHkah5D25Sd)) and the beneficiary ([tx](https://testnet.nearblocks.io/txns/7ZqRYruxGSFN9TmDKX5MgvUizkLW4rTBExYkcUPZQnGF)) with the token, and [minted 30 tUSD to the vault](https://testnet.nearblocks.io/txns/Xjr6YnFcj4K6yfiiZPxLLtBUnEzx7isczP8vn9KFtro) through the token's faucet.
+
+**A lend signed only with the function-call key.** Courier (`courier-48265.v1.lien-13569.testnet`) was raising 10 tUSD (loan 1, nothing funded). `vault.ts` read the vault's policy, the registry and Courier's loan with views, sized the loan at 3 tUSD, and called `lend` ([tx](https://testnet.nearblocks.io/txns/GVnPoohzpHmGYTtPJjRgv4SfbmJZK7qMbKcm2rYRVr4G)). In that one transaction the vault asked the registry (`get_agents`) and Courier (`get_agent`), checked them, sent `ft_transfer_call` of 3 tUSD with its own 1 yoctoNEAR, and settled from the token's answer: Courier accepted all 3. Afterwards `get_note(1, lendvault.lien-vault-48296.testnet)` on Courier shows principal 3,000,000, so the note is in the vault's name and repayments go to the vault.
+
+**Refused on chain, each signed with the same key:**
+
+- 11 tUSD to Courier: "refused: 11000000 is above max_per_loan 10000000" ([tx](https://testnet.nearblocks.io/txns/2YEKSJXax1iuU2S48fFuEK3GG8dNTVF9MAj1Fg43rKXk)).
+- 2.000001 tUSD more to Courier, within `max_per_loan` but taking the vault's note past half of the 10 tUSD loan: "refused: the vault's note on loan 1 would be 5000001, above max_share_bps 5000 of the principal 10000000 (5000000)" ([tx](https://testnet.nearblocks.io/txns/3kAKEtpuZ4iwTrRHj8QCF4pN3PdB5oCcMP59qopa9neV)). This check uses Courier's loan as read through `get_agent` in the same transaction.
+- 1 tUSD to `lien-f4-3863.testnet`, an ordinary account: "refused: lien-f4-3863.testnet is not a Lien business (not an account created under the registry v1.lien-13569.testnet)" ([tx](https://testnet.nearblocks.io/txns/4x5wsFRzqsUCLngV31PdeqnMPzabzczuaswFpWCJTxuw)).
+- 1 tUSD to `sentinel-x.v1.lien-13569.testnet`, an account under the registry that is not a business (it is the Chain Signatures vault): "refused: sentinel-x.v1.lien-13569.testnet is not a Lien business (the registry v1.lien-13569.testnet does not list it)" ([tx](https://testnet.nearblocks.io/txns/5WPToFMUJv4bjb3DTAc79RPmxvuehbUateNL8PzSrJ7Q)).
+- Rejected by NEAR before running, so no transaction exists: `withdraw` on the vault with the agent's key ("Access key does not allow method withdraw"), and `ft_transfer` on the token ("Access key receiver lendvault.lien-vault-48296.testnet does not match transaction receiver usd.lien-13569.testnet").
+
+**Withdrawal.** The beneficiary [withdrew 1 tUSD](https://testnet.nearblocks.io/txns/5QskvjsKogT3qaZtB7x7jNHK8K4r9A3LSHx4L9Cruyoh). `withdraw` takes no recipient: it always pays the beneficiary, whoever calls it (the agent or the beneficiary; anyone else is refused). After the run: `get_totals` lent 3, in flight 0, withdrawn 1, budget left 27 tUSD; the vault holds 26 tUSD.
+
+- ok: a lend signed by an account with no full-access key
+- ok: above the cap, above the share of one loan, a non-business and an unlisted account under the registry, all refused by the contract on chain
+- not shown on testnet: `claim` and `foreclose` through the vault (Courier's loan has not started). Both are unit-tested with mocked promises, and both attach nothing.
+- note, the trust model: the vault's money can leave only by `ft_transfer_call` to a business the registry lists, with the `fund` message, or by `ft_transfer` to the beneficiary. A stolen agent key can still choose which listed business gets a loan within the caps, and anyone can list a business through the registry, so the caps are what bound it. The vault trusts the registry's listing; the registry account holds a full-access key.
+- note: a contract cannot read another account's access keys, so the vault does not check that a business has none. It relies on the registry, which creates every business in one batch with no AddKey, on shared code that has no method to add a key.
+- note: `total_budget` counts principal ever accepted; repayments and withdrawals do not refill it. Unused tokens a business sends back are tracked as `refunded` and free the budget.
+- Tests: `cargo test -p lien-lendvault`, 31 passing: each refusal above, the callbacks being callable only by the vault, a refund, a failed transfer, claim, foreclose and withdraw, and the happy path with mocked registry, business and token results.

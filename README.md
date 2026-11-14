@@ -113,6 +113,8 @@ Every MCP tool that moves money now runs Sentinel's rules (ported to [`web/src/l
 
 **Keys, honestly.** NEAR does not let a function-call access key attach any deposit; its allowance pays gas only. Lending and hiring go through `ft_transfer_call`, which requires exactly 1 yoctoNEAR, so they need the agent's full-access key: the [attack log](agents/lender/logs/attack.jsonl) records the protocol rejecting a token-scoped key with `Deposit is not allowed with function call`. The narrowest setup that works: the full key signs only token payments that passed the policy and the guard, and the account holds only its lending budget; collections and foreclosures, which attach nothing, are signed with a key the agent adds for each business it lends to, scoped to `claim` and `foreclose` on that business alone.
 
+**Lending without a full-access key.** [`contracts/lendvault`](contracts/lendvault/src/lib.rs) removes that limit for the money it holds. It is a keyless contract with no owner, setter or upgrade method, holding the agent's lending budget in tUSD. The agent calls `lend(business, amount)` with no deposit, so a function-call key is enough, and the vault sends `ft_transfer_call` with its own 1 yoctoNEAR only after checking on chain the policy fixed at init: the caller is the agent; the amount is within `max_per_loan` (10 tUSD) and what is left of `total_budget` (30 tUSD); the registry lists the business (a cross-contract `get_agents`); and its loan is raising, with the vault's note staying within `max_share_bps` (50%) of the principal (a cross-contract `get_agent`). Notes are in the vault's name, so repayments come back to it through `claim`, and `withdraw` pays only the beneficiary fixed at init. On testnet the agent `agent.lien-vault-48296.testnet` holds no full-access key, only one key scoped to `lend`, `claim` and `foreclose` on `lendvault.lien-vault-48296.testnet`. With it, [`agents/lender/src/vault.ts`](agents/lender/src/vault.ts) [lent 3 tUSD to Courier](https://testnet.nearblocks.io/txns/GVnPoohzpHmGYTtPJjRgv4SfbmJZK7qMbKcm2rYRVr4G), and the vault refused, on chain, [11 tUSD](https://testnet.nearblocks.io/txns/2YEKSJXax1iuU2S48fFuEK3GG8dNTVF9MAj1Fg43rKXk), [more than half of one loan](https://testnet.nearblocks.io/txns/3kAKEtpuZ4iwTrRHj8QCF4pN3PdB5oCcMP59qopa9neV), [an ordinary account](https://testnet.nearblocks.io/txns/4x5wsFRzqsUCLngV31PdeqnMPzabzczuaswFpWCJTxuw) and [an account under the registry that it does not list](https://testnet.nearblocks.io/txns/5WPToFMUJv4bjb3DTAc79RPmxvuehbUateNL8PzSrJ7Q). Within the policy the agent still picks the business, and anyone can list one, so the caps are what bound a stolen key. Run it with `cd ops && npx tsx src/lendvault.ts deploy|fund|lend|refuse|status` and `cd agents/lender && npx tsx src/vault.ts`; details in the [evidence](docs/evidence/testnet-e2e.md#the-lender-agent-lends-with-a-function-call-key-through-a-keyless-policy-vault).
+
 ## Hire Sentinel on NEAR's Agent Market
 
 **Live on NEAR's [Agent Market](https://market.near.ai/a/lien-sentinel)** as `lien-sentinel`, $0.25 a check, payable per call with x402 in USDC ([agent card](https://lien-sentinel.market.near.ai/.well-known/agent-card.json)). The marketplace's signed test ping reached the webhook and was verified, and an unpaid call answers `402` with the price. Try it: `curl -s -X POST https://lien-sentinel.market.near.ai/a2a/v1 -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"SendMessage","params":{"message":{"role":"ROLE_USER","messageId":"1","parts":[{"text":"check outlayer.near"}]}}}'`
@@ -199,6 +201,7 @@ Free test accounts need a sponsor in `web/.env.local` (see `web/.env.example`). 
 ./scripts/build.sh                               # needs cargo-near
 cargo test -p lien-agent                         # contract rules and money properties
 cargo test -p lien-xvault                        # the Chain Signatures vault's policy and payloads
+cargo test -p lien-lendvault                     # the lending vault's policy, refusals and callbacks
 cargo test --release -p lien-integration-tests   # full lifecycles on a local NEAR node
 (cd agents/sentinel && cargo test)               # the agent
 (cd web && npm test)                             # app logic
@@ -227,6 +230,7 @@ contracts/agent       The business: loans, waterfall, foreclosure, auction, jobs
 contracts/collector   The inbox for income from anywhere
 contracts/registry    Creates businesses and lists them
 contracts/xvault      Keyless Chain Signatures vault: Base Sepolia transfers to one fixed address
+contracts/lendvault   Keyless lending vault: the lender agent lends through it with a function-call key
 contracts/mocks       Test stablecoin and a stand-in for OutLayer
 agents/sentinel       The example agent, built to WASI P2
 tests/integration     Sandbox lifecycles
