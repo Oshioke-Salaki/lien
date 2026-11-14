@@ -155,6 +155,13 @@ await check("Robbing it during a loan was refused on chain (owner and stranger, 
   return { ok, detail: lines.join("\n   ") };
 });
 
+await check("A compromised build's payment outside the spend policy was blocked on chain", async () => {
+  const rec = JSON.parse(readFileSync(join(ROOT, "docs/evidence/blocked-spend-testnet.json"), "utf8"));
+  const a = await view(rec.business, "get_agent");
+  const blocked = Number(a.stats?.spends_blocked ?? 0);
+  return { ok: blocked >= 1, detail: `${rec.business}: spends_blocked = ${blocked} (read now from the chain); the build ${rec.compromised_build.hash.slice(0, 12)}… tried to pay ${rec.compromised_build.pays}\n   ${rec.transactions.buy_check?.link ?? ""}` };
+});
+
 const passed = results.filter(Boolean).length;
 console.log(`\n${passed}/${results.length} checks passed.`);
 process.exit(passed === results.length ? 0 : 1);

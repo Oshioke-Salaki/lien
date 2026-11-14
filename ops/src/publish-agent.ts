@@ -64,7 +64,11 @@ for (let attempt = 0; ; attempt += 1) {
   await sleep(5_000);
 }
 
-const deployment = loadDeployment(net);
-deployment.sentinel = { url, hash, buildTarget: "wasm32-wasip2", ...(vendor ? { vendor } : {}) };
-saveDeployment(deployment);
+// NO_SAVE publishes a build without making it the deployment's Sentinel build: used for the
+// deliberately compromised build in `npm run blocked-spend`.
+if (!process.env.NO_SAVE) {
+  const deployment = loadDeployment(net);
+  deployment.sentinel = { url, hash, buildTarget: "wasm32-wasip2", ...(vendor ? { vendor } : {}) };
+  saveDeployment(deployment);
+}
 console.log(`Published and verified.\n  hash ${hash}\n  url  ${url}`);

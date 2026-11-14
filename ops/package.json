@@ -15,6 +15,7 @@
     "upgrade": "tsx src/upgrade.ts",
     "refusals": "tsx src/refusals.ts",
     "enable-ai": "tsx src/enable-ai.ts",
+    "blocked-spend": "tsx src/blocked-spend.ts",
     "sample-repaid": "tsx src/sample-repaid.ts",
     "xvault": "tsx src/xvault.ts",
     "note-transfer": "tsx src/note-transfer.ts",

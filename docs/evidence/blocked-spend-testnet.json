@@ -1,0 +1,40 @@
+{
+  "business": "beacon-repaid-7978.v1.lien-13569.testnet",
+  "network": "testnet",
+  "at": "2026-11-14T09:21:06.638Z",
+  "compromised_build": {
+    "hash": "1ee8adb49bdc30d941ee68ca41123d1addbc2a73f571a75e2c483d74df159e95",
+    "url": "https://test.fastfs.io/lien-f4-3863.testnet/outlayer.testnet/1ee8adb49bdc30d941ee68ca41123d1addbc2a73f571a75e2c483d74df159e95.wasm",
+    "pays": "attacker.testnet (not an approved vendor)"
+  },
+  "policy": {
+    "vendors": [
+      "lien-f6-3876.testnet"
+    ],
+    "max_per_tx": "100000",
+    "max_per_day": "5000000"
+  },
+  "spends_blocked": {
+    "before": 0,
+    "after": 1
+  },
+  "transactions": {
+    "switch_to_compromised": {
+      "tx": "6bLJHbGL3Tbpoxp6FRRA3iJrLeBh3GTDpr7v4jmWmA8d",
+      "link": "https://testnet.nearblocks.io/txns/6bLJHbGL3Tbpoxp6FRRA3iJrLeBh3GTDpr7v4jmWmA8d"
+    },
+    "restore": {
+      "tx": "A3ME1Y8cV6wmHAiSXZVJrrzRQ2R2EaczhnMd8ywr1DPr",
+      "link": "https://testnet.nearblocks.io/txns/A3ME1Y8cV6wmHAiSXZVJrrzRQ2R2EaczhnMd8ywr1DPr"
+    },
+    "buy_check": {
+      "tx": "7oJUNFtXbM96RXYTGAXgQKQ8QWmUiGSJcQh8wnMzFckH",
+      "link": "https://testnet.nearblocks.io/txns/7oJUNFtXbM96RXYTGAXgQKQ8QWmUiGSJcQh8wnMzFckH"
+    }
+  },
+  "heartbeat": [
+    "- Loan: none",
+    "- Bought a check of `usd.lien-13569.testnet` for 0.25 tUSD ([tx](https://testnet.nearblocks.io/txns/7oJUNFtXbM96RXYTGAXgQKQ8QWmUiGSJcQh8wnMzFckH))",
+    "- Delivered from the pinned build 1ee8adb49bdc…: **medium risk** (owner_can_replace_contract_code)"
+  ]
+}

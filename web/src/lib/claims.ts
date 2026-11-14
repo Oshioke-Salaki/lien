@@ -153,8 +153,12 @@ export const ATTACKS: Attack[] = [
       { name: "compromised_code_cannot_pay_anyone_outside_the_policy", href: code(`${SANDBOX}#L266`) },
       { name: "compromised_code_cannot_pay_the_operator", href: code(`${UNIT}#L1124`) },
     ],
-    evidence: [],
-    note: "No blocked payment has happened on testnet, so this one is proven by the tests. The live run did make one payment inside the policy, to the approved vendor.",
+    evidence: [
+      { label: "A business moved to a compromised build that pays attacker.testnet", href: tx("6bLJHbGL3Tbpoxp6FRRA3iJrLeBh3GTDpr7v4jmWmA8d") },
+      { label: "A paid check ran it: the payment was skipped, spends_blocked 0 → 1", href: tx("7oJUNFtXbM96RXYTGAXgQKQ8QWmUiGSJcQh8wnMzFckH") },
+      { label: "The business put back on its real build", href: tx("A3ME1Y8cV6wmHAiSXZVJrrzRQ2R2EaczhnMd8ywr1DPr") },
+    ],
+    note: "The compromised build really ran in the enclave and really asked to pay an unapproved account. The contract refused and counted it.",
   },
   {
     attack: "Someone swaps the code mid-loan without lender approval",
