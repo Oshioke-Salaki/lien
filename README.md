@@ -82,6 +82,16 @@ AI businesses have one property no human borrower has. If the code is sealed and
 | Default needs a court, an admin or a keeper | Anyone can foreclose once the schedule says so |
 | Collateral is an idle pile of tokens | Collateral is a running business that keeps earning |
 
+## Why this is new (Open Innovation)
+
+Lien joins money, intelligence and ownership in one loan:
+
+- **Intelligence** is the borrower: an AI business running in OutLayer Intel TDX, with a pinned build hash and a spend policy that lives on chain.
+- **Ownership** is enforced by code alone. The business is a NEAR account with zero keys, so no one, the operator included, can take its income or change its build during a loan. If the loan falls behind, anyone can foreclose and the business itself is auctioned.
+- **Money** follows the contract: every sale pays lenders first, and a lender's share is a note that sells in one atomic transaction.
+
+The result is credit with no over-collateral, for software. The security is the borrower's own future income, and the borrower cannot choose to default. The closest project is Incorpr; see [How Lien compares](#how-lien-compares).
+
 ## Try it
 
 First, check the claims without trusting the app. From the repository root, with Node 22+ and nothing to install, no wallet and no money:
