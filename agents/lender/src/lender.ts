@@ -16,10 +16,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { addFcKey, explorer, fcAccount, fcKey, fullKeyAccount, jobIdFromLogs, logger, send } from "./chain";
+import { addFcKey, explorer, fcAccount, fcKey, fullKeyAccount, jobIdFromLogs, logger, readLog, registered, send } from "./chain";
+import { counterMemo } from "./counter";
 import { vet, type Intent, type Prepared } from "./guard";
 import { Mcp } from "./mcp";
-import { evaluate, fmt, units, warnAcceptable, type BusinessView, type Policy } from "./policy";
+import { evaluate, fmt, units, warnAcceptable, type BusinessView, type Counter, type Policy } from "./policy";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const policyText = readFileSync(join(ROOT, "policy.json"), "utf8");
@@ -37,7 +38,7 @@ const FC_ALLOWANCE = 5n * 10n ** 23n; // 0.5 NEAR, for gas only: covers the 300 
 
 type Log = ReturnType<typeof logger>;
 
-export type PayOutcome = { ok: true; tx: string; logs: string[]; gate: unknown } | { ok: false; reason: string; gate?: unknown };
+export type PayOutcome = { ok: true; tx: string; logs: string[]; gate: unknown } | { ok: false; reason: string; gate?: unknown; dry?: true };
 
 /** Prepare through MCP, acknowledge a WARN only on accepted flags, check the transaction, sign it. */
 export async function gatedPay(mcp: Mcp, log: Log, tool: string, args: Record<string, unknown>, intent: Intent & { kind: "pay" }): Promise<PayOutcome & { prepared?: Prepared }> {
@@ -61,7 +62,7 @@ export async function gatedPay(mcp: Mcp, log: Log, tool: string, args: Record<st
     log({ kind: "guard", tool, target: intent.business, signed: false, problems });
     return { ok: false, reason: `guard refused to sign: ${problems.join("; ")}`, gate: prepared.gate };
   }
-  if (DRY) return { ok: false, reason: "dry run: not signed", gate: prepared.gate };
+  if (DRY) return { ok: false, dry: true, reason: "dry run: prepared and checked by the guard, not signed", gate: prepared.gate };
   const sent = await send(fullKeyAccount(ME), prepared);
   if (!sent.ok || sent.failedOn.includes(intent.business)) {
     return { ok: false, reason: `transaction ${sent.tx} failed: ${sent.failure ?? `refused by ${intent.business}, refunded`}`, gate: prepared.gate };
@@ -73,6 +74,10 @@ export async function gatedPay(mcp: Mcp, log: Log, tool: string, args: Record<st
 export async function hireSentinel(mcp: Mcp, log: Log, target: string, priceUnits: bigint, why: string) {
   const sentinel = `sentinel.${policy.registry}`;
   const paid = await gatedPay(mcp, log, "prepare_hire_check", { buyer: ME, target, business: sentinel }, { kind: "pay", business: sentinel, units: priceUnits, msg: { action: "job", input: `check ${target}` } });
+  if (!paid.ok && paid.dry) {
+    log({ kind: "hire", planned: true, agent_hired: sentinel, target, why, would_pay: fmt(priceUnits), signed: false, note: "dry run: the server prepared the purchase and the guard passed it; a live run signs it and waits for Sentinel's attested verdict" });
+    return { ok: true as const, planned: true as const, tx: null, jobId: null, verdict: null, report: null };
+  }
   if (!paid.ok) return { ok: false as const, reason: paid.reason };
   const jobId = jobIdFromLogs(paid.logs);
   log({ kind: "hire", agent_hired: sentinel, target, why, paid: fmt(priceUnits), job_id: jobId, tx: paid.tx, explorer: explorer(paid.tx) });
@@ -81,10 +86,40 @@ export async function hireSentinel(mcp: Mcp, log: Log, target: string, priceUnit
     await new Promise((r) => setTimeout(r, 8_000));
     const check = await mcp.call("get_check", { business: sentinel, job_id: jobId });
     if (!check.ok) continue;
-    if (check.data.status === "Done") return { ok: true as const, tx: paid.tx, jobId, verdict: check.data.verdict as string, report: check.data.report };
+    if (check.data.status === "Done") return { ok: true as const, planned: false as const, tx: paid.tx, jobId, verdict: check.data.verdict as string, report: check.data.report };
     if (check.data.status === "Refunded") return { ok: false as const, reason: `Sentinel could not finish job ${jobId}; the fee was refunded`, tx: paid.tx, jobId };
   }
   return { ok: false as const, reason: `job ${jobId} still running after 4 minutes`, tx: paid.tx, jobId };
+}
+
+/** Counters this agent has already sent, from its own log, so it counters each loan once. */
+export function countersSent(path: string): Array<{ business: string; loan_id: number; tx: string }> {
+  return readLog(path).filter((e) => e.kind === "counter" && e.sent === true).map((e) => ({ business: e.business, loan_id: e.loan_id, tx: e.tx }));
+}
+
+/**
+ * Publishes a counter-offer on chain: 1 unit of the pinned token to the business's
+ * operator, with the terms it would lend on as the memo. Built here, not by the server,
+ * and still passed through the guard before signing.
+ */
+async function counterOffer(log: Log, b: BusinessView, c: Counter) {
+  const loanId = b.loan!.id;
+  if (countersSent(log.path).some((s) => s.business === b.id && s.loan_id === loanId)) return;
+  const memoObj = counterMemo(b.id, loanId, c, policyHash);
+  const memo = JSON.stringify(memoObj);
+  const tx: Prepared = {
+    signer_id: ME,
+    receiver_id: policy.token,
+    actions: [{ type: "FunctionCall", method_name: "ft_transfer", args: { receiver_id: b.operator, amount: "1", memo }, gas: "30000000000000", deposit: "1" }],
+  };
+  const base = { kind: "counter", business: b.id, name: b.name, loan_id: loanId, to: b.operator, terms: memoObj, channel: `ft_transfer of 1 unit of ${policy.token} to the operator, terms in the memo` };
+  const problems = vet(tx, { kind: "counter", business: b.id, operator: b.operator, memo }, ME, policy);
+  if (problems.length) return log({ ...base, sent: false, reason: `guard refused to sign: ${problems.join("; ")}` });
+  if (!(await registered(policy.token, b.operator))) return log({ ...base, sent: false, reason: `${b.operator} is not registered on ${policy.token}, so it cannot receive the memo` });
+  if (DRY) return log({ ...base, sent: false, planned: true, reason: "dry run: not signed" });
+  const sent = await send(fullKeyAccount(ME), tx);
+  if (!sent.ok) return log({ ...base, sent: false, reason: `transaction ${sent.tx} failed: ${sent.failure}` });
+  log({ ...base, sent: true, tx: sent.tx, explorer: explorer(sent.tx) });
 }
 
 /** A zero-deposit call (claim or foreclose), signed with the function-call key when the agent has one. */
@@ -139,10 +174,13 @@ async function pass(mcp: Mcp, log: Log) {
     const b = await mcp.must<BusinessView>("get_business", { business: listed.id });
     const d = evaluate(b, policy, { exposure, alreadyLent: held.has(`${b.id}:${b.loan?.id}`) });
     if (d.decision !== "lend") {
-      log({ kind: "decision", business: b.id, name: b.name, decision: d.decision, reasons: d.reasons });
+      log({ kind: "decision", business: b.id, name: b.name, decision: d.decision, reasons: d.reasons, ...(d.decision === "decline" && d.counter ? { negotiable: true } : {}) });
+      if (d.decision === "decline" && d.counter && policy.counter_offers) await counterOffer(log, b, d.counter);
       continue;
     }
     const reasons = [...d.reasons];
+    const earlier = countersSent(log.path).find((c) => c.business === b.id && c.loan_id !== b.loan!.id);
+    if (earlier) reasons.push(`these terms answer the counter it sent on loan ${earlier.loan_id} (tx ${earlier.tx})`);
 
     if (policy.operator_check === "hire") {
       if (hireSpent + sentinelPrice > units(policy.max_hire_spend_per_run)) {
@@ -155,14 +193,22 @@ async function pass(mcp: Mcp, log: Log) {
         log({ kind: "decision", business: b.id, name: b.name, decision: "decline", reasons: [...reasons, `operator not vetted: ${vetting.reason}`] });
         continue;
       }
-      if (!policy.operator_verdicts_ok.includes(vetting.verdict)) {
+      if (vetting.planned) {
+        reasons.push(`would hire Sentinel to vet the operator ${b.operator} and lend only on ${policy.operator_verdicts_ok.join(" or ")} (dry run: purchase prepared, not paid); the free check says ${b.trust.operator.verdict}`);
+      } else if (!policy.operator_verdicts_ok.includes(vetting.verdict)) {
         log({ kind: "decision", business: b.id, name: b.name, decision: "decline", reasons: [...reasons, `Sentinel's verdict on the operator ${b.operator} is ${vetting.verdict} (job ${vetting.jobId})`] });
         continue;
+      } else {
+        reasons.push(`hired Sentinel (job ${vetting.jobId}, tx ${vetting.tx}): operator ${b.operator} is ${vetting.verdict}`);
       }
-      reasons.push(`hired Sentinel (job ${vetting.jobId}, tx ${vetting.tx}): operator ${b.operator} is ${vetting.verdict}`);
     }
 
     const paid = await gatedPay(mcp, log, "prepare_lend", { business: b.id, lender: ME, amount: fmt(d.amount) }, { kind: "pay", business: b.id, units: d.amount, msg: { action: "fund", loan_id: b.loan!.id } });
+    if (!paid.ok && paid.dry) {
+      log({ kind: "decision", business: b.id, name: b.name, decision: "lend", dry_run: true, amount: fmt(d.amount), reasons, gate: paid.gate, signed: false, note: "dry run: the lend was prepared and passed the guard; a live run signs it" });
+      exposure += d.amount;
+      continue;
+    }
     if (!paid.ok) {
       log({ kind: "decision", business: b.id, name: b.name, decision: "decline", reasons: [...reasons, `not sent: ${paid.reason}`] });
       continue;

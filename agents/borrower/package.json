@@ -1,0 +1,20 @@
+{
+  "name": "lien-borrower",
+  "private": true,
+  "type": "module",
+  "description": "An autonomous borrower agent: runs a business, negotiates its loan with lender agents on chain, hires Sentinel, repays.",
+  "scripts": {
+    "setup": "tsx src/setup.ts",
+    "borrower": "tsx src/borrower.ts",
+    "test": "node --import tsx --test src/terms.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "near-api-js": "^7.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

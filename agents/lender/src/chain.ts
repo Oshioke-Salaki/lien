@@ -90,11 +90,30 @@ export function jobIdFromLogs(logs: string[]): number | null {
 /** One JSON object per line, appended. */
 export function logger(path: string, run: string) {
   mkdirSync(dirname(path), { recursive: true });
-  return (entry: Record<string, unknown>) => {
+  const log = (entry: Record<string, unknown>) => {
     const line = JSON.stringify({ at: new Date().toISOString(), run, ...entry }, (_k, v) => (typeof v === "bigint" ? v.toString() : v));
     appendFileSync(path, `${line}\n`);
     console.log(line);
   };
+  return Object.assign(log, { path });
+}
+
+/** Earlier lines of a JSON-lines log, skipping any that do not parse. */
+export function readLog(path: string): Array<Record<string, any>> {
+  if (!existsSync(path)) return [];
+  return readFileSync(path, "utf8").split("\n").flatMap((line) => {
+    try {
+      return line ? [JSON.parse(line) as Record<string, any>] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+
+/** Whether an account can receive the token (NEP-145 registration). */
+export async function registered(token: string, accountId: string): Promise<boolean> {
+  const r = await provider().callFunction({ contractId: token, method: "storage_balance_of", args: { account_id: accountId } });
+  return r !== null && r !== undefined;
 }
 
 export const explorer = (hash: string) => `https://testnet.nearblocks.io/txns/${hash}`;

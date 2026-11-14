@@ -22,6 +22,8 @@
     "note-transfer": "tsx src/note-transfer.ts",
     "notemarket": "tsx src/notemarket.ts",
     "lender-demo": "tsx src/lender-demo.ts",
+    "negotiation-demo": "tsx src/negotiation-demo.ts",
+    "borrower": "npm --prefix ../agents/borrower run --silent borrower --",
     "lender": "npm --prefix ../agents/lender run --silent lender --",
     "lender-attack": "npm --prefix ../agents/lender run --silent attack --"
   },

@@ -11,8 +11,10 @@ export type Prepared = { signer_id: string; receiver_id: string; actions: Prepar
 
 /** What the agent meant to do. */
 export type Intent =
-  | { kind: "pay"; business: string; units: bigint; msg: { action: "fund"; loan_id: number } | { action: "job"; input: string } }
-  | { kind: "call"; business: string; method: "claim" | "foreclose"; loanId?: number };
+  | { kind: "pay"; business: string; units: bigint; msg: { action: "fund"; loan_id: number } | { action: "job"; input: string } | { action: "repay" } }
+  | { kind: "call"; business: string; method: "claim" | "foreclose"; loanId?: number }
+  /** A counter-offer: 1 unit of the token to the business's operator, the terms in the memo. */
+  | { kind: "counter"; business: string; operator: string; memo: string };
 
 const TOKEN_REGISTRATION = "1250000000000000000000";
 const MAX_GAS = 300_000_000_000_000n;
@@ -56,6 +58,15 @@ export function vet(tx: Prepared, intent: Intent, me: string, policy: Policy): s
       const extra = Object.keys(t.args ?? {}).filter((k) => !["receiver_id", "amount", "msg", "memo"].includes(k));
       if (extra.length) problems.push(`unexpected transfer arguments: ${extra.join(", ")}`);
     }
+  } else if (intent.kind === "counter") {
+    if (tx.receiver_id !== policy.token) problems.push(`receiver is ${tx.receiver_id}, not the pinned token ${policy.token}`);
+    if (tx.actions.length !== 1) problems.push(`expected one call, found ${tx.actions.length}`);
+    const a = tx.actions[0]!;
+    if (a.method_name !== "ft_transfer") problems.push(`method is ${a.method_name}, not ft_transfer`);
+    if (a.deposit !== "1") problems.push(`deposit is ${a.deposit} yocto, not 1`);
+    if (a.args?.receiver_id !== intent.operator) problems.push(`sends to ${a.args?.receiver_id}, not the operator ${intent.operator}`);
+    if (String(a.args?.amount) !== "1") problems.push(`amount is ${a.args?.amount}, not 1 unit`);
+    if (a.args?.memo !== intent.memo) problems.push("memo differs from the counter decided");
   } else {
     if (tx.receiver_id !== intent.business) problems.push(`receiver is ${tx.receiver_id}, not ${intent.business}`);
     if (tx.actions.length !== 1) problems.push(`expected one call, found ${tx.actions.length}`);

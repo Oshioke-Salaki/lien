@@ -15,5 +15,6 @@
   "accept_warn_flags": ["contract_is_locked_no_one_can_change_it", "almost_no_balance", "very_small_contract"],
   "max_hire_spend_per_run": "1",
   "collect": true,
-  "foreclose_when_late": true
+  "foreclose_when_late": true,
+  "counter_offers": true
 }
