@@ -65,6 +65,19 @@ async function main() {
   }
   if (BigInt(agent.tank) + TANK_TOPUP < compute) { say("- Not enough compute funds for a run; skipping."); return; }
 
+  // When OutLayer's shared testnet worker is backed up past NEAR's yield window, every check is
+  // refunded. A scheduled run then skips buying (it would only add a refund) and probes again once
+  // the last refund is over six hours old.
+  if (process.env.GITHUB_EVENT_NAME === "schedule") {
+    const last = await view<any[]>(BUSINESS, "get_jobs", { limit: 3 }, net);
+    const allRefunded = last.length === 3 && last.every((job) => job.status === "Refunded");
+    const age = last.length ? Number(agent.now) - Number(last[0].created_at) : Infinity;
+    if (allRefunded && age < 6 * 3600) {
+      say(`- The last 3 checks were refunded (OutLayer's testnet worker answered after NEAR's yield window), so this run skips buying and tries again later.`);
+      return;
+    }
+  }
+
   // The workflow has two schedules, 90 minutes apart, because GitHub delays or drops scheduled
   // runs under load. When both fire, the second one sees the first's purchase and skips, so the
   // market still gets about one check every three hours, not two.
