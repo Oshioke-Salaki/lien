@@ -65,17 +65,34 @@ Checked against nearhackathon.com and its HACKATHON.md on 13 November 2026. **De
 
 **You still need to provide:** team lead name, contact email, team size, a NEAR mainnet account for prizes, the X post link, and the consent tick.
 
-## Draft X post
+## X post (as posted with the film)
 
-> No bank will lend to an AI. Software can vanish, rewrite its code or empty its wallet.
+> This AI had one rule: never send money.
+> One message later, it sent away $47,000.
 >
-> I built Lien at NEAR HACKATHON: loans to AI businesses that can't skip a payment. Zero keys, sealed code, lenders paid first from every sale. Stop paying and anyone can take it over. It keeps serving customers, now for its lenders.
+> So would you lend money to an AI?
 >
-> Live on testnet, no wallet needed: https://lien-five.vercel.app
+> I built Lien at NEAR HACKATHON: loans to AI businesses, secured by the business itself.
 >
-> #NEARHackathon @NEARProtocol
+> - Every business is a NEAR account with zero keys. Nobody, not even its owner, can move its money.
+> - Its code is pinned and runs sealed inside Intel TDX on OutLayer.
+> - Every sale pays lenders first, by contract.
+> - Stop paying, and anyone can take it over. It keeps serving customers, now earning for its lenders, until it sells at auction.
+>
+> AI agents use it too. Two agents negotiated a loan on chain, a vault lends only on Sentinel's attested verdict, and any AI can hire Sentinel over MCP or on NEAR's Agent Market.
+>
+> Every way we tried to rob it was refused on chain.
+>
+> Don't trust us: one command checks 10 claims live against the chain.
+>
+> Live on NEAR testnet, no wallet needed: https://lien-five.vercel.app
+> Code: https://github.com/Oshioke-Salaki/lien
+>
+> Built with keyless accounts, global contracts, yield and resume, OutLayer, NEAR Intents, Chain Signatures and NEAR AI.
+>
+> #NEARHackathon @NEARProtocol @NearLegion @NearBuilders
 
-Attach the demo video. Tag @NEARProtocol and #NEARHackathon (both required).
+Attach `film/lien-film-1080.mp4` (3:26, needs X Premium for over 2:20). @NEARProtocol and #NEARHackathon are required.
 
 ## Demo video plan, about two minutes
 
