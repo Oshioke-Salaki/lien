@@ -1,4 +1,5 @@
 import testnet from "../../../deployments/testnet.json";
+import noteMarket from "../../../deployments/notemarket-testnet.json";
 
 export type Network = "testnet" | "mainnet";
 
@@ -23,6 +24,9 @@ if (!active) throw new Error(`Lien has no deployment on ${NETWORK} yet.`);
 export const deployment: Deployment = active;
 
 export const isTestnet = NETWORK === "testnet";
+
+/** The keyless note market (contracts/notemarket), where a loan share and its price change hands atomically. */
+export const NOTE_MARKET: string | null = isTestnet ? noteMarket.market : null;
 
 export const RPC_URLS: Record<Network, string[]> = {
   // Four independent providers from NEAR's provider list, so one free tier throttling us

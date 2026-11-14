@@ -86,6 +86,26 @@ export const approveChange = (agent: string, proposalId: number) =>
   onAgent(agent, "Approve the change", call("approve_change", { proposal_id: proposalId }));
 export const transferNote = (agent: string, loanId: number, to: string) =>
   onAgent(agent, "Send your share of the loan", call("transfer_note", { loan_id: loanId, to }, YOCTO_ONE));
+
+/** The note market's refundable listing bond: 0.01 NEAR. */
+export const LISTING_BOND = "10000000000000000000000";
+/** Selling through the note market, in signing order: reserve, move the note in, confirm. */
+export const listNote = (market: string, agent: string, loanId: number, price: bigint): TxRequest[] => [
+  { receiverId: market, calls: [call("list", { business: agent, loan_id: loanId, price: price.toString() }, LISTING_BOND, 100)], summary: "Reserve a listing for your share" },
+  transferNote(agent, loanId, market),
+  { receiverId: market, calls: [call("confirm", { business: agent, loan_id: loanId }, "0", 100)], summary: "Put your share up for sale" },
+];
+/** Buys a listed share in one payment: the note reaches the buyer and the seller is paid, or the payment comes back. */
+export const buyNote = (market: string, agent: string, loanId: number, price: bigint): TxRequest => ({
+  receiverId: deployment.token,
+  calls: [call("ft_transfer_call", { receiver_id: market, amount: price.toString(), msg: JSON.stringify({ buy: { business: agent, loan_id: loanId } }) }, YOCTO_ONE)],
+  summary: "Buy this share of the loan",
+});
+export const cancelNoteListing = (market: string, agent: string, loanId: number): TxRequest => ({
+  receiverId: market,
+  calls: [call("cancel", { business: agent, loan_id: loanId }, YOCTO_ONE, 100)],
+  summary: "Take your share off sale",
+});
 export const fundTank = (agent: string, yocto: string) => onAgent(agent, "Add money for checks", call("fund_tank", {}, yocto, 30));
 export const expireJob = (agent: string, jobId: number) => onAgent(agent, "Refund the stuck job", call("expire_job", { job_id: jobId }));
 export const forward = (collector: string) => onAgent(collector, "Forward income", call("forward"));
