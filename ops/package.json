@@ -15,7 +15,10 @@
     "upgrade": "tsx src/upgrade.ts",
     "refusals": "tsx src/refusals.ts",
     "sample-repaid": "tsx src/sample-repaid.ts",
-    "xvault": "tsx src/xvault.ts"
+    "xvault": "tsx src/xvault.ts",
+    "lender-demo": "tsx src/lender-demo.ts",
+    "lender": "npm --prefix ../agents/lender run --silent lender --",
+    "lender-attack": "npm --prefix ../agents/lender run --silent attack --"
   },
   "dependencies": {
     "@noble/ciphers": "^2.4.0",

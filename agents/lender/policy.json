@@ -1,0 +1,19 @@
+{
+  "token": "usd.lien-13569.testnet",
+  "registry": "v1.lien-13569.testnet",
+  "max_per_loan": "10",
+  "max_share_of_loan_bps": 5000,
+  "max_total_exposure": "30",
+  "min_lender_bps": 2000,
+  "min_return_bps": 500,
+  "max_business_full_access_keys": 0,
+  "require_on_time": true,
+  "max_past_defaults": 0,
+  "decline_instruction_text": true,
+  "operator_check": "hire",
+  "operator_verdicts_ok": ["ALLOW"],
+  "accept_warn_flags": ["contract_is_locked_no_one_can_change_it", "almost_no_balance", "very_small_contract"],
+  "max_hire_spend_per_run": "1",
+  "collect": true,
+  "foreclose_when_late": true
+}
