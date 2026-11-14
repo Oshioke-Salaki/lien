@@ -106,7 +106,7 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
               <dt>You get back</dt><dd>{money(returns)} in total</dd>
               <dt>If it stops paying</dt><dd>Anyone can take it over</dd>
               <dt>If it is taken over and sold<Info label="sale floor" tip={`After a takeover the business is auctioned. The first bid must be at least ${percent(loan.terms.auction_reserve_bps)} of what is still owed (a floor the owner set in the terms), and each later bid must beat the highest by 5%. The price pays lenders first, split by their shares. Counting repayments before the takeover, lenders as a whole get back at least ${moneyUp(floor)}.`} /></dt>
-              <dd data-testid="lend-floor">At least {moneyUp((floor * value) / principal)} back in total, if it sells for at least the reserve (the lowest bid allowed). Until someone buys it, lenders keep its sales.</dd>
+              <dd data-testid="lend-floor">At least {moneyUp((floor * value) / principal)} in total, if it sells at or above its reserve price</dd>
             </dl>
           ) : null}
           <p className="hint">Your money leaves your balance at once and is held by the contract. It reaches the business only when the whole loan is raised; if it isn&rsquo;t by {dateTime(loan.funding_deadline)}, you can take it back.</p>
