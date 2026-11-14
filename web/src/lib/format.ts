@@ -101,10 +101,20 @@ export function parseAmount(text: string): bigint | null {
 
 export const percent = (bps: number) => `${(bps / 100).toFixed(bps % 100 === 0 ? 0 : 2)}%`;
 
-/** A percentage for display: whole numbers, except below 1% where two decimals keep it honest. */
+/**
+ * A percentage for summaries: whole numbers. Above zero but under 1% reads "<1%", and just short
+ * of 100% reads ">99%", so rounding never says nothing or everything when that is not true.
+ * Show pctExact on hover where the exact figure matters.
+ */
 export function pct(value: number): string {
-  if (value > 0 && value < 1) return `${value.toFixed(2)}%`;
+  if (value > 0 && value < 1) return "<1%";
+  if (value > 99 && value < 100) return ">99%";
   return `${Math.round(value)}%`;
+}
+
+/** The same percentage to two decimals at most, for a tooltip or a detail view. */
+export function pctExact(value: number): string {
+  return `${Number(value.toFixed(2))}%`;
 }
 
 export function share(part: bigint | string, whole: bigint | string): number {

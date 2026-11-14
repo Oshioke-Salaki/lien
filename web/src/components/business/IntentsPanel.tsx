@@ -8,7 +8,7 @@ import { isTestnet } from "@/lib/config";
 import { money } from "@/lib/format";
 import { amountProblem, parseMoney } from "@/lib/amounts";
 import {
-  describeStatus, HAPPY_PATH, INTENT_STATUSES, INTENTS_EXPLORER, isFinalStatus,
+  chainOf, describeStatus, HAPPY_PATH, INTENT_STATUSES, INTENTS_EXPLORER, isFinalStatus, previewRefund, refundProblem,
   type IntentStatus, type QuoteView, type StatusTone, type StatusView,
 } from "@/lib/intents";
 import { forward } from "@/lib/near/actions";
@@ -58,8 +58,14 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
   const pending = inbox.data ?? 0n;
   const route = routes.find((r) => r.assetId === origin);
 
+  // Checked as you type, for the chain being paid from; a preview may leave it empty.
+  const refundError = refundTo.trim() ? refundProblem(refundTo, origin) : null;
+  const refundNeeded = !dryRun || !previewRefund(origin);
+  const canQuote = !!wanted && !refundError && (!!refundTo.trim() || !refundNeeded);
+  const chain = chainOf(origin);
+
   const getQuote = async () => {
-    if (!wanted || !refundTo.trim()) return;
+    if (!canQuote) return;
     setState("loading");
     setError(null);
     setQuote(null);
@@ -80,7 +86,8 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
   };
 
   const reset = () => { setQuote(null); setError(null); };
-  const ctx = quote ? { send: `${quote.amountInFormatted}${route?.symbol ? ` ${route.symbol}` : ""}`, refundTo: quote.refundTo, receive: wanted ? money(wanted) : undefined } : {};
+  // A preview with no refund address typed was priced with a placeholder: never show that as "yours".
+  const ctx = quote ? { send: `${quote.amountInFormatted}${route?.symbol ? ` ${route.symbol}` : ""}`, refundTo: quote.dry && !refundTo.trim() ? undefined : quote.refundTo, receive: wanted ? money(wanted) : undefined, preview: quote.dry } : {};
 
   return (
     <Panel title="Pay this business from another blockchain">
@@ -109,13 +116,21 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
               </select>
             </label>
             <AmountField label="Business receives" unit={isTestnet ? "dollars" : "USDC"} value={amountText} onChange={(v) => { setAmountText(v); reset(); }} error={amountProblem(amountText)} />
-            <TextField label="Your address on that chain, for refunds" testId="intents-refund" value={refundTo} onChange={(v) => { setRefundTo(v); reset(); }} placeholder="0x…" />
+            <TextField
+              label={dryRun && !refundNeeded ? "Your address on that chain, for refunds (optional for a preview)" : "Your address on that chain, for refunds"}
+              testId="intents-refund"
+              value={refundTo}
+              onChange={(v) => { setRefundTo(v); reset(); }}
+              placeholder={chain?.format === "sol" ? "a Solana address" : chain ? "0x… (any letter case)" : "your address"}
+              error={refundError}
+              hint={dryRun && !refundNeeded ? "A preview sends nothing, so nothing can be refunded. Leave it empty if you like." : "If the payment can't complete, NEAR Intents sends it back here."}
+            />
             <label className="flex items-start gap-3 text-[14px] leading-snug" data-testid="intents-dry-toggle">
               <input type="checkbox" className="mt-[3px]" checked={dryRun} onChange={(e) => { setDryRun(e.target.checked); reset(); }} />
-              <span><b>Dry run</b> <span className="muted">(for judges): ask 1Click for a price only, with no deposit address, then step through every status a payment can reach, including refunds and failures.</span></span>
+              <span><b>Preview the full flow (nothing is sent)</b> <span className="muted">Get a price only, with no deposit address, then step through every status a payment can reach, including refunds and failures.</span></span>
             </label>
-            <button type="submit" className="btn btn-secondary w-full" data-testid="intents-quote" disabled={state === "loading" || !wanted || !refundTo.trim()}>
-              {state === "loading" ? "Finding a route…" : dryRun ? "Get a dry-run price" : isTestnet ? "Get a real quote and deposit address (nothing is sent)" : "Get a quote and deposit address"}
+            <button type="submit" className="btn btn-secondary w-full" data-testid="intents-quote" disabled={state === "loading" || !canQuote}>
+              {state === "loading" ? "Finding a route…" : dryRun ? "Preview the payment" : isTestnet ? "Get a real quote and deposit address (nothing is sent)" : "Get a quote and deposit address"}
             </button>
           </form>
         ) : routesState === "loading" ? (
@@ -125,7 +140,11 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
         {error ? <p role="alert" className="hint" data-error="true">{error}</p> : null}
         {quote ? (
           <div className="inset appear space-y-2 text-[15px]" data-testid="intents-result" data-dry={quote.dry}>
-            <p>You send {ctx.send}. The business receives {ctx.receive ?? quote.amountOutFormatted}. It arrives in about {quote.timeEstimate} seconds.</p>
+            {quote.depositAddress ? (
+              <p>You send {ctx.send}. The business receives {ctx.receive ?? quote.amountOutFormatted}. It arrives in about {quote.timeEstimate} seconds.</p>
+            ) : (
+              <p>Price for a real payment: a customer would send {ctx.send}, and the business would receive {ctx.receive ?? quote.amountOutFormatted} about {quote.timeEstimate} seconds later.</p>
+            )}
             {quote.depositAddress ? (
               <>
                 <p className="break-all">Send to: <code data-testid="intents-deposit">{quote.depositAddress}</code>{quote.depositMemo ? <> with memo <code>{quote.depositMemo}</code></> : null}</p>
@@ -133,7 +152,7 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
                 <p className="text-[14px] muted">If anything goes wrong, the money goes back to <code className="break-all">{quote.refundTo}</code>.</p>
               </>
             ) : (
-              <p className="text-[14px] muted">Dry run: 1Click returned a price only. No deposit address was created, so there is nothing to send to.</p>
+              <p className="text-[14px] muted">This is a preview: NEAR Intents gave a price only and created no deposit address, so there is nowhere to send money. Below, step through what the customer would see.</p>
             )}
             {quote.sendingOff ? (
               <p className="rounded-[10px] px-3 py-2 text-[14px] leading-snug" style={{ background: "color-mix(in srgb, var(--warn) 18%, transparent)" }} data-testid="intents-sending-off">
@@ -153,7 +172,7 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
   );
 }
 
-type Ctx = { send?: string; refundTo?: string; receive?: string };
+type Ctx = { send?: string; refundTo?: string; receive?: string; preview?: boolean };
 
 /** Follows a real deposit address on 1Click's status API until it settles. */
 function StatusTracker({ depositAddress, depositMemo, ctx }: { depositAddress: string; depositMemo: string | null; ctx: Ctx }) {
@@ -218,13 +237,13 @@ function DryRunWalkthrough({ ctx }: { ctx: Ctx }) {
 
   return (
     <div className="space-y-2 pt-1" data-testid="intents-dryrun">
-      <p className="text-[13px] muted">Simulated, not from a real deposit. Pick any status 1Click can report to see what the customer is told.</p>
+      <p className="text-[13px] muted">Simulated, not from a real deposit. Pick any status NEAR Intents can report to see what the customer is told.</p>
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn btn-secondary btn-sm" onClick={play} disabled={playing} data-testid="intents-dryrun-play">Play a successful payment</button>
         {INTENT_STATUSES.map((s) => (
           <button key={s} type="button" className="chip cursor-pointer" aria-pressed={status === s} data-testid={`intents-sim-${s}`} style={status === s ? { outline: "2px solid var(--accent)" } : undefined}
-            onClick={() => { if (timer.current) clearTimeout(timer.current); setPlaying(false); setStatus(s); }}>
-            {s}
+            onClick={() => { if (timer.current) clearTimeout(timer.current); setPlaying(false); setStatus(s); }} title={`NEAR Intents status ${s}`}>
+            {describeStatus(s).label}
           </button>
         ))}
       </div>
@@ -244,8 +263,7 @@ function StatusCard({ status, ctx, view }: { status: IntentStatus | "UNKNOWN"; c
         ))}
       </ol>
       <p className="flex flex-wrap items-center gap-2">
-        <span className="chip" style={{ color: TONE[words.tone] }}><span aria-hidden className="chip-dot" /><span className="text-[var(--ink)]">{words.label}</span></span>
-        <code className="text-[12px] muted">{view?.rawStatus || status}</code>
+        <span className="chip" style={{ color: TONE[words.tone] }} title={`NEAR Intents status ${view?.rawStatus || status}`}><span aria-hidden className="chip-dot" /><span className="text-[var(--ink)]">{words.label}</span></span>
       </p>
       <p className="mt-2 text-[14px] leading-snug" data-testid="intents-status-meaning">{words.meaning}</p>
       {view && (view.depositedFormatted || view.originTxs.length || view.destinationTxs.length) ? (

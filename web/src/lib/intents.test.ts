@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildQuoteRequest, describeStatus, friendlyQuoteError, INTENT_STATUSES, isFinalStatus, oneClickHeaders, readQuote, readStatus, USDC_NEAR,
+  buildQuoteRequest, chainOf, describeStatus, friendlyQuoteError, INTENT_STATUSES, isFinalStatus, oneClickHeaders, previewRefund, readQuote, readStatus, refundProblem, USDC_NEAR,
 } from "./intents";
 
 const NOW = Date.UTC(2026, 10, 14, 12, 0, 0);
@@ -45,7 +45,7 @@ describe("building a 1Click quote request", () => {
   });
 
   it("keeps non-EVM refund addresses as typed, trimmed", () => {
-    const sol = buildQuoteRequest({ ...input, refundTo: "  9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin " }, { mainnet: true, now: NOW });
+    const sol = buildQuoteRequest({ ...input, originAsset: "nep141:sol-5ce3bf3a31af18be40ba30f721101b4341690186.omft.near", refundTo: "  9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin " }, { mainnet: true, now: NOW });
     expect(sol.ok && sol.request.refundTo).toBe("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
   });
 
@@ -58,6 +58,37 @@ describe("building a 1Click quote request", () => {
     expect(bad({ recipient: "Not An Account" }).ok).toBe(false);
     expect(bad({ refundTo: "" }).ok).toBe(false);
     expect(bad({ refundTo: "<script>" }).ok).toBe(false);
+  });
+
+  it("accepts any EVM address of the right shape, checksummed or not, and sends it in one case", () => {
+    for (const refundTo of ["0x000000000000000000000000000000000000dEaD", "0x000000000000000000000000000000000000DEAD", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"]) {
+      const built = buildQuoteRequest({ ...input, refundTo }, { mainnet: true, now: NOW });
+      expect(built.ok, refundTo).toBe(true);
+      expect(built.ok && built.request.refundTo).toBe(refundTo.toLowerCase());
+    }
+  });
+
+  it("checks the refund address against the chain being paid from", () => {
+    const SOL_USDC = "nep141:sol-5ce3bf3a31af18be40ba30f721101b4341690186.omft.near";
+    expect(refundProblem("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", BASE_USDC)).toBeNull();
+    expect(refundProblem("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA9604", BASE_USDC)).toMatch(/Base address/); // 39 digits
+    expect(refundProblem("nonsense", BASE_USDC)).toMatch(/does not look right/);
+    expect(refundProblem("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin", SOL_USDC)).toBeNull();
+    expect(refundProblem("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", SOL_USDC)).toMatch(/Solana/);
+    expect(refundProblem("", BASE_USDC)).toMatch(/Enter your address/);
+    expect(chainOf(BASE_USDC)?.name).toBe("Base");
+  });
+
+  it("lets a preview leave the refund address empty, and a real quote never", () => {
+    const preview = buildQuoteRequest({ ...input, refundTo: "", dry: true }, { mainnet: false, now: NOW });
+    expect(preview.ok && preview.request.refundTo).toBe(previewRefund(BASE_USDC));
+    expect(buildQuoteRequest({ ...input, refundTo: "", dry: false }, { mainnet: false, now: NOW }).ok).toBe(false);
+    // An address typed into a preview is still checked.
+    expect(buildQuoteRequest({ ...input, refundTo: "nonsense", dry: true }, { mainnet: false, now: NOW }).ok).toBe(false);
+  });
+
+  it("says plainly when 1Click refuses an address of the right shape", () => {
+    expect(friendlyQuoteError("refundTo is not valid")).toMatch(/would not take this refund address/);
   });
 
   it("sends the partner key only when one is set", () => {

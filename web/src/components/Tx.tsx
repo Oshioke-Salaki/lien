@@ -106,9 +106,11 @@ export function TxProvider({ children }: { children: ReactNode }) {
   return (
     <TxContext.Provider value={{ run, busy, notify }}>
       {children}
-      {/* Kept clear of the action buttons: under the top bar on phones and tablets (the actions sit
-          lower down), bottom-left beside the sidebar on desktop (the actions are on the right). */}
-      <div aria-live="polite" className="pointer-events-none fixed top-[calc(64px+env(safe-area-inset-top))] right-3 left-3 z-50 flex flex-col items-end gap-2 sm:right-4 sm:left-auto sm:w-[360px] lg:top-auto lg:right-auto lg:bottom-4 lg:left-[280px] lg:items-start">
+      {/* Top centre up to 1280 px, just under the top bar (or the top of the page beside the sidebar),
+          where nothing is tapped. Wider, bottom-right; and on a business page, bottom-right of the
+          main column, so it never sits over the actions column (380 px + the page's 40 px gutter)
+          or the sidebar. Each is short-lived and can be dismissed. */}
+      <div aria-live="polite" data-testid="notices" className="pointer-events-none fixed inset-x-0 top-[calc(64px+env(safe-area-inset-top))] z-50 mx-auto flex w-[min(400px,calc(100vw-24px))] flex-col items-stretch gap-2 lg:top-6 lg:left-[264px] xl:inset-x-auto xl:top-auto xl:right-6 xl:bottom-6 xl:mx-0 xl:w-[360px] xl:[body:has([data-action-rail])_&]:right-[444px]">
         {notices.map((notice) => (
           <div key={notice.id} role={notice.tone === "error" ? "alert" : "status"} data-tone={notice.tone} className="notice pointer-events-auto w-full">
             <NoticeIcon tone={notice.tone} />
@@ -225,7 +227,7 @@ function GuestButton({ busy, paused, disabled, onClick }: { busy: boolean; pause
   if (process.env.NEXT_PUBLIC_NETWORK === "mainnet") return null;
   return (
     <button type="button" className={`btn ${paused ? "btn-secondary" : "btn-primary"}`} disabled={disabled} onClick={onClick}>
-      {busy ? "Creating your account…" : paused ? "Free test accounts paused" : "Use a free test account"}
+      {busy ? "Creating your account…" : paused ? "Free test accounts paused" : "Get a free test account"}
     </button>
   );
 }

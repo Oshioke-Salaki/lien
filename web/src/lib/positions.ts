@@ -25,6 +25,7 @@ export function mergePositions(prev: PositionsSnapshot | undefined, next: Positi
   return {
     ...next,
     businesses,
+    names: { ...prev.names, ...next.names },
     positions: kept(prev.positions, next.positions),
     credits: kept(prev.credits, next.credits),
     bought: kept(prev.bought ?? [], next.bought ?? []),

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ConnectButtons, ConnectGate as Gate, useTx } from "@/components/Tx";
 import { Info, Panel, Term } from "@/components/ui";
 import { usePay } from "@/hooks/usePay";
 import { useLive } from "@/hooks/useLive";
 import { isTestnet } from "@/lib/config";
-import { CENT, centsUp, dateTime, duration, fromNow, inputAmount, money, moneyUp, nearAmount, owedMoney, pct, percent, share, toYocto } from "@/lib/format";
+import { CENT, centsUp, dateTime, duration, fromNow, inputAmount, money, moneyUp, nearAmount, owedMoney, pct, pctExact, percent, share, toYocto } from "@/lib/format";
 import { hasAccountName, isAccountId, targetProblem } from "@/lib/accounts";
 import { REFRESH_EVENT } from "@/lib/events";
 import { GLOSSARY } from "@/lib/glossary";
@@ -16,7 +16,7 @@ import type { Business, LoanView, NoteView } from "@/lib/near/types";
 import { auctionEnded, isTrapped, standing } from "@/lib/status";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { OfferForm } from "./OfferForm";
-import { ReportCard } from "./ReportCard";
+import { ReportCard, VerdictBadge } from "./ReportCard";
 import { isFinal, loadChecks, saveChecks, type SavedCheck } from "@/lib/checks";
 import { settleNotice } from "@/lib/events";
 import { parseReport } from "@/lib/report";
@@ -35,7 +35,7 @@ export function ActionRail({ business: b, now, refresh }: Props) {
   const foreclosed = loan?.status === "Foreclosed";
 
   return (
-    <aside className="space-y-4" aria-label="Actions">
+    <aside className="space-y-4" aria-label="Actions" data-action-rail>
       {!account && ready ? (
         <section className="panel p-5" aria-labelledby="take-part">
           <h2 id="take-part" className="text-[18px] font-medium tracking-[-0.01em]">Try it with test dollars</h2>
@@ -102,11 +102,11 @@ function LendCard({ business: b, now, refresh, featured }: Props) {
           <button type="submit" data-testid="lend-submit" className="btn btn-primary w-full" disabled={busy || !value || !!check.error}>{value && !check.error ? `Lend ${money(value)}` : "Enter an amount to lend"}</button>
           {value && !check.error ? (
             <dl className="dl rounded-[12px] bg-[var(--surface-2)] p-4" data-testid="lend-preview">
-              <dt><Term tip={GLOSSARY.share}>Your share</Term></dt><dd>{pct(noteShare)} of the loan</dd>
+              <dt><Term tip={GLOSSARY.share}>Your share</Term></dt><dd>{pctExact(noteShare)} of the loan</dd>
               <dt>You get back</dt><dd>{money(returns)} in total</dd>
               <dt>If it stops paying</dt><dd>Anyone can take it over</dd>
-              <dt>If it is then sold<Info label="sale floor" tip={`After a takeover the business is auctioned. The first bid must be at least ${percent(loan.terms.auction_reserve_bps)} of what is still owed (a floor the owner set in the terms), and each later bid must beat the highest by 5%. The price pays lenders first, split by their shares. Counting repayments before the takeover, lenders as a whole get back at least ${moneyUp(floor)}.`} /></dt>
-              <dd>You get back at least {moneyUp((floor * value) / principal)} in total</dd>
+              <dt>If it is taken over and sold<Info label="sale floor" tip={`After a takeover the business is auctioned. The first bid must be at least ${percent(loan.terms.auction_reserve_bps)} of what is still owed (a floor the owner set in the terms), and each later bid must beat the highest by 5%. The price pays lenders first, split by their shares. Counting repayments before the takeover, lenders as a whole get back at least ${moneyUp(floor)}.`} /></dt>
+              <dd data-testid="lend-floor">At least {moneyUp((floor * value) / principal)} in total, if it sells at or above its reserve price</dd>
             </dl>
           ) : null}
           <p className="hint">Your money leaves your balance at once and is held by the contract. It reaches the business only when the whole loan is raised; if it isn&rsquo;t by {dateTime(loan.funding_deadline)}, you can take it back.</p>
@@ -226,7 +226,38 @@ function AuctionCard({ business: b, now, refresh, featured }: Props) {
   );
 }
 
-const EXAMPLES = isTestnet ? ["outlayer.testnet", "wrap.testnet", "intents.testnet"] : ["usdc.near", "wrap.near", "intents.near"];
+/**
+ * Examples that show the range of answers, each labelled with what to expect. The outcomes are
+ * what Sentinel's rules (lib/risk.ts) gave these accounts when chosen; a live check reads the
+ * account as it is now, so the label says "likely". A name nobody owns is answered for free,
+ * before any money moves.
+ */
+export const EXAMPLES: Array<{ label: string; account: string }> = isTestnet
+  ? [
+      { label: "A safe one", account: "aurora.testnet" },
+      { label: "A risky one", account: "outlayer.testnet" },
+      { label: "No such account", account: "no-such-business.testnet" },
+    ]
+  : [
+      // Not yet scored on mainnet, so these carry no promise about the outcome.
+      { label: "Try", account: "usdc.near" },
+      { label: "Try", account: "intents.near" },
+      { label: "No such account", account: "no-such-business.near" },
+    ];
+
+/**
+ * A name nobody owns, found before anything is paid. Sentinel's rules score a missing account 90
+ * of 100 (lib/risk.ts), which is BLOCK, so that is the answer shown, free.
+ */
+function NoSuchAccount({ name }: { name: string }) {
+  return (
+    <div className="inset space-y-2" data-testid="no-such-account" role="status">
+      <p className="flex flex-wrap items-center gap-2"><VerdictBadge verdict="BLOCK" /><span className="text-[14px] muted">Answered for free, nothing was charged</span></p>
+      <p className="text-[17px] font-medium">No such account</p>
+      <p className="text-[15px] leading-snug text-[var(--ink-2)]">Nothing exists at <span className="font-medium text-[var(--ink)] [overflow-wrap:anywhere]">{name}</span> on the {isTestnet ? "test " : ""}network, so anything sent to it could be lost. Sentinel&rsquo;s rules block it; there is nothing to pay for. Check the spelling.</p>
+    </div>
+  );
+}
 
 /** What went wrong with a refunded check, in words, from the reason the contract recorded. */
 function refundText(reason: string | undefined, price: bigint): { text: string; retry: boolean } {
@@ -260,7 +291,10 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
   const [missing, setMissing] = useState<string | null>(null);
   const shapeError = input.trim() ? targetProblem(input, isTestnet) : null;
   const named = !shapeError && hasAccountName(input);
-  const inputError = shapeError ?? (missing && missing === input.trim() ? `No such account: ${missing} does not exist on the ${isTestnet ? "test " : ""}network. Check the spelling.` : null);
+  // A name nobody owns is answered at once, for free, and shown as the verdict a paid check would give.
+  const missingNow = missing && missing === input.trim() ? missing : null;
+  const inputError = shapeError;
+  const inputRef = useRef<HTMLDivElement>(null);
   const owner = `${b.id}:${account ?? ""}`;
   const list = checks.for === owner ? checks.list : [];
 
@@ -326,6 +360,8 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
     // Saved before paying: if the page is refreshed mid-payment, the check is still followed.
     update((all) => [{ id: b.next_job_id, input: text, since, confirmed: false, status: "Pending" }, ...all]);
     const result = await pay(price, { action: "job", input: text }, "Buy a safety check", "Check paid for", "Paid. A secure computer is running the check now; it usually takes under a minute, sometimes up to two. You can keep using the page.");
+    // Paid: the box empties, so pressing the button again never buys the same check twice by accident.
+    if (result?.ok) setInput((now) => (now.trim() === text ? "" : now));
     const started = result?.events.find((event) => event.event === "job_started");
     const refunded = result?.events.find((event) => event.event === "job_refunded");
     if (result?.ok && started) {
@@ -350,16 +386,28 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
       </p>
       <ConnectGate quiet reason="Connect to buy one.">
         <form className="space-y-3" onSubmit={async (e) => { e.preventDefault(); await submit(input.trim()); }}>
-          <TextField label="Account to check" testId="job-input" value={input} onChange={setInput} placeholder={`an account name, e.g. ${EXAMPLES[0]}`} error={inputError} />
-          <div className="flex flex-wrap items-center gap-2" aria-label="Examples">
-            <span className="text-[14px] muted">Try:</span>
-            {EXAMPLES.map((example) => (
-              <button key={example} type="button" className="example-chip" onClick={() => setInput(example)}>{example}</button>
-            ))}
+          <div ref={inputRef}>
+            <TextField label="Account to check" testId="job-input" value={input} onChange={setInput} placeholder={`an account name, e.g. ${EXAMPLES[0]!.account}`} error={inputError} />
           </div>
+          <div className="space-y-2" aria-label="Examples" data-testid="job-examples">
+            <p className="text-[14px] muted">Not sure what to check? Try one:</p>
+            <div className="flex flex-wrap gap-2">
+              {EXAMPLES.map((example) => (
+                <button key={example.account} type="button" className="example-chip whitespace-nowrap" onClick={() => setInput(example.account)} title={example.account}>
+                  <span className="text-[var(--ink)]">{example.label}</span><span className="ml-1.5 muted">{example.account}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {missingNow ? <NoSuchAccount name={missingNow} /> : null}
           {short ? <p className="hint" data-error="true">You have {money(balance.data!)}, and a check costs {money(price)}. Use Get test funds to add more.</p> : null}
           {tankEmpty ? <p className="hint" data-error="true">This business has run out of fees for checks. Anyone can top it up at the bottom of this column.</p> : null}
-          <button type="submit" data-testid="job-submit" className="btn btn-primary w-full" disabled={busy || !input.trim() || !named || !!inputError || short || tankEmpty}>{!input.trim() ? "Type an account name first" : !named ? "Type an account name to check" : `Pay ${money(price)} and run the check`}</button>
+          {!input.trim() && current ? (
+            // After a check, the box is empty and the button starts the next one rather than paying again.
+            <button type="button" data-testid="job-submit" className="btn btn-secondary w-full" onClick={() => inputRef.current?.querySelector("input")?.focus()}>Check another account</button>
+          ) : (
+            <button type="submit" data-testid="job-submit" className="btn btn-primary w-full" disabled={busy || !input.trim() || !named || !!inputError || !!missingNow || short || tankEmpty}>{!input.trim() ? "Type an account name first" : !named ? "Type an account name to check" : missingNow ? "Nothing to check: no such account" : `Pay ${money(price)} and run the check`}</button>
+          )}
         </form>
       </ConnectGate>
       {current ? (
@@ -372,7 +420,7 @@ function BuyCard({ business: b, refresh, featured }: { business: Business; refre
                 {now - current.since > 120 ? "The test network's secure computers are slow right now, so this can take a few minutes. If it fails, your money comes back automatically." : "It usually takes under a minute, sometimes up to two."}
               </span>
             </p>
-          ) : current.status === "Done" ? <ReportCard raw={current.report ?? null} /> : (
+          ) : current.status === "Done" ? <ReportCard raw={current.report ?? null} ai={{ on: !!b.service.secrets_profile, loanOpen: !!b.current_loan }} /> : (
             <div className="space-y-3">
               <p className="text-[15px]">{refund!.text}</p>
               {refund!.retry ? <button type="button" className="btn btn-secondary btn-sm" disabled={busy || short} onClick={() => void submit(current.input)}>Try the same check again</button> : null}
@@ -493,7 +541,7 @@ function PositionCard({ business: b, refresh }: { business: Business; refresh: (
           return (
             <div key={loan.id} className="space-y-2">
               <dl className="dl">
-                <dt>You lent{b.loan_count > 1 ? ` (loan ${loan.id + 1})` : ""}</dt><dd>{money(note.principal)}, {pct(share(note.principal, loan.terms.principal))} of the loan</dd>
+                <dt>You lent{b.loan_count > 1 ? ` (loan ${loan.id + 1})` : ""}</dt><dd>{money(note.principal)}, {pctExact(share(note.principal, loan.terms.principal))} of the loan</dd>
                 <dt>Collected so far</dt><dd>{money(note.claimed)}</dd>
                 <dt>Ready to collect</dt><dd data-testid="claimable">{money(claimable)}</dd>
               </dl>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { amount, centsUp, dateTime, duration, fromNow, inputAmount, money, moneyExact, moneyUp, parseAmount, pct, percent, share, shortAccount, smartAmount, toYocto, nearAmount } from "./format";
+import { amount, centsUp, dateTime, duration, fromNow, inputAmount, money, moneyExact, moneyUp, parseAmount, pct, pctExact, percent, share, shortAccount, smartAmount, toYocto, nearAmount } from "./format";
 
 describe("amount", () => {
   it("formats base units", () => {
@@ -91,11 +91,18 @@ describe("money", () => {
 });
 
 describe("display rules a newcomer sees", () => {
-  it("shows percentages as whole numbers, with decimals only under 1%", () => {
+  it("shows percentages as whole numbers in summaries, never rounding to nothing or to everything", () => {
     expect(pct(74)).toBe("74%");
     expect(pct(15.09)).toBe("15%");
-    expect(pct(0.37)).toBe("0.37%");
+    expect(pct(0.37)).toBe("<1%");
     expect(pct(0)).toBe("0%");
+    expect(pct(99.6)).toBe(">99%");
+    expect(pct(100)).toBe("100%");
+  });
+  it("keeps the exact percentage for hover, to two decimals at most", () => {
+    expect(pctExact(0.17)).toBe("0.17%");
+    expect(pctExact(12.5)).toBe("12.5%");
+    expect(pctExact(50)).toBe("50%");
   });
   it("shortens account names at a dot, never inside a word", () => {
     expect(shortAccount("g134k3ya.guests.lien-13569.testnet", 24)).toBe("g134k3ya….testnet");

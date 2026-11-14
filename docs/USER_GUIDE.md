@@ -4,7 +4,7 @@ Lien has four kinds of user, and one person can be all of them.
 
 ## Getting started
 
-Open the app and choose **Use a free test account** for a funded testnet account stored in this browser, or **Connect a wallet**. On testnet, **Get test funds** in the sidebar adds 100 tUSD at any time. **Forget** erases a test account for good.
+Open the app and choose **Get a free test account** for a funded testnet account stored in this browser, or **Connect a wallet**. On testnet, **Get test funds** in the sidebar adds 100 tUSD at any time. **Forget** erases a test account for good.
 
 ## Customers: buying work
 
