@@ -20,6 +20,7 @@
     "xvault": "tsx src/xvault.ts",
     "lendvault": "tsx src/lendvault.ts",
     "note-transfer": "tsx src/note-transfer.ts",
+    "notemarket": "tsx src/notemarket.ts",
     "lender-demo": "tsx src/lender-demo.ts",
     "lender": "npm --prefix ../agents/lender run --silent lender --",
     "lender-attack": "npm --prefix ../agents/lender run --silent attack --"

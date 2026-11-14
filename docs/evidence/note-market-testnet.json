@@ -1,0 +1,172 @@
+{
+  "market": "notemarket.lien-13569.testnet",
+  "business": "watchtower-late-5337.v1.lien-13569.testnet",
+  "loan": 0,
+  "price": "30000000",
+  "seller": "lien-f4-3863.testnet",
+  "buyer": "lien-f5-3869.testnet",
+  "stranger": "lien-f6-3876.testnet",
+  "started": "2026-11-14T09:29:12.625Z",
+  "before": {
+    "listing": null,
+    "market": {
+      "note": null,
+      "tusd": "0"
+    },
+    "lien-f4-3863.testnet": {
+      "note": {
+        "principal": "40000000",
+        "claimed": "0",
+        "voted_proposal": null,
+        "claimable": "5230000"
+      }
+    },
+    "lien-f5-3869.testnet": {
+      "note": null
+    },
+    "lien-f6-3876.testnet": {
+      "note": null
+    }
+  },
+  "steps": [
+    {
+      "what": "lien-f4-3863.testnet lists its whole note at 30.00 tUSD, moves it to the market, and the market confirms it holds it",
+      "list": {
+        "tx": "8WNgnPEzUCnGFvM9cbZHxhiX953ShDsAnbAfNFQtQKkh",
+        "link": "https://testnet.nearblocks.io/txns/8WNgnPEzUCnGFvM9cbZHxhiX953ShDsAnbAfNFQtQKkh"
+      },
+      "transfer_note": {
+        "tx": "ERCQ6JprnicyKMpoVoBHG9ZVQ67XAZ8vwsAir22XTPHb",
+        "link": "https://testnet.nearblocks.io/txns/ERCQ6JprnicyKMpoVoBHG9ZVQ67XAZ8vwsAir22XTPHb"
+      },
+      "confirm": {
+        "tx": "Gi7xmGAGXD68VpfGvX24a85msvvyHigWKLzhG5R7rffX",
+        "link": "https://testnet.nearblocks.io/txns/Gi7xmGAGXD68VpfGvX24a85msvvyHigWKLzhG5R7rffX"
+      }
+    },
+    {
+      "what": "lien-f6-3876.testnet offers 1.00 tUSD instead of the price; the market refuses and the token refunds it in the same transaction",
+      "tx": "6UWphjDVfuyo3Azye5yvkL1WMJDgSYgfMECwr3Ndhfg2",
+      "link": "https://testnet.nearblocks.io/txns/6UWphjDVfuyo3Azye5yvkL1WMJDgSYgfMECwr3Ndhfg2",
+      "refused": [
+        "the price is 30000000"
+      ],
+      "kept": "0"
+    },
+    {
+      "what": "lien-f5-3869.testnet buys in one ft_transfer_call: the note moves to the buyer and the seller is paid, or neither",
+      "tx": "AuLQRYRhWgGSrieajYsK9Ve16Ax4JESTnmNuD9kCPSMJ",
+      "link": "https://testnet.nearblocks.io/txns/AuLQRYRhWgGSrieajYsK9Ve16Ax4JESTnmNuD9kCPSMJ",
+      "kept": "30000000",
+      "sellerPaid": "30000000",
+      "after": {
+        "listing": null,
+        "market": {
+          "note": null,
+          "tusd": "0"
+        },
+        "lien-f4-3863.testnet": {
+          "note": null
+        },
+        "lien-f5-3869.testnet": {
+          "note": {
+            "principal": "40000000",
+            "claimed": "0",
+            "voted_proposal": null,
+            "claimable": "5230000"
+          }
+        },
+        "lien-f6-3876.testnet": {
+          "note": null
+        }
+      }
+    },
+    {
+      "what": "lien-f6-3876.testnet tries to buy the sold note; it is no longer listed and the payment comes back",
+      "tx": "2wmf1NSnsvqHacJiQvwPAmsM143eLHg7FCzwHvynCJJw",
+      "link": "https://testnet.nearblocks.io/txns/2wmf1NSnsvqHacJiQvwPAmsM143eLHg7FCzwHvynCJJw",
+      "refused": [
+        "that note is not listed"
+      ],
+      "kept": "0"
+    },
+    {
+      "what": "lien-f5-3869.testnet lists the note it bought, then cancels; the note comes back to it",
+      "list": {
+        "tx": "HNM6he9TQbJiVTF68ABfNQQ81GngHLXxSc7JCUnJWAsK",
+        "link": "https://testnet.nearblocks.io/txns/HNM6he9TQbJiVTF68ABfNQQ81GngHLXxSc7JCUnJWAsK"
+      },
+      "transfer_note": {
+        "tx": "HG8tAaUmWpZJMiijLVVCUWgKqFFA9ZRksN4DdBhTaEMr",
+        "link": "https://testnet.nearblocks.io/txns/HG8tAaUmWpZJMiijLVVCUWgKqFFA9ZRksN4DdBhTaEMr"
+      },
+      "confirm": {
+        "tx": "2ccZPDuMcrJjKc5w7LewPgvxnVWXkoAh8Un3ptvKt7tM",
+        "link": "https://testnet.nearblocks.io/txns/2ccZPDuMcrJjKc5w7LewPgvxnVWXkoAh8Un3ptvKt7tM"
+      },
+      "cancel": {
+        "tx": "FR6rbtYFTG2ifzfZWDSKocF6Ej9pvc4i9Zk6uxZugBnH",
+        "link": "https://testnet.nearblocks.io/txns/FR6rbtYFTG2ifzfZWDSKocF6Ej9pvc4i9Zk6uxZugBnH"
+      },
+      "after": {
+        "listing": null,
+        "market": {
+          "note": null,
+          "tusd": "0"
+        },
+        "lien-f5-3869.testnet": {
+          "note": {
+            "principal": "40000000",
+            "claimed": "0",
+            "voted_proposal": null,
+            "claimable": "5230000"
+          }
+        }
+      }
+    },
+    {
+      "what": "lien-f5-3869.testnet sells it back to lien-f4-3863.testnet through the market, so the note ends where it started",
+      "list": {
+        "tx": "3GG71PJxwbAWUXLxH2iLGsyxze3oxM9ghtRTKf8XxGZ6",
+        "link": "https://testnet.nearblocks.io/txns/3GG71PJxwbAWUXLxH2iLGsyxze3oxM9ghtRTKf8XxGZ6"
+      },
+      "transfer_note": {
+        "tx": "BzfKb6pBCaQhBXTimfL8MzREiQ2Docp3kB9DyJYXdByC",
+        "link": "https://testnet.nearblocks.io/txns/BzfKb6pBCaQhBXTimfL8MzREiQ2Docp3kB9DyJYXdByC"
+      },
+      "confirm": {
+        "tx": "7SNbpeNDizkfW6ib2uvY1PEDbTLoP5eKdzjrhrVFLXsa",
+        "link": "https://testnet.nearblocks.io/txns/7SNbpeNDizkfW6ib2uvY1PEDbTLoP5eKdzjrhrVFLXsa"
+      },
+      "buy": {
+        "tx": "8sMUS8eFi3ZvRZABdDcJ5qkave7wEr8o3iN5GfjXJsDA",
+        "link": "https://testnet.nearblocks.io/txns/8sMUS8eFi3ZvRZABdDcJ5qkave7wEr8o3iN5GfjXJsDA"
+      },
+      "sellerPaid": "30000000"
+    }
+  ],
+  "complete": true,
+  "after": {
+    "listing": null,
+    "market": {
+      "note": null,
+      "tusd": "0"
+    },
+    "lien-f4-3863.testnet": {
+      "note": {
+        "principal": "40000000",
+        "claimed": "0",
+        "voted_proposal": null,
+        "claimable": "5230000"
+      }
+    },
+    "lien-f5-3869.testnet": {
+      "note": null
+    },
+    "lien-f6-3876.testnet": {
+      "note": null
+    }
+  },
+  "finished": "2026-11-14T09:33:27.294Z",
+  "restored": true
+}

@@ -134,6 +134,11 @@ export const getJob = (id: string, jobId: number) => view<Job | null>(id, "get_j
 export const getLoans = (id: string, limit = 50) => view<LoanView[]>(id, "get_loans", { limit });
 export const getNote = (id: string, loanId: number, account: string) =>
   view<NoteView | null>(id, "get_note", { loan_id: loanId, account_id: account });
+/** A listing on the note market. `ForSale` means the market holds the note; `busy` means a sale or cancel is in flight. */
+export type NoteListing = { business: string; loan_id: number; seller: string; price: string; principal: string; status: "Pending" | "ForSale"; busy: boolean; listed_at: number };
+export const getListing = (market: string, business: string, loanId: number) =>
+  view<NoteListing | null>(market, "get_listing", { business, loan_id: loanId });
+export const getListings = (market: string) => view<NoteListing[]>(market, "get_listings", { limit: 100 });
 export const getCredit = async (id: string, account: string) =>
   BigInt(await view<string>(id, "get_credit", { account_id: account }));
 

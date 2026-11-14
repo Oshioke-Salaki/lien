@@ -63,9 +63,10 @@ GET /llms.txt          this guide for an agent to read`}</Code>
 
 tools: list_businesses, get_business, get_positions, check_account,
        prepare_lend, prepare_hire_check, get_check, prepare_buy_job,
-       prepare_repay, prepare_bid, prepare_foreclose, prepare_claim`}</Code>
+       prepare_repay, prepare_bid, prepare_foreclose, prepare_claim,
+       list_notes_for_sale, prepare_list_note, prepare_buy_note`}</Code>
         <p>Each action tool checks the state first, so an agent gets a plain reason (&ldquo;Only 30 tUSD is left to raise&rdquo;, &ldquo;The minimum bid is 16.44 tUSD&rdquo;) instead of a failed transaction. Amounts are in tUSD, the test dollar token, with 6 decimals.</p>
-        <p>Every tool that moves money first checks the account that would receive it, with Sentinel&rsquo;s own rules: low risk is ALLOW, medium is WARN and needs <code>acknowledge_risk: true</code>, high is BLOCK. It also refuses any account that is not a listed business. <code>prepare_hire_check</code> lets one agent hire Sentinel to vet another account before it pays.</p>
+        <p>Every tool that moves money first checks the account that would receive it, with Sentinel&rsquo;s own rules: low risk is ALLOW, medium is WARN and needs <code>acknowledge_risk: true</code>, high is BLOCK. It also refuses any account that is not a listed business. <code>prepare_hire_check</code> lets one agent hire Sentinel to vet another account before it pays. <code>prepare_buy_note</code> pays the keyless note market, which pays the seller only in the same transaction that moves the note to the buyer, so its check is on the business whose loan the note is.</p>
       </section>
 
       <section className="space-y-3">

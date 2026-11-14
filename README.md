@@ -102,7 +102,7 @@ Lien is an MCP server at `https://lien-five.vercel.app/api/mcp`. Any MCP client 
 
 `agents/lender` is an autonomous lender with its own testnet account (`lien-lender-645368.testnet`). It uses only Lien's MCP server: it lists the market, reads each business's repayment record and free trust checks, applies a written policy ([`agents/lender/policy.json`](agents/lender/policy.json): at most 10 tUSD per loan and 50% of any loan, lenders must get 20% of sales, no keys on the business, no loan behind, no past default), and logs every lend, decline and skip as a JSON line with its reasons. Before it pays a business it **hires Sentinel**, another agent, through the new `prepare_hire_check` tool to vet the business's operator, and lends only on an ALLOW. It then collects repayments and forecloses a late loan by itself.
 
-Every MCP tool that moves money now runs Sentinel's rules (ported to [`web/src/lib/risk.ts`](web/src/lib/risk.ts), with the Rust test cases repeated) on the receiving account: low risk is **ALLOW**, medium is **WARN** and needs `acknowledge_risk: true`, high is **BLOCK**, and an account that is not a listed business is always BLOCK. A listed business with zero keys whose only flags are the ones every Lien business carries (tokens, not NEAR, and shared global code) passes as ALLOW. The agent itself signs nothing it did not decide: [`guard.ts`](agents/lender/src/guard.ts) compares each prepared transaction with its intent against a token and registry pinned in its policy. The same verdict shows as a badge on every Sentinel report in the app.
+Every MCP tool that moves money now runs Sentinel's rules (ported to [`web/src/lib/risk.ts`](web/src/lib/risk.ts), with the Rust test cases repeated) on the receiving account (for a note purchase, which pays the keyless note market, on the business whose loan the note is): low risk is **ALLOW**, medium is **WARN** and needs `acknowledge_risk: true`, high is **BLOCK**, and an account that is not a listed business is always BLOCK. A listed business with zero keys whose only flags are the ones every Lien business carries (tokens, not NEAR, and shared global code) passes as ALLOW. The agent itself signs nothing it did not decide: [`guard.ts`](agents/lender/src/guard.ts) compares each prepared transaction with its intent against a token and registry pinned in its policy. The same verdict shows as a badge on every Sentinel report in the app.
 
 | Do this | See this |
 |---|---|
@@ -134,6 +134,10 @@ Server env vars: `AGENT_MARKET_WEBHOOK_SECRET` (the webhook secret set on the li
 ## The market is live
 
 About every three hours a [scheduled GitHub Action](.github/workflows/heartbeat.yml) has a customer buy one real Sentinel check on testnet (GitHub can delay or skip scheduled runs, so the gap is sometimes longer; a second schedule 90 minutes later covers a dropped run): the job runs on the pinned build inside Intel TDX through OutLayer, the report lands on chain, and the sale repays Sentinel's lenders first. Each run's summary in the [Actions tab](https://github.com/Oshioke-Salaki/lien/actions/workflows/heartbeat.yml) links its transaction. It only buys work, so the businesses waiting to be foreclosed or sold stay that way for you to try.
+
+## Selling a loan share
+
+A lender's share of a loan (a note) can be sold for tUSD in one transaction, with no trust between buyer and seller. `contracts/notemarket` is a separate keyless contract, `notemarket.lien-13569.testnet`, with no owner and no upgrade method; the business contracts are unchanged. The seller reserves a listing, moves the note to the market with the business's own `transfer_note`, and the market confirms it now holds exactly that note. A buyer then sends the price with one `ft_transfer_call`: the market moves the note to the buyer and pays the seller only if that worked, otherwise the token refunds the buyer in the same transaction. Unclaimed repayments go with the note. On testnet a note [was sold](https://testnet.nearblocks.io/txns/AuLQRYRhWgGSrieajYsK9Ve16Ax4JESTnmNuD9kCPSMJ), a [wrong price](https://testnet.nearblocks.io/txns/6UWphjDVfuyo3Azye5yvkL1WMJDgSYgfMECwr3Ndhfg2) and a [second buy](https://testnet.nearblocks.io/txns/2wmf1NSnsvqHacJiQvwPAmsM143eLHg7FCzwHvynCJJw) were refunded, a listing was cancelled and the note sold back ([evidence](docs/evidence/testnet-e2e.md#a-loan-share-sold-atomically-through-a-keyless-market)). Agents get `list_notes_for_sale`, `prepare_list_note` and `prepare_buy_note` over MCP; `cd ops && npm run notemarket -- list|buy|cancel`.
 
 ## Revenue on other chains
 
@@ -202,7 +206,8 @@ Free test accounts need a sponsor in `web/.env.local` (see `web/.env.example`). 
 cargo test -p lien-agent                         # contract rules and money properties
 cargo test -p lien-xvault                        # the Chain Signatures vault's policy and payloads
 cargo test -p lien-lendvault                     # the lending vault's policy, refusals and callbacks
-cargo test --release -p lien-integration-tests   # full lifecycles on a local NEAR node
+cargo test -p lien-notemarket                    # the note market: every sale, refund and cancel path
+cargo test --release -p lien-integration-tests   # full lifecycles and an atomic note sale on a local NEAR node
 (cd agents/sentinel && cargo test)               # the agent
 (cd web && npm test)                             # app logic
 (cd web && npx next build && npx playwright test) # the real app on real testnet
@@ -231,6 +236,7 @@ contracts/collector   The inbox for income from anywhere
 contracts/registry    Creates businesses and lists them
 contracts/xvault      Keyless Chain Signatures vault: Base Sepolia transfers to one fixed address
 contracts/lendvault   Keyless lending vault: the lender agent lends through it with a function-call key
+contracts/notemarket  Keyless note market: a loan share and its price change hands atomically
 contracts/mocks       Test stablecoin and a stand-in for OutLayer
 agents/sentinel       The example agent, built to WASI P2
 tests/integration     Sandbox lifecycles

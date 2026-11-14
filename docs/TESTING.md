@@ -5,9 +5,10 @@ Everything here was run. Where something has not been verified, it says so.
 | Suite | Count | What it proves | Command |
 |---|---|---|---|
 | Contract unit and property tests | 146 | Every rule, refusal and money path, plus conservation under random inputs | `cargo test -p lien-agent` |
-| Sandbox lifecycles | 17 | Real cross-contract calls on a local NEAR node with a stand-in for OutLayer | `cargo test --release -p lien-integration-tests` |
+| Sandbox lifecycles | 17 | Real cross-contract calls on a local NEAR node with a stand-in for OutLayer | `cargo test --release -p lien-integration-tests --test lifecycle` |
+| Note market | 32 | 31 unit tests (list, confirm, buy, cancel, a wrong price, a wrong token, an unlisted or unconfirmed note, a double buy, a note transfer the business refuses refunding the buyer, a refused payout kept as a credit, a stale listing) and 1 sandbox test against a real business and token: an atomic sale, a buy refused by the business (vote-locked buyer) refunded in full, a forged callback refused, a cancel | `cargo test -p lien-notemarket`; `cargo test --release -p lien-integration-tests --test notemarket` |
 | Agent tests | 11 | Risk rules and the output format the contract parses | `cd agents/sentinel && cargo test` |
-| App logic | 163 | Money math against the Rust cases, formatting, the books (income, balance sheet, customers, loans) computed from fixture views, accounts, reading outcomes, merging positions reads, the MCP server, NEAR Intents quote requests and status wording, Sentinel's risk rules ported to TypeScript (the Rust cases repeated), the ALLOW / WARN / BLOCK gate on every money-moving MCP tool, the Agent Market worker (webhook signature, brief parsing, the deliverable, start and submit against a mocked marketplace, both routes called as Next calls them) | `cd web && npm test` |
+| App logic | 169 | Money math against the Rust cases, formatting, the books (income, balance sheet, customers, loans) computed from fixture views, accounts, reading outcomes, merging positions reads, the MCP server, NEAR Intents quote requests and status wording, Sentinel's risk rules ported to TypeScript (the Rust cases repeated), the ALLOW / WARN / BLOCK gate on every money-moving MCP tool, the Agent Market worker (webhook signature, brief parsing, the deliverable, start and submit against a mocked marketplace, both routes called as Next calls them), the note market tools (listing order, exact-price buy, refusals) | `cd web && npm test` |
 | Lender agent | 9 | The lender's policy (lend, decline with every reason, skip), WARN acknowledged only on listed flags, and the guarded signer refusing any transaction that differs from what the agent decided | `cd agents/lender && npm test` |
 | Browser, read-only | 22 | Real app on real testnet: pages, the landing agreeing with the app to the cent, a business's books agreeing with /api/market to the cent and equal to its balance, live proofs, no sideways scrolling, a live Intents quote with a real deposit address and its status, the Intents dry run | `npx playwright test readonly` |
 | Browser, full loan | 1 | Guest → business → loan → job → refund → claim → foreclosure → still serving → redemption | `npx playwright test lifecycle` |
@@ -45,5 +46,6 @@ Kept here because they show what the tests are worth.
 - Signing with each wallet in NEAR Connect. Browser tests sign with the guest key.
 - An independent audit or load testing.
 - The `transfer_note`, `propose_change` and `approve_change` flows through the UI. The contract rules are unit-tested.
+- On testnet, a note buy that reaches the business and is refused there. That refund path runs in the sandbox and unit tests; the testnet run shows refunds for a wrong price and an already-sold note. The note market has no UI.
 
 The numbers stated on the site are checked against the test runners by `scripts/check-facts.mjs`.
