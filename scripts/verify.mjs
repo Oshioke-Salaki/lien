@@ -162,6 +162,19 @@ await check("A compromised build's payment outside the spend policy was blocked 
   return { ok: blocked >= 1, detail: `${rec.business}: spends_blocked = ${blocked} (read now from the chain); the build ${rec.compromised_build.hash.slice(0, 12)}… tried to pay ${rec.compromised_build.pays}\n   ${rec.transactions.buy_check?.link ?? ""}` };
 });
 
+await check("The shared blocklist is keyless and reports attacker.testnet, with evidence", async () => {
+  const rec = JSON.parse(readFileSync(join(ROOT, "deployments/reports-testnet.json"), "utf8"));
+  const [keys, account, reports] = await Promise.all([
+    query({ request_type: "view_access_key_list", account_id: rec.registry }),
+    query({ request_type: "view_account", account_id: rec.registry }),
+    view(rec.registry, "get_reports", { account: "attacker.testnet" }),
+  ]);
+  const active = reports.filter((r) => r.retracted_at_ms === null);
+  const ok = keys.keys.length === 0 && account.code_hash === rec.codeHash && active.length > 0;
+  const lines = active.map((r) => `report ${r.id} by ${r.reporter}, ${new Date(r.created_at_ms).toISOString()}: ${r.evidence_url}`);
+  return { ok, detail: `${rec.registry}: ${keys.keys.length} keys, code ${account.code_hash} (recorded ${rec.codeHash}); ${active.length} active report(s) on attacker.testnet\n   ${lines.join("\n   ")}` };
+});
+
 const passed = results.filter(Boolean).length;
 console.log(`\n${passed}/${results.length} checks passed.`);
 process.exit(passed === results.length ? 0 : 1);
