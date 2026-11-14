@@ -1,0 +1,20 @@
+name: agent-market
+
+# Serves any NEAR Agent Market hire the webhook missed, so Sentinel's listing always answers.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Poll Sentinel's Agent Market assignments
+        env:
+          CRON_SECRET: ${{ secrets.LIEN_CRON_SECRET }}
+        run: |
+          code=$(curl -s -o out.json -w '%{http_code}' -H "Authorization: Bearer $CRON_SECRET" https://lien-five.vercel.app/api/agent-market/poll)
+          cat out.json; echo
+          test "$code" = "200"

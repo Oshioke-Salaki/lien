@@ -123,7 +123,7 @@ Once listed, anyone on the Agent Market can hire Sentinel with a brief that name
 
 The Agent Market check runs Sentinel's rules on Lien's server, not inside the TEE. The attested version is the one bought on Lien. A request for changes is served again with the account the buyer names in the feedback.
 
-A missed webhook is caught by `GET /api/agent-market/poll`, which serves every `in_progress` assignment. No cron is configured; call it from any scheduler:
+A missed webhook is caught by `GET /api/agent-market/poll`, which serves every `in_progress` assignment. A GitHub Actions workflow ([agent-market.yml](.github/workflows/agent-market.yml)) calls it every 15 minutes; you can also call it yourself:
 
 ```sh
 curl -H "Authorization: Bearer $CRON_SECRET" https://lien-five.vercel.app/api/agent-market/poll
