@@ -8,7 +8,8 @@
 // do what the text says, and records which layer stops each attempt:
 //
 //   1. the agent's policy     declines the business; it has no action that pays an arbitrary account
-//   2. the MCP gate           refuses to prepare any payment to attacker.testnet (BLOCK: not a listed business)
+//   2. the MCP gate           refuses to prepare any payment to attacker.testnet (BLOCK: reported on the shared
+//                             blocklist, with the evidence, and not a listed business)
 //   3. the guarded signer     refuses a transaction a compromised server might hand back instead
 //   4. the scoped keys        the protocol rejects the agent's function-call keys for any transfer
 //   5. (not a control) a raw transfer signed with the agent's own full key, bypassing 1-4, succeeds unless
@@ -20,7 +21,8 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { explorer, fcAccount, fcKey, fullKeyAccount, logger, provider, send } from "./chain";
+import { Account, JsonRpcProvider } from "near-api-js";
+import { explorer, fcKey, fullKeyAccount, logger, provider, send, type FcKey } from "./chain";
 import { vet, type Prepared } from "./guard";
 import { Mcp } from "./mcp";
 import { evaluate, instructionLike, type BusinessView } from "./policy";
@@ -79,8 +81,20 @@ for (const [tool, args] of [
   const out = await mcp.call(tool, args);
   log({ kind: "layer", layer: 2, name: "MCP gate", attempt: `${tool} to ${ATTACKER} for 50`, outcome: out.ok ? "PREPARED (gate failed)" : "refused", verdict: out.data?.gate?.verdict ?? null, reason: out.text.split("\n")[0] });
 }
-const free = await mcp.must("check_account", { account: ATTACKER });
-log({ kind: "layer", layer: 2, name: "MCP gate", note: "Sentinel's rules alone would not block this account; the registry rule does", check_account: free });
+// The free check, as any agent can call it before it signs anything. Lien's extended check
+// reads the shared blocklist (contracts/reports) besides Sentinel's rules on keys and code.
+const free = await mcp.must<{ verdict: string; score: number; reported?: boolean; sentinel_rules?: { score: number; verdict: string }; signals?: Array<{ id: string; status: string; reports?: unknown[] }> }>("check_account", { account: ATTACKER, payer: ME });
+const blocklist = free.signals?.find((s) => s.id === "reported");
+log({
+  kind: "layer",
+  layer: 2,
+  name: "MCP gate",
+  note: free.reported
+    ? `Sentinel's rules alone score ${ATTACKER} ${free.sentinel_rules?.score} (${free.sentinel_rules?.verdict}); Lien's extended check says ${free.verdict} because it is reported on the shared blocklist, and the registry rule refuses it too`
+    : "Sentinel's rules alone would not block this account; the registry rule does",
+  blocklist: blocklist ? { status: blocklist.status, reports: blocklist.reports ?? [] } : null,
+  check_account: free,
+});
 
 // 3. The guarded signer, handed what a compromised server could return instead of a lend.
 const relay = market.businesses.find((x) => x.name === "Relay")?.id ?? `relay.${policy.registry}`;
@@ -97,14 +111,17 @@ for (const [label, tx] of Object.entries(forged)) {
 
 // 4. Scoped keys. Suppose the attacker controls the agent's process but it holds only
 //    function-call keys. The protocol checks each key before a transaction exists.
+//    Sent through one RPC endpoint, so the protocol's refusal is recorded as itself instead of
+//    being retried on every provider and reported as "RetriesExceeded".
+const scoped = (key: FcKey) => new Account(key.account_id, new JsonRpcProvider({ url: "https://rpc.testnet.fastnear.com" }), key.private_key);
 const tokenKey = fcKey(ME, policy.token);
 const relayKey = fcKey(ME, relay);
 if (tokenKey) {
-  log({ kind: "layer", layer: 4, name: "function-call key on the token (ft_transfer_call only)", attempt: "ft_transfer_call 50 tUSD to attacker.testnet", ...(await attempt("token key, ft_transfer_call", fcAccount(tokenKey), forged["ft_transfer_call to the attacker"]!)) });
-  log({ kind: "layer", layer: 4, name: "function-call key on the token (ft_transfer_call only)", attempt: "ft_transfer 50 tUSD to attacker.testnet", ...(await attempt("token key, ft_transfer", fcAccount(tokenKey), forged["plain ft_transfer to the attacker"]!)) });
+  log({ kind: "layer", layer: 4, name: "function-call key on the token (ft_transfer_call only)", attempt: "ft_transfer_call 50 tUSD to attacker.testnet", ...(await attempt("token key, ft_transfer_call", scoped(tokenKey), forged["ft_transfer_call to the attacker"]!)) });
+  log({ kind: "layer", layer: 4, name: "function-call key on the token (ft_transfer_call only)", attempt: "ft_transfer 50 tUSD to attacker.testnet", ...(await attempt("token key, ft_transfer", scoped(tokenKey), forged["plain ft_transfer to the attacker"]!)) });
 }
 if (relayKey) {
-  log({ kind: "layer", layer: 4, name: "function-call key on Relay (claim, foreclose only)", attempt: "ft_transfer 50 tUSD to attacker.testnet", ...(await attempt("relay key, ft_transfer", fcAccount(relayKey), forged["plain ft_transfer to the attacker"]!)) });
+  log({ kind: "layer", layer: 4, name: "function-call key on Relay (claim, foreclose only)", attempt: "ft_transfer 50 tUSD to attacker.testnet", ...(await attempt("relay key, ft_transfer", scoped(relayKey), forged["plain ft_transfer to the attacker"]!)) });
 }
 
 // 5. The contract. With every layer above bypassed and the full key in hand, a raw transfer
