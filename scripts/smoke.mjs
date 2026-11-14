@@ -19,7 +19,7 @@ const get = async (path) => {
   return r;
 };
 
-for (const path of ["/", "/market", "/proof", "/guide", "/create", "/portfolio", `/b/${B}`, "/llms.txt"]) {
+for (const path of ["/", "/market", "/proof", "/guide", "/create", "/portfolio", `/b/${B}`, `/b/${B}/books`, "/llms.txt"]) {
   await check(`page ${path}`, async () => { await get(path); });
 }
 await check("404 page answers 404", async () => {
@@ -51,6 +51,15 @@ await check("MCP lists its tools", async () => {
   return `${n} tools`;
 });
 await check("an Intents quote route answers", async () => { await get("/api/quote"); });
+await check("a business's books balance", async () => {
+  const d = await (await get(`/api/books/${B}`)).json();
+  if (!d.balance) throw new Error("no balance sheet");
+  return `block ${d.block}`;
+});
+await check("the Agent Market webhook refuses an unsigned call", async () => {
+  const r = await fetch(SITE + "/api/agent-market/webhook", { method: "POST", body: "{}", signal: AbortSignal.timeout(30_000) });
+  if (r.status !== 401) throw new Error(`answered ${r.status}`);
+});
 
 console.log(failed ? `\n${failed} check(s) failed` : "\nAll smoke checks passed.");
 process.exit(failed ? 1 : 0);
