@@ -1754,6 +1754,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "lien-lendvault2"
+version = "0.1.0"
+dependencies = [
+ "near-sdk",
+]
+
+[[package]]
 name = "lien-mock-outlayer"
 version = "0.1.0"
 dependencies = [

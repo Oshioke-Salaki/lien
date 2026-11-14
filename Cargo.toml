@@ -6,6 +6,7 @@ members = [
   "contracts/registry",
   "contracts/xvault",
   "contracts/lendvault",
+  "contracts/lendvault2",
   "contracts/notemarket",
   "contracts/reports",
   "contracts/mocks/token",

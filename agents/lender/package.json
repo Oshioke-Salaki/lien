@@ -7,7 +7,7 @@
     "setup": "tsx src/setup.ts",
     "lender": "tsx src/lender.ts",
     "attack": "tsx src/attack.ts",
-    "test": "node --import tsx --test src/policy.test.ts",
+    "test": "node --import tsx --test src/policy.test.ts src/verdict.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
