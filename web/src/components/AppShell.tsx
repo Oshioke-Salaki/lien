@@ -57,14 +57,14 @@ function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
 
   if (!ready) return <div className="skeleton h-[132px]" />;
   if (!account && quietWhenOut) {
-    return <p className="rounded-[14px] bg-[var(--surface)] p-4 text-[14px] leading-snug text-[var(--ink-2)]">You are not connected yet. Nothing here needs a wallet to read.</p>;
+    return <p className="rounded-[14px] bg-[var(--surface)] p-4 text-[14px] leading-snug text-[var(--ink-2)]">Not connected. Reading needs no wallet.</p>;
   }
   if (!account) {
     return (
       <div className="space-y-3 rounded-[14px] bg-[var(--surface)] p-4">
         <div>
           <p className="text-[15px] font-medium">Try it free</p>
-          <p className="mt-1 text-[14px] leading-snug text-[var(--ink-2)]">Get a free test account with $500 of test dollars, or connect a NEAR wallet.</p>
+          <p className="mt-1 text-[14px] leading-snug text-[var(--ink-2)]">A free test account with $500 of test dollars, or a NEAR wallet.</p>
         </div>
         <ConnectButtons compact />
         <RestoreAccount />
@@ -108,7 +108,7 @@ function AccountBox({ quietWhenOut = false }: { quietWhenOut?: boolean }) {
       </div>
       {confirming ? (
         <div className="space-y-2 rounded-[10px] bg-[var(--surface-2)] p-3" role="alert">
-          <p className="text-[14px] leading-snug">This test account lives only in this browser. Signing out loses it, its test money and anything it owns, unless you back it up first.</p>
+          <p className="text-[14px] leading-snug">Signing out loses this browser-only account and all it owns. Back it up first.</p>
           <button type="button" className="link text-[14px]" onClick={() => { setConfirming(false); setShowBackup(true); }}>Back it up first</button>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn btn-secondary btn-sm" onClick={signOut} data-testid="confirm-sign-out">Sign out</button>
@@ -135,7 +135,7 @@ function BackupPanel({ text }: { text: string }) {
   const area = useRef<HTMLTextAreaElement>(null);
   return (
     <div className="space-y-2 rounded-[10px] bg-[var(--surface-2)] p-3" data-testid="backup">
-      <p className="text-[13px] leading-snug text-[var(--ink-2)]">Keep this line somewhere safe to use this test account in another browser. Anyone with it controls the account, but it only ever holds test money.</p>
+      <p className="text-[13px] leading-snug text-[var(--ink-2)]">Keep this line to use the account elsewhere. Whoever has it controls it (test money only).</p>
       <textarea ref={area} readOnly value={text} rows={3} className="input w-full resize-none text-[12px] break-all" aria-label="Backup of this test account" onFocus={(e) => e.currentTarget.select()} />
       <button type="button" className="btn btn-secondary btn-sm" aria-live="polite" onClick={async () => {
         let ok = false;

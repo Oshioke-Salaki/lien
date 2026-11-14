@@ -77,12 +77,12 @@ export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
       <PageHead
         title="Market"
         lead={
-          // Three lines are reserved while loading, so the Start button does not jump when the words arrive.
-          <p data-testid="market-finding" className="min-h-[3lh]">
+          // Two lines are reserved while loading, so the Start button does not jump when the words arrive.
+          <p data-testid="market-finding" className="min-h-[2lh]">
             {live.loaded
               ? all.length === 0
                 ? "No businesses yet. Be the first to start one."
-                : `${all.length} ${all.length === 1 ? "business" : "businesses"}. ${rows.length} featured: ${finding}.${others.length ? ` Plus ${others.join(" and ")}.` : ""}`
+                : `${rows.length} featured: ${finding}.${others.length ? ` Plus ${others.join(" and ")}.` : ""}`
               : "Loading live data…"}
           </p>
         }
@@ -92,7 +92,7 @@ export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
       <HowItWorks />
 
       {live.error && !live.data ? (
-        <ErrorState message="The network could not be reached, so the market cannot be shown right now." onRetry={() => void live.refresh()} />
+        <ErrorState message="Network unreachable, so the market can't load." onRetry={() => void live.refresh()} />
       ) : (
         <>
           <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3" data-testid="market-stats">
@@ -104,7 +104,7 @@ export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
                 label: "Real loans closed",
                 tip: `Loans on a real clock, with payments due every few days or weeks, that were paid back in full or taken over. Staged demo loans are counted apart: the team opens them on ${stagedClock} so that visitors can try a takeover, and they fall behind on purpose.`,
                 value: stats ? `${stats.loansRepaid} repaid, ${stats.loansTakenOver} taken over` : null,
-                note: staged?.takenOver ? `Plus ${staged.takenOver} ${staged.takenOver === 1 ? "takeover" : "takeovers"} of staged demos on ${stagedClock}` : null,
+                note: staged?.takenOver ? `Plus ${staged.takenOver} staged-demo ${staged.takenOver === 1 ? "takeover" : "takeovers"}` : null,
                 testId: "stat-closed",
               },
               {
@@ -130,19 +130,19 @@ export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
             {!live.loaded ? (
               [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[92px] w-full lg:h-[76px]" />)
             ) : rows.length === 0 ? (
-              <EmptyState title="Nothing is listed yet" body="A business here is an AI agent that sells a service and can borrow against its sales. Start one and it appears here." action={{ href: "/create", label: "Start a business" }} />
+              <EmptyState title="Nothing is listed yet" body="An AI agent that sells a service and borrows against its sales." action={{ href: "/create", label: "Start a business" }} />
             ) : (
               <ul className="space-y-2">
                 {rows.map((b) => <MarketRow key={b.id} business={b} name={nameOf(b)} onOpen={() => router.push(`/b/${b.id}`)} />)}
               </ul>
             )}
             {teamTests.length ? (
-              <Folded testId="team-tests" title={`Lien team tests (${teamTests.length})`} lead="Businesses the Lien team runs to test the product, such as probes and the prompt-injection demo that lender agents must refuse.">
+              <Folded testId="team-tests" title={`Lien team tests (${teamTests.length})`} lead="Team probes, and the prompt-injection demo lender agents must refuse.">
                 {teamTests.map((b) => <MarketRow key={b.id} business={b} name={nameOf(b)} onOpen={() => router.push(`/b/${b.id}`)} />)}
               </Folded>
             ) : null}
             {started.length ? (
-              <Folded testId="started-by-visitors" title={`Started by visitors (${started.length})`} lead="Businesses people started or bought at auction while trying Lien, with fewer than three different customers so far.">
+              <Folded testId="started-by-visitors" title={`Started by visitors (${started.length})`} lead="Started or bought by visitors; fewer than three customers so far.">
                 {started.map((b) => <MarketRow key={b.id} business={b} name={nameOf(b)} onOpen={() => router.push(`/b/${b.id}`)} />)}
               </Folded>
             ) : null}
@@ -152,7 +152,7 @@ export function MarketScreen({ initial }: { initial?: MarketSnapshot }) {
 
           {live.loaded ? <TryIt rows={rows} nameOf={nameOf} /> : null}
           <p className="max-w-[72ch] text-[14px] muted">
-            Every figure is read live from the network. No person holds the keys to any business here, so none of this depends on trusting Lien. <Link className="link" href="/proof">See every promise and its proof</Link>.
+            Every figure is live from the network; nobody holds any business&rsquo;s keys. <Link className="link" href="/proof">See the proofs</Link>.
           </p>
         </>
       )}
@@ -183,11 +183,11 @@ function TryIt({ rows, nameOf }: { rows: Business[]; nameOf: (b: Business) => st
   const ended = pick("sale-ended");
   const serving = pick("current") ?? rows[0];
   const steps = [
-    raising && { href: `/b/${raising.id}`, action: `Lend to ${nameOf(raising)}`, result: "You get a share of the loan, repaid from every sale it makes." },
-    serving && { href: `/b/${serving.id}`, action: `Buy a safety check from ${nameOf(serving)}`, result: "A report on any account, usually in under a minute, sometimes up to two. If it fails, you get your money back." },
-    late && { href: `/b/${late.id}`, action: `Take over ${nameOf(late)}`, result: `${late.current_loan && isStagedLoan(late.current_loan) ? "A staged demo: its loan wants a payment every few minutes, so it falls behind on purpose." : "It missed its payments."} Anyone can take it over for its lenders, and it keeps serving customers.` },
-    sale && { href: `/b/${sale.id}`, action: `Bid on ${nameOf(sale)}`, result: "The highest bid takes a running business. The price goes to its lenders first." },
-    !sale && ended && { href: `/b/${ended.id}`, action: `Complete the sale of ${nameOf(ended)}`, result: "Its auction has ended. Anyone can complete the sale; the price goes to lenders first." },
+    raising && { href: `/b/${raising.id}`, action: `Lend to ${nameOf(raising)}`, result: "A share of the loan, repaid from every sale." },
+    serving && { href: `/b/${serving.id}`, action: `Buy a safety check from ${nameOf(serving)}`, result: "A risk report in about a minute. Refunded if it fails." },
+    late && { href: `/b/${late.id}`, action: `Take over ${nameOf(late)}`, result: `${late.current_loan && isStagedLoan(late.current_loan) ? "Staged demo, behind on purpose." : "It missed its payments."} It keeps serving, now for lenders.` },
+    sale && { href: `/b/${sale.id}`, action: `Bid on ${nameOf(sale)}`, result: "Win a running business. The price pays lenders first." },
+    !sale && ended && { href: `/b/${ended.id}`, action: `Complete the sale of ${nameOf(ended)}`, result: "Auction over. Anyone can finish it; lenders are paid first." },
   ].filter((s): s is { href: string; action: string; result: string } => Boolean(s));
   if (!steps.length) return null;
   return (
@@ -240,7 +240,7 @@ function MarketRow({ business: b, name, onOpen }: { business: Business; name: st
           </>
         ) : <span className="text-[14px] muted">No loan. {b.stats.jobs_done} {b.stats.jobs_done === 1 ? "check" : "checks"} sold.</span>}
         {loan?.status === "Foreclosed" && !auctionEnded(loan, b.now) && loan.min_next_bid && BigInt(loan.min_next_bid) < BigInt(b.ledger.opex) ? (
-          <p className="mt-2 text-[13px] text-[var(--ink-2)]" data-testid="bargain-row">Lowest bid {moneyUp(loan.min_next_bid)}, below the {money(b.ledger.opex)} of running money inside. Its terms allow it.</p>
+          <p className="mt-2 text-[13px] text-[var(--ink-2)]" data-testid="bargain-row">Lowest bid {moneyUp(loan.min_next_bid)}, below its {money(b.ledger.opex)} running money.</p>
         ) : null}
       </div>
       <div className="text-[14px] lg:text-[15px]">
@@ -284,9 +284,9 @@ function ReopenIntro() {
 }
 
 const STEPS = [
-  { title: "An AI agent borrows", body: "It runs as a NEAR account that nobody holds the keys to, so no one can walk off with the loan." },
-  { title: "Every sale repays lenders first", body: "A fixed share of each sale goes to the lenders before the owner sees anything." },
-  { title: "Stop paying, lose the business", body: "Anyone can take over a late agent. It keeps working for its lenders until it is sold." },
+  { title: "An AI agent borrows", body: "Its NEAR account has no keys, so nobody can take the loan." },
+  { title: "Every sale repays lenders first", body: "A fixed share of each sale reaches lenders before the owner." },
+  { title: "Stop paying, lose the business", body: "Anyone can take over a late agent. It works for lenders until sold." },
 ];
 
 /** Lien in three plain steps, for anyone who arrives here first. Hidden once dismissed. */

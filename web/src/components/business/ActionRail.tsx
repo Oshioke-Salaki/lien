@@ -141,7 +141,7 @@ function ForecloseCard({ business: b, now, refresh, featured }: Props) {
             <p className="text-[var(--ink-2)]">You pay only the network fee.<Info label="what you get" tip="If you lent to it, your share of that money is yours to collect; either way, you can then bid to buy it." /></p>
             <div className="flex flex-wrap gap-2">
               <button type="button" data-testid="foreclose-confirm" className="btn btn-warn" disabled={busy} onClick={async () => {
-                const result = await run(tx.foreclose(b.id), { requiredOn: b.id, done: "Taken over: the owner's share now goes to lenders, and the business is up for auction" });
+                const result = await run(tx.foreclose(b.id), { requiredOn: b.id, done: "Taken over: lenders get the owner's share; auction open" });
                 if (result?.ok) setConfirming(false);
                 await refresh();
               }}>Yes, take it over</button>
@@ -606,7 +606,7 @@ function OperatorCard({ business: b, now, refresh }: Props) {
         </button>
 
         {loan?.status === "Funding" ? (
-          <button type="button" className="btn btn-secondary w-full" disabled={busy} data-testid="cancel-offer" onClick={async () => { await run(tx.cancelOffer(b.id), { requiredOn: b.id, done: "The offer was cancelled, and lenders can take their money back" }); await refresh(); }}>Cancel this loan offer</button>
+          <button type="button" className="btn btn-secondary w-full" disabled={busy} data-testid="cancel-offer" onClick={async () => { await run(tx.cancelOffer(b.id), { requiredOn: b.id, done: "Offer cancelled; lenders can take their money back" }); await refresh(); }}>Cancel this loan offer</button>
         ) : null}
 
         {!loan ? (
