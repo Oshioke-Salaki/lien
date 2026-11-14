@@ -130,6 +130,27 @@ test.describe("a business", () => {
     await page.getByTestId("intents-quote").click();
     await expect(page.getByTestId("intents-result")).toContainText("You send");
     await expect(page.getByTestId("intents-result")).toContainText("switched off");
+    // A real (non-dry) quote: a deposit address, followed on 1Click's status API. Nothing is sent to it.
+    await expect(page.getByTestId("intents-deposit")).toBeVisible();
+    await expect(page.getByTestId("intents-sending-off")).toContainText("Do not send anything");
+    await expect(page.getByTestId("intents-status-card")).toHaveAttribute("data-status", "PENDING_DEPOSIT");
+  });
+
+  test("a dry run shows every NEAR Intents status in plain words", async ({ page }) => {
+    await page.goto(`/b/${SENTINEL}`);
+    await page.getByTestId("intents-disclosure").locator("summary").click();
+    await page.getByTestId("intents-refund").fill("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045");
+    await page.getByTestId("intents-origin").selectOption({ label: "USDC on Base" });
+    await page.getByTestId("intents-dry-toggle").locator("input").check();
+    await page.getByTestId("intents-quote").click();
+    await expect(page.getByTestId("intents-result")).toContainText("No deposit address was created");
+    await expect(page.getByTestId("intents-deposit")).toHaveCount(0);
+    await page.getByTestId("intents-sim-REFUNDED").click();
+    await expect(page.getByTestId("intents-status-meaning")).toContainText("refund address (0xd8da6bf26964af9d7eed9e03e53415d37aa96045)");
+    await page.getByTestId("intents-sim-FAILED").click();
+    await expect(page.getByTestId("intents-status-meaning")).toContainText("received nothing");
+    await page.getByTestId("intents-dryrun-play").click();
+    await expect(page.getByTestId("intents-status-card")).toHaveAttribute("data-status", "SUCCESS", { timeout: 10_000 });
   });
 
   test("a bad refund address gets a clear message", async ({ page }) => {
