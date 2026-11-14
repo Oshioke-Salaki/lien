@@ -58,13 +58,13 @@ First, check the claims without trusting the app. From the repository root, with
 npm run verify     # or: node scripts/verify.mjs
 ```
 
-Then open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally (below), and follow the rest. There is nothing to install: **Use a free test account** gives you a funded testnet account in your browser.
+Then open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally (below), and follow the rest. There is nothing to install: **Get a free test account** gives you a funded testnet account in your browser.
 
 | Do this | You should see |
 |---|---|
 | Run `npm run verify` at the repository root | Six ✅ lines, read from testnet: Sentinel and its inbox hold zero access keys, it runs the published contract (code hash from `deployments/testnet.json`), its pinned build re-hashes byte for byte from FastFS, the tokens it holds cover its ledger (equal when we ran it), its latest Intel TDX quote names the pinned build, and the live run's evidence file records the operator's withdrawal refused |
 | Open `/market` | Real businesses read from testnet, the ones needing attention first |
-| Click **Use a free test account** | An account with 500.00 tUSD in the sidebar, in about 10 seconds |
+| Click **Get a free test account** | An account with 500.00 tUSD in the sidebar, in about 10 seconds |
 | Open **Sentinel**, read **Check it yourself** | Five checks turn to Verified, run by your browser: zero keys, published contract, the build's bytes re-hashed, books match balance, and an Intel TDX quote naming the pinned build |
 | Buy a check on `outlayer.testnet` | About 15 seconds later, a risk report. The waterfall bar shows where your payment went |
 | Buy a check on `hello` | A refund, because there is no account in it to check |
@@ -194,7 +194,7 @@ A job is one round trip. The customer's payment is held, `request_execution` run
 |---|---|
 | **OutLayer** | Runs the pinned WASM in Intel TDX and returns the result on chain |
 | **Yield and resume** | The contract pauses while the enclave works and resumes with the result |
-| **NEAR Intents, 1Click API** | Income from other chains reaches a business's inbox. The app gets a real quote and deposit address, follows its status (pending, deposit seen, processing, success, incomplete deposit, refunded, failed) and has a dry run for judges |
+| **NEAR Intents, 1Click API** | Income from other chains reaches a business's inbox. The app gets a real quote and deposit address, follows its status (pending, deposit seen, processing, success, incomplete deposit, refunded, failed) and has a preview of the full flow (nothing is sent) |
 | **Chain Signatures** | A keyless vault controls an EVM address and has the MPC network sign only transfers to one fixed address on Base Sepolia |
 | **Keyless accounts** | Sub-accounts deployed with no access keys, so nobody can spend or change them |
 | **Global contracts (NEP-591)** | Every business runs the same published code, checkable by hash |

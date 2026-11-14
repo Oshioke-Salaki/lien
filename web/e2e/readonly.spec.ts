@@ -40,13 +40,16 @@ test.describe("landing page", () => {
     await page.goto("/");
     const notice = page.getByTestId("notice");
     await expect(notice).toHaveAttribute("data-state", "active");
-    await expect(page.getByTestId("monthly-lender")).toHaveText("$240"); // 30% of $800
-    await expect(page.getByTestId("payoff")).toHaveText("5 months"); // 1100 / 240
+    await expect(page.getByTestId("monthly-lender")).toHaveText("$120"); // 30% of $400
+    await expect(page.getByTestId("payoff")).toHaveText("10 months"); // 1100 / 120, rounded up
     await page.getByTestId("sim-stop").click();
     await expect(notice).toHaveAttribute("data-state", "foreclosed");
     await expect(notice).toContainText("Notice of foreclosure");
-    await expect(page.getByTestId("still-owed")).toHaveText("$380"); // 1100 - 3 * 240
-    await expect(page.getByTestId("recovered")).toHaveText("$1,100"); // 720 + min(500, 380)
+    await expect(page.getByTestId("still-owed")).toHaveText("$740"); // 1100 - 3 * 120
+    await expect(page.getByTestId("recovered")).toHaveText("$860"); // 360 + min(500, 740)
+    await expect(notice).toContainText("so they lose $240"); // the loss depends on the bid
+    await page.getByTestId("sim-bid").fill("800");
+    await expect(page.getByTestId("recovered")).toHaveText("$1,100"); // a bid above the debt covers it
     await page.getByTestId("sim-stop").click();
     await expect(notice).toHaveAttribute("data-state", "active");
   });
@@ -153,7 +156,8 @@ test.describe("a business", () => {
     await page.getByTestId("intents-origin").selectOption({ label: "USDC on Base" });
     await page.getByTestId("intents-dry-toggle").locator("input").check();
     await page.getByTestId("intents-quote").click();
-    await expect(page.getByTestId("intents-result")).toContainText("No deposit address was created");
+    await expect(page.getByTestId("intents-result")).toContainText("created no deposit address");
+    await expect(page.getByTestId("intents-status-meaning")).toContainText("A preview creates none");
     await expect(page.getByTestId("intents-deposit")).toHaveCount(0);
     await page.getByTestId("intents-sim-REFUNDED").click();
     await expect(page.getByTestId("intents-status-meaning")).toContainText("refund address (0xd8da6bf26964af9d7eed9e03e53415d37aa96045)");

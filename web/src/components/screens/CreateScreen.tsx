@@ -49,7 +49,8 @@ export function CreateScreen() {
   const [price, setPrice] = useState("0.25");
   const [url, setUrl] = useState(sentinel?.url ?? "");
   const [hash, setHash] = useState(sentinel?.hash ?? "");
-  const [vendors, setVendors] = useState(sentinel?.vendor ?? "");
+  // Empty to start: a vendor is a choice the owner makes. Sentinel's own vendor is one click away below.
+  const [vendors, setVendors] = useState("");
   const [perTx, setPerTx] = useState("0.10");
   const [perDay, setPerDay] = useState("5");
   // Keyed by name, so a stale answer about the previous name is never shown.
@@ -201,7 +202,12 @@ export function CreateScreen() {
             <TextField label="What it does" value={description} onChange={setDescription} multiline error={descriptionError} />
           </>)}
           {step("What it may spend on", "It can only pay these accounts, up to these limits, whatever its program asks for. This is what keeps a loan safe.", <>
-            <TextField label="Vendors it may pay" value={vendors} onChange={(v) => setVendors(v.toLowerCase())} error={vendorError} hint={vendorList.length ? "Accounts it may pay, separated by commas." : "With no vendors it can't pay anyone for its work. Add at least one, like the service it buys compute from."} />
+            <TextField label="Vendors it may pay" testId="create-vendors" value={vendors} onChange={(v) => setVendors(v.toLowerCase())} error={vendorError} placeholder="e.g. compute-provider.testnet" hint={vendorList.length ? "Accounts it may pay, separated by commas." : "NEAR accounts it may pay, separated by commas. With none, it can't pay anyone for its work, such as the service it buys compute from."} />
+            {sentinel?.vendor && !vendorList.includes(sentinel.vendor) ? (
+              <button type="button" className="link -mt-2 text-[14px]" data-testid="create-vendor-sentinel" onClick={() => setVendors(vendorList.length ? `${vendors.replace(/[,\s]+$/, "")}, ${sentinel.vendor}` : sentinel.vendor!)}>
+                Running Sentinel&rsquo;s program? Add the vendor it pays, {sentinel.vendor}
+              </button>
+            ) : null}
             <div className="grid gap-4 sm:grid-cols-2">
               <AmountField label="Most per payment" value={perTx} onChange={setPerTx} error={perTxCheck.error ?? limitError} hint={perTx.trim() === "" ? "Left empty, the limit is $0: its program will not be able to pay any vendor." : undefined} />
               <AmountField label="Most per day" value={perDay} onChange={setPerDay} error={perDayCheck.error} />
@@ -236,7 +242,7 @@ export function CreateScreen() {
             </p>
             <dl className="dl">
               <dt>Keys on the account</dt><dd>None, ever</dd>
-              <dt>Contract</dt><dd><code>{shortHash(deployment.agentCode)}</code></dd>
+              <dt>Contract</dt><dd title={`Code hash ${deployment.agentCode}`}>Runs the standard Lien contract</dd>
               <dt>Build it runs</dt><dd><code>{hash ? shortHash(hash) : "-"}</code></dd>
               <dt>Job price</dt><dd>{priceValue ? money(priceValue) : "-"}</dd>
               <dt>Network deposit</dt><dd>{depositCovered ? "Covered for you" : guestPaused ? "Paused: test funds are being refilled" : `${CREATE_DEPOSIT_NEAR} NEAR`}</dd>

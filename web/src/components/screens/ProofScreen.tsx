@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Fragment } from "react";
 import { ProofPanel } from "@/components/business/ProofPanel";
 import { PageHead, Panel, Skeleton } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
@@ -12,9 +13,27 @@ const SENTINEL = `sentinel.${deployment.registry}`;
 
 /** A test's name read as a sentence: "a_created_business_has_no_keys" → "A created business has no keys". */
 const plainTest = (name: string) => {
+  if (PLAIN[name]) return PLAIN[name];
+  // A file name ("mcp.test.ts") is named as the file, never capitalised into a sentence.
+  if (/\.[a-z]+$/.test(name)) return `The ${name} suite`;
   const words = name.replace(/_/g, " ").trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
+
+/** Names whose words need punctuation a test name cannot carry. */
+const PLAIN: Record<string, string> = {
+  revenue_splits_between_lenders_operator_and_opex: "Revenue splits between lenders, the owner and running costs",
+};
+
+/** A test's own name in a mono chip that wraps only after an underscore or a dot, never mid-word. */
+function TestName({ name, className = "" }: { name: string; className?: string }) {
+  const parts = name.split(/(?<=[_.])/);
+  return (
+    <code className={`inline-block max-w-full rounded-[6px] bg-[var(--surface-2)] px-1.5 py-0.5 [overflow-wrap:anywhere] ${className}`}>
+      {parts.map((part, i) => <Fragment key={i}>{part}{i < parts.length - 1 ? <wbr /> : null}</Fragment>)}
+    </code>
+  );
+}
 type Evidence = { href: string; label: string };
 /** Transactions and attestations on the network, as opposed to links into the source code. */
 const isOnChain = (e: Evidence) => !/github\.com/.test(e.href);
@@ -50,7 +69,7 @@ export function ProofScreen() {
                   <p className="muted">Proven by</p>
                   <ul className="space-y-1">
                     {a.tests.map((t) => (
-                      <li key={t.name} className="break-words"><a className="link" href={t.href} target="_blank" rel="noreferrer"><code className="text-[12px]">{t.name}</code></a></li>
+                      <li key={t.name}><a className="link" href={t.href} target="_blank" rel="noreferrer"><TestName name={t.name} className="text-[12px]" /></a></li>
                     ))}
                   </ul>
                   {a.evidence.length ? (
@@ -92,9 +111,9 @@ export function ProofScreen() {
                         <p className="muted">Proved by</p>
                         <ul className="mt-1 space-y-2">
                           {claim.tests.map((t) => (
-                            <li key={t.name} className="break-words">
+                            <li key={t.name}>
                               <a className="link" href={t.href} target="_blank" rel="noreferrer">{plainTest(t.name)}</a>
-                              <span className="block text-[12px] muted"><code>{t.name}</code></span>
+                              <span className="mt-1 block text-[12px] muted"><TestName name={t.name} /></span>
                             </li>
                           ))}
                         </ul>

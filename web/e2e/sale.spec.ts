@@ -10,7 +10,7 @@ const id = `${label}.${REGISTRY}`;
 async function guest(browser: Browser): Promise<Page> {
   const page = await (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage();
   await page.goto("/market");
-  await page.getByRole("button", { name: "Use a free test account" }).first().click();
+  await page.getByRole("button", { name: "Get a free test account" }).first().click();
   await expect(page.getByTestId("balance").first()).toHaveText("$500.00", { timeout: 90_000 });
   return page;
 }

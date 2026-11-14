@@ -104,7 +104,7 @@ function BalanceChip({ books }: { books: Books }) {
   return (
     <span className="chip" style={{ color: ok ? "var(--ok)" : "var(--danger)" }} data-testid="books-check" data-check={check}>
       <span aria-hidden className="chip-dot" />
-      <span className="text-[var(--ink)]">{check === "equal" ? "Equal to balance: yes" : check === "covers" ? "Balance covers the books: yes" : "Balance below the books"}</span>
+      <span className="text-[var(--ink)]" title={check === "equal" ? "The token contract says this business holds exactly what its ledger records: every dollar is accounted for. The same check npm run verify runs." : check === "covers" ? "It holds more than its ledger records: someone sent it a plain transfer it never recorded." : "It holds less than its ledger records."}>{check === "equal" ? "Every dollar accounted for ✓" : check === "covers" ? "Balance covers the books ✓" : "Balance below the books"}</span>
     </span>
   );
 }
@@ -125,7 +125,7 @@ function Headlines({ books }: { books: Books }) {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Tile label="Sales, since it opened" value={life.sales.usd} sub={`${life.salesCount} ${life.salesCount === 1 ? "check" : "checks"} delivered`} testid="tile-sales" />
-      <Tile label="Paid to lenders" value={life.lendersRepaid.usd} sub={books.loans.ran ? `on ${books.loans.ran} ${books.loans.ran === 1 ? "loan" : "loans"}` : "it has not borrowed"} testid="tile-lenders" />
+      <Tile label="Paid to lenders" value={life.lendersRepaid.usd} sub={books.loans.ran ? `on ${books.loans.ran} ${books.loans.ran === 1 ? "loan" : "loans"}` : books.loans.lines.some((l) => l.status === "Funding") ? "none yet: its loan is still raising, and repayments start once it is full" : "it has not borrowed"} testid="tile-lenders" />
       <Tile label="Tokens it holds" value={books.balance.held.usd} sub={books.balance.check === "equal" ? "every unit accounted for" : books.balance.check === "covers" ? `${books.balance.difference.usd} above the books` : `${books.balance.difference.usd} short`} testid="tile-held" />
       <Tile label="Paying customers" value={c.uniqueLifetime} sub={c.complete ? `${c.visitors} outside visitors, ${c.team} team` : `${c.counted} in the last ${c.jobsInRecords} jobs`} testid="tile-customers" />
     </div>
@@ -210,7 +210,7 @@ function BalancePanel({ books }: { books: Books }) {
       </dl>
       <div className={`mt-4 rounded-[12px] px-4 py-3 text-[15px] ${bal.check === "short" ? "bg-[rgb(255_122_110_/_0.1)]" : "bg-[var(--surface-2)]"}`} data-testid="balance-check">
         <p className="font-medium" style={{ color: bal.check === "short" ? "var(--danger)" : "var(--ok)" }}>
-          {bal.check === "equal" ? "Equal to balance: yes" : bal.check === "covers" ? "Balance covers the books: yes" : "Balance below the books: no"}
+          {bal.check === "equal" ? "Every dollar accounted for ✓" : bal.check === "covers" ? "Balance covers the books ✓" : "Balance below the books"}
         </p>
         <p className="mt-1 text-[14px] text-[var(--ink-2)]">
           {bal.check === "equal"

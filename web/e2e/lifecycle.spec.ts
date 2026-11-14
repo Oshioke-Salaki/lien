@@ -10,7 +10,7 @@ const id = `${label}.${REGISTRY}`;
 
 async function startGuest(page: Page) {
   await page.goto("/market");
-  await page.getByRole("button", { name: "Use a free test account" }).first().click();
+  await page.getByRole("button", { name: "Get a free test account" }).first().click();
   await expect(page.getByText("Free test account", { exact: true }).first()).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId("balance").first()).toHaveText("$500.00");
 }
@@ -25,6 +25,7 @@ test("one loan, from creation to foreclosure and redemption, through the app", a
   await page.goto("/create");
   await page.getByTestId("create-label").fill(label);
   await page.getByTestId("create-name").fill(`Test ${label}`);
+  await page.getByTestId("create-vendor-sentinel").click();
   await expect(page.getByTestId("create-form")).toContainText("is free");
   await page.getByTestId("create-submit").click();
   await expect(page).toHaveURL(new RegExp(`/b/${id}`), { timeout: 90_000 });
