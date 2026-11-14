@@ -26,7 +26,7 @@ Checked against nearhackathon.com and its HACKATHON.md on 13 November 2026. **De
 | Form: website (optional) | Ready | https://lien-five.vercel.app |
 | Form: consent checkbox | **The user ticks it** | |
 | One submission per project; up to two projects per person, each README naming the other | Met | One project |
-| Testnet is eligible unless an integration is mainnet only | Met | Everything runs on testnet. NEAR Intents has no testnet, so the app shows a live mainnet quote, deposit address and status with sending switched off, plus a dry run, as HACKATHON.md suggests |
+| Testnet is eligible unless an integration is mainnet only | Met | Everything runs on testnet. NEAR Intents has no official testnet, so the app shows a live mainnet 1Click quote, deposit address and status with sending switched off, plus a dry run, as HACKATHON.md suggests; separately, one Intents payment [settled into Sentinel's inbox](https://testnet.nearblocks.io/txns/F7UgwSefS91xmx3xJWBybSAxuQTZwHL7FE7NaxEKkPeR) through NEAR's unmodified verifier contract, which Lien deployed to testnet |
 
 **Only the user can do these,** in this order: make the repository public; record the demo video; post it on X; then submit the form with the post link, the prize wallet, team lead, email and team size. The guest sponsor (`guests.lien-13569.testnet`) should hold enough testnet NEAR for judging: each free account costs 0.45 NEAR, plus 0.6 to start a business.
 

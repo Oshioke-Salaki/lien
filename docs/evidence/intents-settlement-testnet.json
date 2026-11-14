@@ -1,0 +1,89 @@
+{
+  "what": "One NEAR Intents payment settled on testnet: a payer deposits tUSD into NEAR's unmodified Intents verifier, signs an ft_withdraw intent (NEP-413, ed25519) to Sentinel's inbox, a different account relays it with execute_intents, and the inbox is forwarded into the business's lenders-first split.",
+  "network": "testnet",
+  "at": "2026-11-14T11:15:52.083Z",
+  "verifier": "verifier.lien-intents-27984.testnet",
+  "verifierCode": {
+    "codeHash": "BtA1BEFNS619KkvXFsgcpQ21Tb5yMm32aaUkn7xNothk",
+    "repo": "https://github.com/near/intents",
+    "tag": "defuse/v0.4.5",
+    "commit": "16d04f6ec4401263f8914638710260da50bb46b0",
+    "sameAs": "intents.near"
+  },
+  "token": "usd.lien-13569.testnet",
+  "amount": "1000000",
+  "payer": "lien-payer-27984.testnet",
+  "relayer": "lien-13569.testnet",
+  "business": "sentinel.v1.lien-13569.testnet",
+  "inbox": "sentinel-in.v1.lien-13569.testnet",
+  "signedIntent": {
+    "standard": "nep413",
+    "payload": {
+      "message": "{\"signer_id\":\"lien-payer-27984.testnet\",\"deadline\":\"2026-11-14T11:25:29.678Z\",\"intents\":[{\"intent\":\"ft_withdraw\",\"token\":\"usd.lien-13569.testnet\",\"receiver_id\":\"sentinel-in.v1.lien-13569.testnet\",\"amount\":\"1000000\",\"memo\":\"Lien: an Intents payment to sentinel.v1.lien-13569.testnet\"}]}",
+      "nonce": "Vij2xgCXckmrgM+lHLLl5xjmq9NeLYb80G4/kfBtKHI=",
+      "recipient": "verifier.lien-intents-27984.testnet"
+    },
+    "public_key": "ed25519:8UXuarJt2XMTmtdkRtyV9mQicWfSX7N36Dbnu1YjqbTM",
+    "signature": "ed25519:38UWAFL3EdGsCmrzYmdYn5Ks4oe4vLpyU3TGU23SZcUdQ4PidanbP19vpSe4iNqZ9f3vpjNd1RbSjfE9nSWTwEQE"
+  },
+  "transactions": {
+    "payerRegister": {
+      "tx": "3i21wb8CPhVDXwaZtbjvS5mWMZfADKRZo3RV3Q383jMf",
+      "link": "https://testnet.nearblocks.io/txns/3i21wb8CPhVDXwaZtbjvS5mWMZfADKRZo3RV3Q383jMf"
+    },
+    "faucet": {
+      "tx": "FPhAdA6tFkkb3TUGTajVfgF4Nj1rhZv1HVYpHj1MBQqk",
+      "link": "https://testnet.nearblocks.io/txns/FPhAdA6tFkkb3TUGTajVfgF4Nj1rhZv1HVYpHj1MBQqk"
+    },
+    "deposit": {
+      "tx": "TYpZXtbZsodBfSUp53a1ZJ9XVBdpGYx1o1KGDjuNTuq",
+      "link": "https://testnet.nearblocks.io/txns/TYpZXtbZsodBfSUp53a1ZJ9XVBdpGYx1o1KGDjuNTuq"
+    },
+    "addPublicKey": {
+      "tx": "Bm1L2SzchfV4vEAfmZ2joEqY9PGrNenRmEbrTGy5n4eA",
+      "link": "https://testnet.nearblocks.io/txns/Bm1L2SzchfV4vEAfmZ2joEqY9PGrNenRmEbrTGy5n4eA"
+    },
+    "execute": {
+      "tx": "F7UgwSefS91xmx3xJWBybSAxuQTZwHL7FE7NaxEKkPeR",
+      "link": "https://testnet.nearblocks.io/txns/F7UgwSefS91xmx3xJWBybSAxuQTZwHL7FE7NaxEKkPeR"
+    },
+    "forward": {
+      "tx": "GK6NJSM7wkS1RxoSrmoRXsRfUozYWGxWeEVCMJBrGpfo",
+      "link": "https://testnet.nearblocks.io/txns/GK6NJSM7wkS1RxoSrmoRXsRfUozYWGxWeEVCMJBrGpfo"
+    }
+  },
+  "executeLogs": [
+    "EVENT_JSON:{\"standard\":\"dip4\",\"version\":\"0.4.3\",\"event\":\"ft_withdraw\",\"data\":[{\"intent_hash\":\"FzSRAWmgwessdm4bWs6cxREFZBJdkFCWXwQpshJyeS2F\",\"account_id\":\"lien-payer-27984.testnet\",\"token\":\"usd.lien-13569.testnet\",\"receiver_id\":\"sentinel-in.v1.lien-13569.testnet\",\"amount\":\"1000000\",\"memo\":\"Lien: an Intents payment to sentinel.v1.lien-13569.testnet\"}]}",
+    "EVENT_JSON:{\"standard\":\"dip4\",\"version\":\"0.4.3\",\"event\":\"intents_executed\",\"data\":[{\"intent_hash\":\"FzSRAWmgwessdm4bWs6cxREFZBJdkFCWXwQpshJyeS2F\",\"account_id\":\"lien-payer-27984.testnet\",\"nonce\":\"Vij2xgCXckmrgM+lHLLl5xjmq9NeLYb80G4/kfBtKHI=\"}]}",
+    "EVENT_JSON:{\"standard\":\"nep245\",\"version\":\"1.0.0\",\"event\":\"mt_burn\",\"data\":[{\"owner_id\":\"lien-payer-27984.testnet\",\"token_ids\":[\"nep141:usd.lien-13569.testnet\"],\"amounts\":[\"1000000\"],\"memo\":\"withdraw\"}]}",
+    "EVENT_JSON:{\"standard\":\"nep141\",\"version\":\"1.0.0\",\"event\":\"ft_transfer\",\"data\":[{\"old_owner_id\":\"verifier.lien-intents-27984.testnet\",\"new_owner_id\":\"sentinel-in.v1.lien-13569.testnet\",\"amount\":\"1000000\",\"memo\":\"Lien: an Intents payment to sentinel.v1.lien-13569.testnet\"}]}"
+  ],
+  "inboxBalance": {
+    "before": "0",
+    "afterExecute": "1000000"
+  },
+  "forward": {
+    "externalRevenueAdded": "1000000",
+    "lendersRepaidAdded": "300000",
+    "logs": [
+      "EVENT_JSON:{\"standard\":\"nep141\",\"version\":\"1.0.0\",\"event\":\"ft_transfer\",\"data\":[{\"old_owner_id\":\"sentinel-in.v1.lien-13569.testnet\",\"new_owner_id\":\"sentinel.v1.lien-13569.testnet\",\"amount\":\"1000000\"}]}",
+      "EVENT_JSON:{\"standard\":\"lien\",\"version\":\"1.0.0\",\"event\":\"revenue\",\"data\":{\"source\":\"external\",\"amount\":\"1000000\",\"lender\":\"300000\",\"operator\":\"200000\",\"opex\":\"500000\"}}"
+    ]
+  },
+  "refused": [
+    {
+      "what": "The same signed intent submitted a second time (reused nonce)",
+      "by": "lien-13569.testnet",
+      "reason": "nonce was already used",
+      "tx": "9Ttb3Fk9thWN2K36EuWjMAhTSft6hQjUuXbnv3wxTbrW",
+      "link": "https://testnet.nearblocks.io/txns/9Ttb3Fk9thWN2K36EuWjMAhTSft6hQjUuXbnv3wxTbrW"
+    },
+    {
+      "what": "The relayer rewrote the signed intent to pay itself instead of the inbox",
+      "by": "lien-13569.testnet",
+      "reason": "invalid signature",
+      "tx": "4gucqwA6pSGxzxAoPmMk6jhpwiqvYxguo2oZd9rcG735",
+      "link": "https://testnet.nearblocks.io/txns/4gucqwA6pSGxzxAoPmMk6jhpwiqvYxguo2oZd9rcG735"
+    }
+  ]
+}

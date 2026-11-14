@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTx } from "@/components/Tx";
 import { Panel } from "@/components/ui";
 import { useLive } from "@/hooks/useLive";
-import { isTestnet } from "@/lib/config";
+import { isTestnet, txUrl } from "@/lib/config";
 import { money } from "@/lib/format";
 import { amountProblem, parseMoney } from "@/lib/amounts";
 import {
@@ -22,6 +22,13 @@ type Quote = QuoteView & { sendingOff: boolean; preview: boolean };
 
 const TONE: Record<StatusTone, string> = { waiting: "var(--accent)", done: "var(--ok)", attention: "var(--warn)", bad: "var(--danger)" };
 const POLL_MS = 5_000;
+
+/** The one Intents payment settled on testnet, through NEAR's unmodified verifier (docs/evidence/intents-settlement-testnet.json). */
+const SETTLED = {
+  inbox: "sentinel-in.v1.lien-13569.testnet",
+  execute: "F7UgwSefS91xmx3xJWBybSAxuQTZwHL7FE7NaxEKkPeR",
+  forward: "GK6NJSM7wkS1RxoSrmoRXsRfUozYWGxWeEVCMJBrGpfo",
+};
 
 /** Income from any chain reaches the waterfall through this business's inbox. */
 export function IntentsPanel({ business: b, refresh }: { business: Business; refresh: () => Promise<void> }) {
@@ -99,6 +106,11 @@ export function IntentsPanel({ business: b, refresh }: { business: Business; ref
         ) : null}
         <p className="text-[15px] leading-snug text-[var(--ink-2)]">A customer on another blockchain, like Arbitrum or Base, pays in its own currency. NEAR Intents (1Click) gives a deposit address on that chain, converts the payment to USDC on NEAR, and delivers it to the business&rsquo;s payment address, where it is split between lenders and the business like any other sale. If it cannot complete, the money goes back to the customer&rsquo;s refund address. Nobody holds it in between.</p>
         <p className="text-[14px] break-all"><span className="muted">Payment address: </span><code>{b.collector}</code></p>
+        {isTestnet && b.collector === SETTLED.inbox ? (
+          <p className="text-[13px] muted leading-snug" data-testid="intents-settled">
+            On testnet, one NEAR Intents payment has settled here: a signed withdrawal, relayed by another account through NEAR&rsquo;s own Intents verifier, <a className="underline" href={txUrl(SETTLED.execute)} target="_blank" rel="noreferrer">paid this address</a>, and it was <a className="underline" href={txUrl(SETTLED.forward)} target="_blank" rel="noreferrer">forwarded to lenders first</a>. No 1Click swap was involved.
+          </p>
+        ) : null}
 
         {pending > 0n ? (
           <div className="callout">
