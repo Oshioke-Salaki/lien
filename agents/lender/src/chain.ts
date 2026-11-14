@@ -12,13 +12,15 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { Account, JsonRpcProvider, KeyPair, actions, type KeyPairString } from "near-api-js";
+import { Account, FailoverRpcProvider, JsonRpcProvider, KeyPair, actions, type KeyPairString } from "near-api-js";
 import type { Prepared } from "./guard";
 
-export const RPC = process.env.LENDER_RPC ?? "https://rpc.testnet.fastnear.com";
+/** Independent testnet providers, tried in turn when one throttles. Resending the same
+ *  signed transaction is harmless: it has one hash and can land only once. */
+export const RPCS = (process.env.LENDER_RPC ?? "https://rpc.testnet.fastnear.com,https://testnet-rpc.intea.rs,https://near-testnet.drpc.org,https://api.zan.top/near-testnet").split(",");
 const CREDS = join(homedir(), ".near-credentials", "testnet");
 
-export const provider = () => new JsonRpcProvider({ url: RPC });
+export const provider = () => new FailoverRpcProvider(RPCS.map((url) => new JsonRpcProvider({ url })));
 
 export function fullKeyAccount(me: string): Account {
   const path = join(CREDS, `${me}.json`);
