@@ -64,7 +64,7 @@ Each attack below is refused by the contract. Each has a test that proves it; a 
 
 The same three are on the app's [/proof](https://lien-five.vercel.app/proof) page.
 
-Built for the NEAR Hackathon, November 2026. Tracks: Agent Economy, Unstoppable DeFi, Autonomous Business, AI Security & Defense.
+Built for the NEAR Hackathon, November 2026. Tracks: Autonomous Business, Agent Economy, Unstoppable DeFi, AI Security & Defense, Open Innovation. Demo video: [on X](https://x.com/oshioke_salaki/status/2121620570995315122).
 
 ## The problem
 

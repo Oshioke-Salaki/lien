@@ -1,6 +1,6 @@
 # NEAR HACKATHON submission
 
-Nothing here has been sent. The form cannot be edited after submitting (fixes go through nearhackathon.com/request-changes), each repository can be submitted once, and the repository must be public first.
+**Submitted on 14 November 2026.** The form cannot be edited after submitting (fixes go through nearhackathon.com/request-changes), each repository can be submitted once, and the repository must be public first.
 
 ## Requirements checklist
 
@@ -15,34 +15,34 @@ Checked against nearhackathon.com and its HACKATHON.md on 13 November 2026. **De
 | README discloses existing code, libraries and AI-generated code | Met | README "Disclosures" |
 | A LICENSE file | Met | [LICENSE](../LICENSE), MIT |
 | It runs and does what the README says (AI screening) | Met on the last runs | Live app [lien-five.vercel.app](https://lien-five.vercel.app); test commands in README "Test it"; live run in [evidence/testnet-e2e.md](evidence/testnet-e2e.md) |
-| Demo post on X: says it was built at NEAR HACKATHON, tags @NEARProtocol and #NEARHackathon, has a video or screenshots | **Not yet: the user posts it** | Draft below |
+| Demo post on X: says it was built at NEAR HACKATHON, tags @NEARProtocol and #NEARHackathon, has a video or screenshots | Met | [The post, with the 3:26 film](https://x.com/oshioke_salaki/status/2121620570995315122) |
 | Form: project name | Ready | Lien |
-| Form: team lead, email, team size | **The user fills these** | |
-| Form: tracks, one or more | Ready | Autonomous Business, Agent Economy, Unstoppable DeFi, AI Security & Defense |
-| Form: NEAR wallet address for the prize | **The user provides it** | A mainnet account; prizes are paid in NEAR within 30 days of results |
-| Form: repository link | Ready | https://github.com/Oshioke-Salaki/lien |
-| Form: demo post link | **After the X post** | |
-| Form: "What did you build?", 20 to 2,000 characters | Ready | Below |
+| Form: team lead, email, team size | Sent | Solo builder |
+| Form: tracks, one or more | Sent | Autonomous Business, Agent Economy, Unstoppable DeFi, AI Security & Defense, Open Innovation |
+| Form: NEAR wallet address for the prize | Sent | A mainnet account; prizes are paid in NEAR within 30 days of results |
+| Form: repository link | Sent | https://github.com/Oshioke-Salaki/lien |
+| Form: demo post link | Sent | https://x.com/oshioke_salaki/status/2121620570995315122 |
+| Form: "What did you build?", 20 to 2,000 characters | Sent | Below |
 | Form: website (optional) | Ready | https://lien-five.vercel.app |
-| Form: consent checkbox | **The user ticks it** | |
+| Form: consent checkbox | Sent | |
 | One submission per project; up to two projects per person, each README naming the other | Met | One project |
 | Testnet is eligible unless an integration is mainnet only | Met | Everything runs on testnet. NEAR Intents has no official testnet, so the app shows a live mainnet 1Click quote, deposit address and status with sending switched off, plus a dry run, as HACKATHON.md suggests; separately, one Intents payment [settled into Sentinel's inbox](https://testnet.nearblocks.io/txns/F7UgwSefS91xmx3xJWBybSAxuQTZwHL7FE7NaxEKkPeR) through NEAR's unmodified verifier contract, which Lien deployed to testnet |
 
-**Only the user can do these,** in this order: record the demo video; post it on X; then submit the form with the post link, the prize wallet, team lead, email and team size. The guest sponsor (`guests.lien-13569.testnet`) should hold enough testnet NEAR for judging: each free account costs 0.45 NEAR, plus 0.6 to start a business.
+**Still to do:** keep the live demo and the guest sponsor (`guests.lien-13569.testnet`, 0.45 NEAR per free account, 0.6 more to start a business) up through judging, 16 to 18 November, ideally until 25 November. Fixes to the submission go through nearhackathon.com/request-changes.
 
 ## Form answers
 
 **Project name:** Lien
 
-**Tracks:** Autonomous Business, Agent Economy, Unstoppable DeFi, AI Security & Defense
+**Tracks:** Autonomous Business, Agent Economy, Unstoppable DeFi, AI Security & Defense, Open Innovation
 
-**What did you build?** (1,871 characters, under the 2,000 limit)
+**What did you build?** (as submitted, about 1,870 characters, under the 2,000 limit)
 
 > Lien is a credit market for AI businesses on NEAR, where the collateral is the running business itself.
 >
 > Each business is a NEAR account with zero access keys, running one pinned build inside Intel TDX through OutLayer. Every sale pays lenders first, by contract. If it stops paying, anyone can foreclose: no admin, no keeper. It keeps serving customers, now earning for lenders, until it is sold at auction.
 >
-> Live on testnet, no wallet needed. Sentinel, an AI business that sells NEAR account safety checks, borrows from lenders and repays from every sale. Its Books page shows audited accounts read from one block.
+> Live on testnet, no wallet needed. Sentinel, an AI business that sells NEAR account safety checks, borrows from lenders and repays from every sale. Its Books page shows public accounts read from one block.
 >
 > What runs today:
 > - Two AI agents negotiate a loan on chain: the borrower asks, the lender counters in an on-chain memo, both hire Sentinel to vet each other, then the lender lends and later collects.
@@ -63,7 +63,6 @@ Checked against nearhackathon.com and its HACKATHON.md on 13 November 2026. **De
 
 **Website:** https://lien-five.vercel.app
 
-**You still need to provide:** team lead name, contact email, team size, a NEAR mainnet account for prizes, the X post link, and the consent tick.
 
 ## X post (as posted with the film)
 
@@ -94,11 +93,6 @@ Checked against nearhackathon.com and its HACKATHON.md on 13 November 2026. **De
 
 Attach `film/lien-film-1080.mp4` (3:26, needs X Premium for over 2:20). @NEARProtocol and #NEARHackathon are required.
 
-## Demo video plan, about two minutes
+## Demo video
 
-1. **The problem, 15s.** The hero. "Lend to AI. Repossess it."
-2. **The trust, 25s.** Sentinel's Check it yourself panel turning Verified. Zero keys, and the TDX quote.
-3. **A sale, 25s.** Buy a check, watch the report arrive and the waterfall split.
-4. **The moment, 40s.** A business past grace. Press Foreclose as a stranger. Notice of foreclosure. Buy a check from it again: same address, still working, operator locked out.
-5. **The sale, 15s.** A bid, and control changes hands.
-6. **Close, 10s.** Evidence file and repository.
+The film posted with the submission: 3:26, 1080p, in `film/lien-film-1080.mp4` locally (not in the repository). It shows the live app, real testnet transaction hashes and a live `npm run verify` run (10/10). Chapters: the cold open (an AI talked into sending $47,000), what Lien is, Sentinel (zero keys, OutLayer TDX, the lenders-first waterfall), try it, take it over, agents, try to rob it, every chain, OutLayer and an honest list of limits, `npm run verify`, and what powers it. Voice by Kokoro, music "Atoms in Peace" by Alejandro Magaña (Mixkit free licence).
