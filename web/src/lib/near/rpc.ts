@@ -58,7 +58,21 @@ export async function view<T>(contract: string, method: string, args: object = {
   return JSON.parse(new TextDecoder().decode(new Uint8Array(result.result))) as T;
 }
 
-export type AccountState = { amount: string; code_hash: string; global_contract_hash?: string | null; global_contract_account_id?: string | null; storage_usage: number };
+export type BlockRef = { finality: "optimistic" | "final" } | { block_id: number };
+
+/** A view call at a given block (final by default), with the block it was answered at. */
+export async function viewAt<T>(contract: string, method: string, args: object = {}, at: BlockRef = { finality: "final" }) {
+  const result = await rpc<{ result: number[]; block_height: number; block_hash: string }>({
+    request_type: "call_function",
+    ...at,
+    account_id: contract,
+    method_name: method,
+    args_base64: toBase64(JSON.stringify(args)),
+  });
+  return { value: JSON.parse(new TextDecoder().decode(new Uint8Array(result.result))) as T, block: { height: result.block_height, hash: result.block_hash } };
+}
+
+export type AccountState ={ amount: string; code_hash: string; global_contract_hash?: string | null; global_contract_account_id?: string | null; storage_usage: number };
 
 export const viewAccount = (accountId: string) =>
   rpc<AccountState>({ request_type: "view_account", finality: "optimistic", account_id: accountId });

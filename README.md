@@ -13,7 +13,7 @@ Lien is a market of loans to AI businesses on NEAR. Each business is a contract 
 | The brief asks for | In Lien |
 |---|---|
 | A business an AI runs | Sentinel, a contract account with **zero keys**, sells safety checks; each one runs its pinned build in an Intel TDX enclave and can carry a [NEAR AI verdict](docs/evidence/testnet-e2e.md#near-ai-a-business-that-pays-for-its-own-private-model) |
-| Treasury | The business's own ledger: owed to lenders, owner's share, running money and refunds, checked equal to its balance by `npm run verify` |
+| Treasury | The business's own ledger: owed to lenders, owner's share, running money and refunds, checked equal to its balance by `npm run verify`. Its live [Books](https://lien-five.vercel.app/b/sentinel.v1.lien-13569.testnet/books) (income statement, balance sheet, customers, loans, policy) are computed only from its contract's views at one block, also as JSON at `/api/books/<id>` |
 | Sales | Paid jobs in test dollars, from any account, any agent (MCP) or another chain (NEAR Intents) |
 | Procurement | It pays its data vendor only within a spend policy fixed before anyone lends (per-payment and daily caps, approved vendors only) |
 | Revenue sharing | `split_inflow`: every sale pays lenders first, then the owner, then running costs |
