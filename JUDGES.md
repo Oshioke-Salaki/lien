@@ -96,6 +96,12 @@ What Lien does differently, each with its test:
 
 Where others are ahead: Incorpr is on mainnet, and on Loca lenders compete on price, while Lien's terms are fixed by the borrower.
 
+## Hire Sentinel on NEAR's Agent Market
+
+**PENDING: not registered yet.** Listing: `TODO: listing URL, added after registration`.
+
+Sentinel is built to work as a hired agent on [market.near.ai](https://market.near.ai). A `hire.created` webhook whose brief names an account (`alice.near` for mainnet, `bob.testnet` for testnet) reaches `POST /api/agent-market/webhook`; the signature is checked, the same rules as Sentinel's pinned build are run by Lien's server, and the report (score, ALLOW / WARN / BLOCK, flags, facts, a link to buy the attested version) is submitted through the marketplace's `start` and `submit`. A brief without an account is declined and refunded. `GET /api/agent-market/poll` serves any assignment a webhook missed. The checks run on Lien's server, not in the TEE; the attested check is the one bought [on Lien](https://lien-five.vercel.app/b/sentinel.v1.lien-13569.testnet). Tests: `cd web && npx vitest run src/lib/agentMarket`.
+
 ## Honest limits
 
 - **Testnet only, and unaudited.** The mainnet path is documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md); it is not deployed.
