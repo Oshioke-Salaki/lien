@@ -17,6 +17,7 @@
     "enable-ai": "tsx src/enable-ai.ts",
     "sample-repaid": "tsx src/sample-repaid.ts",
     "xvault": "tsx src/xvault.ts",
+    "lendvault": "tsx src/lendvault.ts",
     "note-transfer": "tsx src/note-transfer.ts",
     "lender-demo": "tsx src/lender-demo.ts",
     "lender": "npm --prefix ../agents/lender run --silent lender --",
