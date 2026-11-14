@@ -142,7 +142,7 @@ test.describe("a business", () => {
     await page.getByTestId("intents-origin").selectOption({ label: "USDC on Base" });
     await page.getByTestId("intents-quote").click();
     await expect(page.getByTestId("intents-result")).toContainText("You send");
-    await expect(page.getByTestId("intents-result")).toContainText("switched off");
+    await expect(page.getByTestId("intents-result")).toContainText("sending is off");
     // A real (non-dry) quote: a deposit address, followed on 1Click's status API. Nothing is sent to it.
     await expect(page.getByTestId("intents-deposit")).toBeVisible();
     await expect(page.getByTestId("intents-sending-off")).toContainText("Do not send anything");
