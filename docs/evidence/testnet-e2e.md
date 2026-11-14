@@ -114,6 +114,7 @@ On 14 November 2026 a keyless vault was created for Sentinel: `sentinel-x.v1.lie
 - **The vault had the MPC signer sign 0.00001 ETH to the settlement address, nonce 0** ([tx](https://testnet.nearblocks.io/txns/unu5o2Jaub6VqzTZVTpXrfBWifTwMMAShbL1oUSJ3c8))
   - ok: the contract's unsigned transaction is byte for byte the one the script builds independently; payload `0x4fa883909d6b1b7a598037c44ce50033dd43797c35aaa2fbacda81b6daaeaacb`
   - ok: the MPC signature recovers to the vault address `0x7004…8546` (checked by the script with noble, and again by ethers v6 parsing the signed transaction)
-  - **not yet on Base Sepolia:** the vault holds no Base Sepolia ETH, so the node refused the broadcast ("insufficient funds for gas * price + value: have 0 want 11050000000000"). The signed transaction is saved in `deployments/xvault-testnet.json`; once the vault address is funded, `cd ops && npx tsx src/xvault.ts broadcast` sends it.
+- **The signed transfer landed on Base Sepolia** ([tx](https://sepolia.basescan.org/tx/0x15b1b31a4cf9591b486d0c60806fb263588e8286bd9796bfebd2481b92780bd0), block 58613924, status success)
+  - ok: after the vault address received 0.0001 test ETH from a faucet, `cd ops && npx tsx src/xvault.ts broadcast` sent exactly the transaction the MPC network had signed; no private key for `0x7004…8546` exists anywhere
 
 What this shows: a keyless NEAR account holds funds on another chain and can move them only to one fixed address, enforced by its own contract before the MPC network signs. What it does not show: money arriving in the waterfall. The settlement address is held by the Lien team, and moving the money from there into Sentinel's NEAR inbox is not automated.
