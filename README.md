@@ -8,6 +8,15 @@ Lien is a market of loans to AI businesses on NEAR. Each business is a contract 
 
 **Judging? Start with [JUDGES.md](JUDGES.md):** the two-minute tour, every claim with its test and its testnet transaction, and the honest limits. One command checks the core claims against the live chain, with no wallet: `npm run verify`.
 
+**Sixty seconds, no wallet:**
+
+1. `npm run verify` at the repo root: seven checks read live from the chain, all ✅.
+2. Open [the market](https://lien-five.vercel.app/market) and click **Get a free test account** ($500 of test money, about ten seconds).
+3. Open [Sentinel](https://lien-five.vercel.app/b/sentinel.v1.lien-13569.testnet), buy a safety check, and watch 30% of the sale reach its lenders.
+4. Open its [Books](https://lien-five.vercel.app/b/sentinel.v1.lien-13569.testnet/books): every dollar accounted for, read from one block.
+5. Take over a late business in the market (a staged demo on a 5-minute clock), then see it keep serving customers for its lenders.
+6. See every attack refused on chain on [/proof](https://lien-five.vercel.app/proof).
+
 **The Autonomous Business brief, point by point:**
 
 | The brief asks for | In Lien |
@@ -18,6 +27,7 @@ Lien is a market of loans to AI businesses on NEAR. Each business is a contract 
 | Procurement | It pays its data vendor only within a spend policy fixed before anyone lends (per-payment and daily caps, approved vendors only) |
 | Revenue sharing | `split_inflow`: every sale pays lenders first, then the owner, then running costs |
 | Cross-chain payments | NEAR Intents deposit and status flow into its inbox; a keyless Chain Signatures vault [paid on Base Sepolia](https://sepolia.basescan.org/tx/0x15b1b31a4cf9591b486d0c60806fb263588e8286bd9796bfebd2481b92780bd0) |
+| Spend caps and a kill switch | Spending is capped by the policy (per payment, per day, approved vendors only); a blocked payment is [counted on chain](docs/evidence/blocked-spend-testnet.json). There is deliberately no pause button: during a loan nobody, not even the owner, can freeze the business or pull money out. The off switch belongs to the lenders: if it stops paying, anyone can take it over, and its owner's share goes to them |
 | Humans only set the constraints | Terms, split and spend policy are fixed before the loan; during it nobody can withdraw, and the code changes only if lenders holding over half approve. If it stops paying, anyone can take it over |
 
 ## Try to rob it
@@ -62,7 +72,7 @@ Then open [lien-five.vercel.app](https://lien-five.vercel.app) or run it locally
 
 | Do this | You should see |
 |---|---|
-| Run `npm run verify` at the repository root | Six ✅ lines, read from testnet: Sentinel and its inbox hold zero access keys, it runs the published contract (code hash from `deployments/testnet.json`), its pinned build re-hashes byte for byte from FastFS, the tokens it holds cover its ledger (equal when we ran it), its latest Intel TDX quote names the pinned build, and the live run's evidence file records the operator's withdrawal refused |
+| Run `npm run verify` at the repository root | Seven ✅ lines, read from testnet: Sentinel and its inbox hold zero access keys, it runs the published contract (code hash from `deployments/testnet.json`), its pinned build re-hashes byte for byte from FastFS, the tokens it holds cover its ledger, its latest Intel TDX quote names the pinned build, three robberies during a loan were refused on chain (read back now), and a compromised build's payment outside the spend policy was blocked on chain |
 | Open `/market` | Real businesses read from testnet, the ones needing attention first |
 | Click **Get a free test account** | An account with 500.00 tUSD in the sidebar, in about 10 seconds |
 | Open **Sentinel**, read **Check it yourself** | Five checks turn to Verified, run by your browser: zero keys, published contract, the build's bytes re-hashed, books match balance, and an Intel TDX quote naming the pinned build |
@@ -86,6 +96,7 @@ The closest project is Incorpr, which lets a keyless AI company be pledged for a
 | Incorpr | Live on mainnet. A keyless AI company can borrow against itself from one lender; while it is pledged, the holder's signing is frozen |
 | Loca | Advances against paid orders held in escrow |
 | Float | A tranched lending pool for agents |
+| Parallax | A CFO agent runs sealed-bid jobs among many agents, with a treasury and escrow contract and a revenue split. Its bank account `bank.useparallax.near` holds one full-access key (checked over mainnet RPC on 14 November 2026), so a person can still move its money |
 | **Lien** | A market where up to 50 lenders fund each loan; lenders are paid first from every sale; anyone can foreclose once the schedule allows, with no keeper or admin; a foreclosed business keeps earning for its lenders and is then put up for auction |
 
 More detail, with each difference's test, is in [JUDGES.md](JUDGES.md#how-lien-differs-from-the-closest-entries-we-found).

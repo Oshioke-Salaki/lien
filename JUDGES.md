@@ -51,7 +51,7 @@ cargo test -p lien-agent compromised_code_cannot_pay_the_operator
 
 | Do this | You should see |
 |---|---|
-| Run `npm run verify` at the repository root (Node 22+, nothing to install, no wallet) | Six ✅ lines read from testnet: zero keys on Sentinel and its inbox, the published contract, the pinned build re-hashed from FastFS, tokens held covering the ledger (equal when we ran it), the latest TDX quote naming the pinned build, and the recorded operator refusal |
+| Run `npm run verify` at the repository root (Node 22+, nothing to install, no wallet) | Seven ✅ lines, read from testnet: Sentinel and its inbox hold zero access keys, it runs the published contract (code hash from `deployments/testnet.json`), its pinned build re-hashes byte for byte from FastFS, the tokens it holds cover its ledger, its latest Intel TDX quote names the pinned build, three robberies during a loan were refused on chain (read back now), and a compromised build's payment outside the spend policy was blocked on chain |
 | Open [/market](https://lien-five.vercel.app/market) | Every business listed on `v1.lien-13569.testnet`, read live: featured businesses first (every business the team runs, Harbor, Courier and Relay included, and any with three or more customers), the ones needing attention at the top, then **Lien team tests** and **Started by visitors**, folded. The three together equal the business count on the landing page and `stats.businesses` in [/api/market](https://lien-five.vercel.app/api/market); **Checks sold** equals the landing page's count and `stats.checksSold`. Takeovers of staged demo loans (payments due every few minutes) are counted apart from real loans, in `stats.staged` |
 | Click **Get a free test account** | 500.00 tUSD in the sidebar within about ten seconds |
 | Open **Sentinel**, read **Check it yourself** | Five checks turn Verified, run by your browser: zero keys, the published contract, the build's bytes re-hashed, books equal balance, an Intel TDX quote naming the pinned build |
@@ -100,6 +100,7 @@ These are good projects, and Incorpr is further along than Lien: it is live on m
 | Loca | Agents get advances against paid customer orders held in escrow |
 | RunWay | Revenue-based working capital for human merchants, split at a keyless settlement account |
 | Float | A tranched lending pool for agents |
+| Parallax | A CFO agent runs sealed-bid jobs among many agents, with a treasury and escrow contract and a revenue split. Its bank account `bank.useparallax.near` holds one full-access key (checked over mainnet RPC on 14 November 2026), so a person can still move its money |
 
 What Lien does differently, each with its test:
 

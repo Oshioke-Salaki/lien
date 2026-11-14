@@ -54,7 +54,7 @@ await check("an Intents quote route answers", async () => { await get("/api/quot
 await check("a business's books balance", async () => {
   const d = await (await get(`/api/books/${B}`)).json();
   if (!d.balance) throw new Error("no balance sheet");
-  return `block ${d.block}`;
+  return `block ${d.block?.height ?? d.block}`;
 });
 await check("the Agent Market webhook refuses an unsigned call", async () => {
   const r = await fetch(SITE + "/api/agent-market/webhook", { method: "POST", body: "{}", signal: AbortSignal.timeout(30_000) });
