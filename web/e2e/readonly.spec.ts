@@ -192,8 +192,13 @@ test.describe("a business", () => {
     await page.getByTestId("intents-disclosure").locator("summary").click();
     await page.getByTestId("intents-refund").fill("nonsense");
     await page.getByTestId("intents-origin").selectOption({ label: "USDC on Base" });
-    await page.getByTestId("intents-quote").click();
-    await expect(page.getByTestId("intents")).toContainText("does not look right");
+    // Checked as you type, for the chain chosen, so no request is sent for an address that cannot work.
+    await expect(page.getByTestId("intents")).toContainText("does not look right for a Base address");
+    await expect(page.getByTestId("intents-quote")).toBeDisabled();
+    // A checksummed address of the right shape is accepted.
+    await page.getByTestId("intents-refund").fill("0x000000000000000000000000000000000000dEaD");
+    await expect(page.getByTestId("intents")).not.toContainText("does not look right");
+    await expect(page.getByTestId("intents-quote")).toBeEnabled();
   });
 });
 
