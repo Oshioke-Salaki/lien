@@ -50,7 +50,44 @@ export type QuoteRequest = {
   deadline: string;
 };
 
-export type BuildResult = { ok: true; request: QuoteRequest } | { ok: false; error: string };
+/** The chains 1Click's asset ids name (nep141:base-0x…omft.near), in words. */
+const CHAINS: Record<string, { name: string; format: "evm" | "sol" }> = {
+  eth: { name: "Ethereum", format: "evm" }, base: { name: "Base", format: "evm" }, arb: { name: "Arbitrum", format: "evm" },
+  op: { name: "Optimism", format: "evm" }, pol: { name: "Polygon", format: "evm" }, bsc: { name: "BNB Chain", format: "evm" },
+  gnosis: { name: "Gnosis", format: "evm" }, avax: { name: "Avalanche", format: "evm" }, sol: { name: "Solana", format: "sol" },
+};
+
+/** The chain an asset id lives on, if the app knows its address format. */
+export function chainOf(assetId: string): { name: string; format: "evm" | "sol" } | null {
+  const m = /^nep\d+:([a-z]+)-/.exec(assetId);
+  return (m && CHAINS[m[1]!]) || null;
+}
+
+const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+/**
+ * Why a refund address cannot be right for the chain being paid from, or null if it can be.
+ * EVM chains: 0x and 40 hex digits, in any letter case (checksummed or not). Solana: a base58
+ * address. Other chains: a loose shape check, and 1Click has the last word.
+ */
+export function refundProblem(address: string, assetId: string): string | null {
+  const chain = chainOf(assetId);
+  const a = address.trim();
+  if (!a) return "Enter your address on that chain, so a failed payment can come back to you.";
+  if (chain?.format === "evm") return EVM.test(a) ? null : `That does not look right for a ${chain.name} address: it starts with 0x, then 40 letters and digits (0-9 and a-f, any case).`;
+  if (chain?.format === "sol") return BASE58.test(a) ? null : "That does not look right for a Solana address: 32 to 44 letters and digits, with no 0x.";
+  return ADDRESS.test(a) ? null : "That refund address does not look right for this chain.";
+}
+
+/** A well-formed address that stands in for an empty refund address in a preview, which sends nothing. */
+export function previewRefund(assetId: string): string | null {
+  const chain = chainOf(assetId);
+  if (chain?.format === "evm") return "0x1111111111111111111111111111111111111111";
+  if (chain?.format === "sol") return "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin";
+  return null;
+}
+
+export type BuildResult ={ ok: true; request: QuoteRequest } | { ok: false; error: string };
 
 /**
  * The 1Click quote request for "this business receives `amount` USDC, paid from `originAsset`".
@@ -67,8 +104,12 @@ export function buildQuoteRequest(input: QuoteInput, opts: { mainnet: boolean; n
   if (typeof originAsset !== "string" || !ASSET.test(originAsset)) return { ok: false, error: "Pick a currency to pay with." };
   if (typeof amount !== "string" || !/^\d{1,30}$/.test(amount) || BigInt(amount) === 0n) return { ok: false, error: "Check the amount." };
   if (typeof recipient !== "string" || !NEAR_ACCOUNT.test(recipient)) return { ok: false, error: "This business has no valid payment address." };
-  const refund = typeof refundTo === "string" ? refundTo.trim() : "";
-  if (!ADDRESS.test(refund)) return { ok: false, error: "That refund address does not look right for this chain." };
+  const typed = typeof refundTo === "string" ? refundTo.trim() : "";
+  // A preview (dry quote) creates no deposit address, so nothing can ever be refunded: it may leave
+  // the refund address empty, and a well-formed placeholder for the chain stands in for 1Click.
+  const refund = !typed && input.dry === true ? previewRefund(originAsset) ?? "" : typed;
+  const problem = refundProblem(refund, originAsset);
+  if (problem) return { ok: false, error: problem };
   return {
     ok: true,
     request: {
@@ -131,7 +172,8 @@ export function readQuote(request: QuoteRequest, data: unknown): QuoteView | nul
 /** 1Click's error text, in words a customer can act on. */
 export function friendlyQuoteError(message: string | undefined): string {
   const m = message ?? "";
-  if (/refundTo/i.test(m)) return "That refund address does not look right for this chain.";
+  // The shape was already checked (refundProblem), so 1Click is refusing this particular address.
+  if (/refundTo/i.test(m)) return "NEAR Intents would not take this refund address. It has the right shape, but 1Click refuses some addresses, such as the 0x…dEaD burn address. Use an address you control.";
   if (/amount.*(too low|small|minimum)/i.test(m)) return "That amount is below the smallest payment this route accepts. Try a larger amount.";
   if (/recipient/i.test(m)) return "NEAR Intents would not accept this business's payment address.";
   return m && m !== "Internal server error" ? m : "No route is available right now.";
@@ -209,6 +251,8 @@ export type StatusContext = {
   receive?: string;
   refunded?: string | null;
   refundReason?: string | null;
+  /** A preview: no deposit address exists, so the words say what would happen in a real payment. */
+  preview?: boolean;
 };
 
 /** Each 1Click status, in plain words, with what it means for the person paying. */
@@ -218,7 +262,9 @@ export function describeStatus(status: IntentStatus | "UNKNOWN", ctx: StatusCont
   const receive = ctx.receive ?? "the payment";
   switch (status) {
     case "PENDING_DEPOSIT":
-      return { label: "Waiting for your payment", tone: "waiting", final: false, meaning: `Nothing has arrived yet. Send ${send} to the deposit address before the quote expires. Until you send, nothing happens and nothing is charged.` };
+      return ctx.preview
+        ? { label: "Waiting for your payment", tone: "waiting", final: false, meaning: `In a real payment, this is where you would send ${send} to a deposit address NEAR Intents creates for you. A preview creates none, so there is nothing to send. Until a customer sends, nothing happens and nothing is charged.` }
+        : { label: "Waiting for your payment", tone: "waiting", final: false, meaning: `Nothing has arrived yet. Send ${send} to the deposit address before the quote expires. Until you send, nothing happens and nothing is charged.` };
     case "KNOWN_DEPOSIT_TX":
       return { label: "Payment seen", tone: "waiting", final: false, meaning: "Your payment was seen on the chain you paid from. NEAR Intents is waiting for it to confirm before converting it." };
     case "PROCESSING":
