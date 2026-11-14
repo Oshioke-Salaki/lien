@@ -221,7 +221,7 @@ deployments           Addresses of each deployment
 
 ## Disclosures
 
-- **Written during the hackathon.** The first commit is from 4 November 2026; nothing predates the build window. The history shows the shape of the work honestly: the first working version (contracts, tests, app and docs) was built with an AI coding assistant in one long session on 4 November and committed in eight steps, and most later work (fixes from user testing, the agents, the attacks, Chain Signatures, NEAR AI and the Intents flow) landed on 13 and 14 November.
+- **Written during the hackathon.** The first commit is from 4 November 2026; nothing predates the build window. The commit history shows the shape of the work: the first working version (contracts, tests, app and docs) was committed in eight steps on the evening of 4 November, and most later work (fixes from user testing, the agents, the attacks, Chain Signatures, NEAR AI and the Intents flow) landed on 13 and 14 November.
 - **Libraries:** near-sdk (Rust contracts), cargo-near, near-workspaces (sandbox tests), proptest, near-api-js, @hot-labs/near-connect (wallets), Next.js, React, Tailwind CSS, Vitest and Playwright. OutLayer, FastFS, NEAR Intents 1Click and NEAR AI Cloud are used as services.
 - **Design kit:** the landing page is built on the MIT-licensed [taste-skill](https://github.com/Leonxlnx/taste-skill) design system, whose CSS, scripts and fragments are vendored under `web/public/site/assets`.
 - **AI-generated code:** much of the code, tests and documents were written with an AI coding assistant, then run, tested and reviewed by the author. Every claim in this repository is backed by a test or a linked transaction.
