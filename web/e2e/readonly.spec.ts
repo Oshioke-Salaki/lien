@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { owedMoney, repaidMoney } from "../src/lib/format";
+import { money, owedMoney, repaidMoney } from "../src/lib/format";
 
 const REGISTRY = "v1.lien-13569.testnet";
 const SENTINEL = `sentinel.${REGISTRY}`;
@@ -161,6 +161,26 @@ test.describe("a business", () => {
     await expect(page.getByTestId("intents-status-meaning")).toContainText("received nothing");
     await page.getByTestId("intents-dryrun-play").click();
     await expect(page.getByTestId("intents-status-card")).toHaveAttribute("data-status", "SUCCESS", { timeout: 10_000 });
+  });
+
+  test("its books agree with the market to the cent, balance, and fit a phone", async ({ page, request }) => {
+    await page.goto(`/b/${SENTINEL}`);
+    await page.getByTestId("books-link").click();
+    await expect(page).toHaveURL(new RegExp(`/b/${SENTINEL}/books$`));
+    await expect(page.getByTestId("books-check")).toHaveAttribute("data-check", "equal");
+    // Both refresh on their own clocks, so a sale landing between two reads is waited out.
+    await expect(async () => {
+      const market = await (await request.get("/api/market")).json();
+      const b = market.businesses.find((x: { id: string }) => x.id === SENTINEL);
+      expect(await page.getByTestId("tile-sales").innerText()).toBe(money(b.stats.job_revenue));
+      expect(await page.getByTestId("tile-customers").innerText()).toBe(String(b.stats.unique_payers));
+      expect(await page.getByTestId("loans-outstanding").innerText()).toBe(owedMoney(b.current_loan.terms.total_due, b.current_loan.repaid));
+    }).toPass({ timeout: 60_000 });
+    await expect(page.getByTestId("books-how")).toContainText("How these numbers are computed");
+    await page.setViewportSize({ width: 390, height: 900 });
+    await expect(page.getByTestId("balance-held")).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow, "overflow at 390").toBeLessThanOrEqual(0);
   });
 
   test("a bad refund address gets a clear message", async ({ page }) => {

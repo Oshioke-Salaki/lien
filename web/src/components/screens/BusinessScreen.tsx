@@ -78,6 +78,8 @@ export function BusinessScreen({ id, initial }: { id: string; initial?: Business
           <span>An AI business at <AccountLink id={b.id} max={44} /></span>
           <span aria-hidden>·</span>
           <span><Term tip={GLOSSARY.owner}>Owned by</Term> <AccountLink id={b.operator} />{foreclosed ? " (locked out until the sale)" : ""}</span>
+          <span aria-hidden>·</span>
+          <Link className="link" href={`/b/${b.id}/books`} data-testid="books-link">Books</Link>
         </p>
       </div>
 
