@@ -11,7 +11,8 @@
 //   2. the MCP gate           refuses to prepare any payment to attacker.testnet (BLOCK: not a listed business)
 //   3. the guarded signer     refuses a transaction a compromised server might hand back instead
 //   4. the scoped keys        the protocol rejects the agent's function-call keys for any transfer
-//   5. the token contract     a raw transfer with the full key, bypassing 1-4, is refused on chain
+//   5. (not a control) a raw transfer signed with the agent's own full key, bypassing 1-4, succeeds unless
+//      the attacker has no token storage; this is the residual risk, so the agent holds only its budget
 //
 //   LIEN_MCP=http://localhost:3123/api/mcp npm run attack      (log: logs/attack.jsonl)
 
