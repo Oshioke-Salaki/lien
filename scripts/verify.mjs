@@ -17,6 +17,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const deployment = JSON.parse(readFileSync(join(ROOT, "deployments/testnet.json"), "utf8"));
 const config = readFileSync(join(ROOT, "web/src/lib/config.ts"), "utf8");
 const RPCS = [...(config.match(/testnet:\s*\[([^\]]+)\]/)?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+// Regular nodes drop transactions after a few epochs; archival nodes keep them, so old proofs stay checkable.
+const TX_RPCS = ["https://archival-rpc.testnet.fastnear.com", "https://archival-rpc.testnet.near.org", ...RPCS];
 if (!RPCS.length) throw new Error("Could not read the testnet RPC list from web/src/lib/config.ts");
 
 const OUTLAYER_API = "https://testnet-api.outlayer.ai";
@@ -139,7 +141,7 @@ await check("Robbing it during a loan was refused on chain (owner and stranger, 
   let ok = rec.attempts.length > 0;
   for (const a of rec.attempts) {
     let status = null;
-    for (const url of RPCS) {
+    for (const url of TX_RPCS) {
       try {
         const r = await fetchWithTimeout(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: "verify", method: "tx", params: { tx_hash: a.tx, sender_account_id: a.by, wait_until: "NONE" } }) });
         const body = await r.json();
@@ -165,7 +167,7 @@ await check("A compromised build's payment outside the spend policy was blocked 
 await check("Two agents negotiated a loan and hired Sentinel, all on chain (read back now)", async () => {
   const LENDER = "lien-lender-645368.testnet", BORROWER = "lien-borrower-648257.testnet";
   const txStatus = async (hash, sender) => {
-    for (const url of RPCS) {
+    for (const url of TX_RPCS) {
       try {
         const r = await fetchWithTimeout(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: "verify", method: "tx", params: { tx_hash: hash, sender_account_id: sender, wait_until: "NONE" } }) });
         const b = await r.json();
@@ -207,7 +209,7 @@ await check("A NEAR Intents payment settled into the inbox through NEAR's unmodi
   const rec = JSON.parse(readFileSync(join(ROOT, "docs/evidence/intents-settlement-testnet.json"), "utf8"));
   const dep = JSON.parse(readFileSync(join(ROOT, "deployments/intents-testnet.json"), "utf8"));
   const txResult = async (hash, sender) => {
-    for (const url of RPCS) {
+    for (const url of TX_RPCS) {
       try {
         const r = await fetchWithTimeout(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: "verify", method: "tx", params: { tx_hash: hash, sender_account_id: sender, wait_until: "NONE" } }) });
         const b = await r.json();
